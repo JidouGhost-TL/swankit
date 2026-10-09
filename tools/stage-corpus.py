@@ -254,6 +254,62 @@ def stage_graphics(args):
         "run serialized required corpus gate")
 
 
+def stage_text(args):
+    """Enroll independent text/font expectations once in their own namespace.
+
+    Text and cartridge handlers may share a ROM digest. Text provenance stays
+    in a separate enrollment ledger; existing versioned expectations are not
+    changed to assign the same input to a second format.
+    """
+    root = Path(__file__).resolve().parents[1]
+    output = args.output.resolve()
+    if output == root or root in output.parents:
+        raise ValueError("corpus staging must be outside the repository")
+    manifest_bytes = args.text_manifest.read_bytes()
+    manifest = json.loads(manifest_bytes)
+    records = []
+    for record in manifest["samples"]:
+        name = record["name"]
+        if Path(name).name != name or name.startswith(".") or Path(name).suffix != ".text":
+            raise ValueError("invalid text sample name")
+        source = Path(record["path"]).resolve(strict=True)
+        if hashlib.sha256(source.read_bytes()).hexdigest() != record["expect"]["sha256"]:
+            raise ValueError("text source differs from independent expectation")
+        references = record["references"]
+        if not references:
+            raise ValueError("text enrollment needs independent oracle provenance")
+        for reference in references:
+            if hashlib.sha256(Path(reference["path"]).read_bytes()).hexdigest() != reference["sha256"]:
+                raise ValueError("text oracle source differs from enrollment provenance")
+        records.append((name, source, record))
+    if not records or len({r[0] for r in records}) != len(records):
+        raise ValueError("text enrollment must contain unique samples")
+    output.mkdir(parents=True, exist_ok=True)
+    with (output / ".staging.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        directory = output / "ws-text"
+        if directory.exists():
+            raise ValueError("text spec exists; frozen expectations must never be overwritten")
+        directory.mkdir()
+        samples = {}
+        for name, source, record in records:
+            (directory / name).symlink_to(source)
+            samples[name] = {"args": record["args"], "expect": record["expect"]}
+        write_json(directory / "spec.json", {
+            "format": "ws-text", "samples": samples,
+            "excluded": {"enrollment.json": "independent text/font oracle provenance sidecar"},
+            "source_excluded": manifest.get("source_excluded", {})})
+        write_json(directory / "enrollment.json", {
+            "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+            "samples": len(records), "references": {r[0]: r[2]["references"] for r in records},
+            "provenance": manifest.get("provenance", {})})
+    strings = sum(len(r[2]["args"].get("strings", [])) for r in records)
+    glyphs = sum(sum(f["count"] for f in r[2]["args"].get("fonts", [])) for r in records)
+    print(f"Staged {len(records)} text sources, {strings} strings, {glyphs} glyphs; frozen values preserved")
+    log(args.progress_log, "text staging", f"{len(records)} sources, {strings} strings, {glyphs} glyphs",
+        "run serialized required text corpus gate")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     selection = parser.add_mutually_exclusive_group(required=True)
@@ -261,6 +317,8 @@ def main():
     selection.add_argument("--codec-manifest", type=Path)
     selection.add_argument("--gfx-manifest", type=Path,
                            help="enroll independently rendered graphics snapshots/fixtures into a new spec directory")
+    selection.add_argument("--text-manifest", type=Path,
+                           help="enroll independently dumped text and font glyph expectations")
     parser.add_argument("--gfx-format", choices=("ws-gfx", "ws-gfx-display"), default="ws-gfx",
                         help="graphics directory to enroll, each may be created only once")
     parser.add_argument("--output", type=Path, required=True)
@@ -272,6 +330,8 @@ def main():
             stage_codecs(args)
         elif args.gfx_manifest:
             stage_graphics(args)
+        elif args.text_manifest:
+            stage_text(args)
         else:
             stage(args)
     except (OSError, ValueError, KeyError, TypeError) as error:
