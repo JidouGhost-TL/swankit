@@ -1,0 +1,2338 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:swankit:save-def:1",
+  "title": "swankit-save-def/1",
+  "description": "Portable save layout and bounded semantic program. See save-definitions.md for execution and write policy.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "id",
+    "implementation",
+    "media",
+    "fields",
+    "records",
+    "blocks",
+    "checksums",
+    "primitives",
+    "validity",
+    "entry",
+    "program"
+  ],
+  "properties": {
+    "schema": {
+      "const": "swankit-save-def/1"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "implementation": {
+      "const": "generated"
+    },
+    "media": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/medium"
+      },
+      "maxItems": 1048576,
+      "minItems": 1
+    },
+    "fields": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/field"
+      },
+      "maxItems": 1048576
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/record"
+      },
+      "maxItems": 1048576
+    },
+    "blocks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/block"
+      },
+      "maxItems": 1048576
+    },
+    "checksums": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/checksum"
+      }
+    },
+    "primitives": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/primitive"
+      }
+    },
+    "validity": {
+      "$ref": "#/$defs/validity"
+    },
+    "entry": {
+      "$ref": "#/$defs/entry"
+    },
+    "program": {
+      "$ref": "#/$defs/Module"
+    }
+  },
+  "$defs": {
+    "medium": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "sizes"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "cartridge-sram",
+            "cartridge-eeprom",
+            "internal-eeprom"
+          ]
+        },
+        "sizes": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1048576
+          },
+          "maxItems": 1048576,
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    },
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "medium",
+        "offset",
+        "size",
+        "encoding",
+        "type",
+        "meaning",
+        "confidence",
+        "evidence"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "medium": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        },
+        "encoding": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "unsigned",
+            "bytes"
+          ]
+        },
+        "meaning": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "string"
+        },
+        "evidence": {
+          "type": "string"
+        },
+        "array": {
+          "$ref": "#/$defs/array-layout"
+        }
+      }
+    },
+    "array-layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "count",
+        "stride"
+      ],
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        },
+        "stride": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        }
+      }
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "width",
+        "fields"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/member"
+          },
+          "maxItems": 1048576
+        }
+      }
+    },
+    "member": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "offset",
+        "size",
+        "type",
+        "count",
+        "stride"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "type": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "stride": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        }
+      }
+    },
+    "block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "redundancy"
+      ],
+      "properties": {
+        "field": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "redundancy": {
+          "const": "program"
+        }
+      }
+    },
+    "validity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy",
+        "exclude"
+      ],
+      "properties": {
+        "policy": {
+          "const": "program"
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1048576
+        }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "program",
+            "sys-argv",
+            "arguments",
+            "direct"
+          ]
+        },
+        "decode": {
+          "type": "string"
+        },
+        "fix": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "direct"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "decode",
+              "fix"
+            ]
+          }
+        }
+      ]
+    },
+    "checksum": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "library",
+            "algorithm",
+            "parameters"
+          ],
+          "properties": {
+            "library": {
+              "const": "ws-save"
+            },
+            "algorithm": {
+              "const": "crc16"
+            },
+            "parameters": {
+              "$ref": "#/$defs/crc"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "library",
+            "algorithm",
+            "parameters"
+          ],
+          "properties": {
+            "library": {
+              "const": "ws-save"
+            },
+            "algorithm": {
+              "const": "fold"
+            },
+            "parameters": {
+              "$ref": "#/$defs/fold"
+            },
+            "input": {
+              "$ref": "#/$defs/input"
+            }
+          }
+        }
+      ]
+    },
+    "crc": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "polynomial",
+        "seed",
+        "xor_out",
+        "swap_bytes",
+        "seed_argument"
+      ],
+      "properties": {
+        "polynomial": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "xor_out": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "swap_bytes": {
+          "type": "boolean"
+        },
+        "seed_argument": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        }
+      }
+    },
+    "fold": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "unit",
+        "fold",
+        "bits",
+        "seed",
+        "xor_out",
+        "offset_base"
+      ],
+      "properties": {
+        "unit": {
+          "enum": [
+            "byte",
+            "word-le"
+          ]
+        },
+        "fold": {
+          "enum": [
+            "sum",
+            "xor"
+          ]
+        },
+        "bits": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        },
+        "seed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "xor_out": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "offset_base": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        }
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "argument",
+        "offset",
+        "size"
+      ],
+      "properties": {
+        "argument": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        }
+      }
+    },
+    "primitive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "parameters"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "xor-rotate-feedback"
+        },
+        "parameters": {
+          "$ref": "#/$defs/feedback"
+        }
+      }
+    },
+    "feedback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bits",
+        "xor_mask",
+        "feedback_bit",
+        "max_rounds",
+        "direction"
+      ],
+      "properties": {
+        "bits": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 64
+        },
+        "xor_mask": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "feedback_bit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 62
+        },
+        "max_rounds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65536
+        },
+        "direction": {
+          "enum": [
+            "encode",
+            "decode"
+          ]
+        }
+      }
+    },
+    "Add": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Add"
+        }
+      }
+    },
+    "And": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "And"
+        }
+      }
+    },
+    "AnnAssign": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "simple",
+        "t",
+        "target",
+        "value"
+      ],
+      "properties": {
+        "t": {
+          "const": "AnnAssign"
+        },
+        "simple": {
+          "type": "integer"
+        },
+        "target": {
+          "$ref": "#/$defs/node"
+        },
+        "value": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "Assert": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "msg",
+        "t",
+        "test"
+      ],
+      "properties": {
+        "t": {
+          "const": "Assert"
+        },
+        "msg": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "test": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "Assign": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t",
+        "targets",
+        "value"
+      ],
+      "properties": {
+        "t": {
+          "const": "Assign"
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        },
+        "value": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "Attribute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attr",
+        "t",
+        "value"
+      ],
+      "properties": {
+        "t": {
+          "const": "Attribute"
+        },
+        "attr": {
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "AugAssign": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op",
+        "t",
+        "target",
+        "value"
+      ],
+      "properties": {
+        "t": {
+          "const": "AugAssign"
+        },
+        "op": {
+          "$ref": "#/$defs/node"
+        },
+        "target": {
+          "$ref": "#/$defs/node"
+        },
+        "value": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "BinOp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "left",
+        "op",
+        "right",
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "BinOp"
+        },
+        "left": {
+          "$ref": "#/$defs/node"
+        },
+        "op": {
+          "$ref": "#/$defs/node"
+        },
+        "right": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "BitAnd": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "BitAnd"
+        }
+      }
+    },
+    "BitOr": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "BitOr"
+        }
+      }
+    },
+    "BitXor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "BitXor"
+        }
+      }
+    },
+    "BoolOp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op",
+        "t",
+        "values"
+      ],
+      "properties": {
+        "t": {
+          "const": "BoolOp"
+        },
+        "op": {
+          "$ref": "#/$defs/node"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        }
+      }
+    },
+    "Break": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Break"
+        }
+      }
+    },
+    "Bytes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t",
+        "v"
+      ],
+      "properties": {
+        "t": {
+          "const": "Bytes"
+        },
+        "v": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "maxItems": 1048576
+        }
+      }
+    },
+    "Call": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "args",
+        "func",
+        "keywords",
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Call"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        },
+        "func": {
+          "$ref": "#/$defs/node"
+        },
+        "keywords": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        }
+      }
+    },
+    "Compare": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "comparators",
+        "left",
+        "ops",
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Compare"
+        },
+        "comparators": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        },
+        "left": {
+          "$ref": "#/$defs/node"
+        },
+        "ops": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        }
+      }
+    },
+    "Constant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "t",
+        "value"
+      ],
+      "properties": {
+        "t": {
+          "const": "Constant"
+        },
+        "kind": {
+          "type": "null"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    "Continue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Continue"
+        }
+      }
+    },
+    "Delete": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t",
+        "targets"
+      ],
+      "properties": {
+        "t": {
+          "const": "Delete"
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        }
+      }
+    },
+    "Dict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "keys",
+        "t",
+        "values"
+      ],
+      "properties": {
+        "t": {
+          "const": "Dict"
+        },
+        "keys": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/node"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "maxItems": 1048576
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        }
+      }
+    },
+    "DictComp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generators",
+        "key",
+        "t",
+        "value"
+      ],
+      "properties": {
+        "t": {
+          "const": "DictComp"
+        },
+        "generators": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        },
+        "key": {
+          "$ref": "#/$defs/node"
+        },
+        "value": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "Div": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Div"
+        }
+      }
+    },
+    "Eq": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Eq"
+        }
+      }
+    },
+    "ExceptHandler": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "body",
+        "name",
+        "t",
+        "type"
+      ],
+      "properties": {
+        "t": {
+          "const": "ExceptHandler"
+        },
+        "body": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "type": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "Expr": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t",
+        "value"
+      ],
+      "properties": {
+        "t": {
+          "const": "Expr"
+        },
+        "value": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "FloorDiv": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "FloorDiv"
+        }
+      }
+    },
+    "For": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "body",
+        "iter",
+        "orelse",
+        "t",
+        "target"
+      ],
+      "properties": {
+        "t": {
+          "const": "For"
+        },
+        "body": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        },
+        "iter": {
+          "$ref": "#/$defs/node"
+        },
+        "orelse": {
+          "type": "array",
+          "items": {},
+          "maxItems": 1048576
+        },
+        "target": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "FormattedValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "conversion",
+        "format_spec",
+        "t",
+        "value"
+      ],
+      "properties": {
+        "t": {
+          "const": "FormattedValue"
+        },
+        "conversion": {
+          "type": "integer"
+        },
+        "format_spec": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "FunctionDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "args",
+        "body",
+        "name",
+        "t",
+        "type_params"
+      ],
+      "properties": {
+        "t": {
+          "const": "FunctionDef"
+        },
+        "args": {
+          "$ref": "#/$defs/node"
+        },
+        "body": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        },
+        "name": {
+          "type": "string"
+        },
+        "type_params": {
+          "type": "array",
+          "items": {},
+          "maxItems": 1048576
+        }
+      }
+    },
+    "GeneratorExp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "elt",
+        "generators",
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "GeneratorExp"
+        },
+        "elt": {
+          "$ref": "#/$defs/node"
+        },
+        "generators": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        }
+      }
+    },
+    "Gt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Gt"
+        }
+      }
+    },
+    "GtE": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "GtE"
+        }
+      }
+    },
+    "If": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "body",
+        "orelse",
+        "t",
+        "test"
+      ],
+      "properties": {
+        "t": {
+          "const": "If"
+        },
+        "body": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        },
+        "orelse": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        },
+        "test": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "IfExp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "body",
+        "orelse",
+        "t",
+        "test"
+      ],
+      "properties": {
+        "t": {
+          "const": "IfExp"
+        },
+        "body": {
+          "$ref": "#/$defs/node"
+        },
+        "orelse": {
+          "$ref": "#/$defs/node"
+        },
+        "test": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "In": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "In"
+        }
+      }
+    },
+    "Invert": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Invert"
+        }
+      }
+    },
+    "Is": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Is"
+        }
+      }
+    },
+    "IsNot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "IsNot"
+        }
+      }
+    },
+    "JoinedStr": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t",
+        "values"
+      ],
+      "properties": {
+        "t": {
+          "const": "JoinedStr"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        }
+      }
+    },
+    "LShift": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "LShift"
+        }
+      }
+    },
+    "Lambda": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "args",
+        "body",
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Lambda"
+        },
+        "args": {
+          "$ref": "#/$defs/node"
+        },
+        "body": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "List": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "elts",
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "List"
+        },
+        "elts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        }
+      }
+    },
+    "ListComp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "elt",
+        "generators",
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "ListComp"
+        },
+        "elt": {
+          "$ref": "#/$defs/node"
+        },
+        "generators": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        }
+      }
+    },
+    "Lt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Lt"
+        }
+      }
+    },
+    "LtE": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "LtE"
+        }
+      }
+    },
+    "Mod": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Mod"
+        }
+      }
+    },
+    "Module": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "body",
+        "t",
+        "type_ignores"
+      ],
+      "properties": {
+        "t": {
+          "const": "Module"
+        },
+        "body": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        },
+        "type_ignores": {
+          "type": "array",
+          "items": {},
+          "maxItems": 1048576
+        }
+      }
+    },
+    "Mult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Mult"
+        }
+      }
+    },
+    "Name": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Name"
+        },
+        "id": {
+          "type": "string"
+        }
+      }
+    },
+    "NamedExpr": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t",
+        "target",
+        "value"
+      ],
+      "properties": {
+        "t": {
+          "const": "NamedExpr"
+        },
+        "target": {
+          "$ref": "#/$defs/node"
+        },
+        "value": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "Nonlocal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "names",
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Nonlocal"
+        },
+        "names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 1048576
+        }
+      }
+    },
+    "Not": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Not"
+        }
+      }
+    },
+    "NotEq": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "NotEq"
+        }
+      }
+    },
+    "NotIn": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "NotIn"
+        }
+      }
+    },
+    "Or": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Or"
+        }
+      }
+    },
+    "Pass": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Pass"
+        }
+      }
+    },
+    "RShift": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "RShift"
+        }
+      }
+    },
+    "Raise": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cause",
+        "exc",
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Raise"
+        },
+        "cause": {
+          "type": "null"
+        },
+        "exc": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "Return": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t",
+        "value"
+      ],
+      "properties": {
+        "t": {
+          "const": "Return"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "Set": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "elts",
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Set"
+        },
+        "elts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        }
+      }
+    },
+    "SetComp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "elt",
+        "generators",
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "SetComp"
+        },
+        "elt": {
+          "$ref": "#/$defs/node"
+        },
+        "generators": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        }
+      }
+    },
+    "Slice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lower",
+        "step",
+        "t",
+        "upper"
+      ],
+      "properties": {
+        "t": {
+          "const": "Slice"
+        },
+        "lower": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "step": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "upper": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/node"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "Starred": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t",
+        "value"
+      ],
+      "properties": {
+        "t": {
+          "const": "Starred"
+        },
+        "value": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "Sub": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Sub"
+        }
+      }
+    },
+    "Subscript": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slice",
+        "t",
+        "value"
+      ],
+      "properties": {
+        "t": {
+          "const": "Subscript"
+        },
+        "slice": {
+          "$ref": "#/$defs/node"
+        },
+        "value": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "Try": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "body",
+        "finalbody",
+        "handlers",
+        "orelse",
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Try"
+        },
+        "body": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        },
+        "finalbody": {
+          "type": "array",
+          "items": {},
+          "maxItems": 1048576
+        },
+        "handlers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        },
+        "orelse": {
+          "type": "array",
+          "items": {},
+          "maxItems": 1048576
+        }
+      }
+    },
+    "Tuple": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "elts",
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "Tuple"
+        },
+        "elts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        }
+      }
+    },
+    "USub": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "USub"
+        }
+      }
+    },
+    "UnaryOp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "op",
+        "operand",
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "UnaryOp"
+        },
+        "op": {
+          "$ref": "#/$defs/node"
+        },
+        "operand": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "While": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "body",
+        "orelse",
+        "t",
+        "test"
+      ],
+      "properties": {
+        "t": {
+          "const": "While"
+        },
+        "body": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        },
+        "orelse": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        },
+        "test": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "With": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "body",
+        "items",
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "With"
+        },
+        "body": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        }
+      }
+    },
+    "arg": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "arg",
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "arg"
+        },
+        "arg": {
+          "type": "string"
+        }
+      }
+    },
+    "arguments": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "args",
+        "defaults",
+        "kw_defaults",
+        "kwarg",
+        "kwonlyargs",
+        "posonlyargs",
+        "t",
+        "vararg"
+      ],
+      "properties": {
+        "t": {
+          "const": "arguments"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        },
+        "defaults": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        },
+        "kw_defaults": {
+          "type": "array",
+          "items": {},
+          "maxItems": 1048576
+        },
+        "kwarg": {
+          "type": "null"
+        },
+        "kwonlyargs": {
+          "type": "array",
+          "items": {},
+          "maxItems": 1048576
+        },
+        "posonlyargs": {
+          "type": "array",
+          "items": {},
+          "maxItems": 1048576
+        },
+        "vararg": {
+          "type": "null"
+        }
+      }
+    },
+    "comprehension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ifs",
+        "is_async",
+        "iter",
+        "t",
+        "target"
+      ],
+      "properties": {
+        "t": {
+          "const": "comprehension"
+        },
+        "ifs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "maxItems": 1048576
+        },
+        "is_async": {
+          "type": "integer"
+        },
+        "iter": {
+          "$ref": "#/$defs/node"
+        },
+        "target": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "keyword": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "arg",
+        "t",
+        "value"
+      ],
+      "properties": {
+        "t": {
+          "const": "keyword"
+        },
+        "arg": {
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "withitem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "context_expr",
+        "optional_vars",
+        "t"
+      ],
+      "properties": {
+        "t": {
+          "const": "withitem"
+        },
+        "context_expr": {
+          "$ref": "#/$defs/node"
+        },
+        "optional_vars": {
+          "$ref": "#/$defs/node"
+        }
+      }
+    },
+    "node": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Add"
+        },
+        {
+          "$ref": "#/$defs/And"
+        },
+        {
+          "$ref": "#/$defs/AnnAssign"
+        },
+        {
+          "$ref": "#/$defs/Assert"
+        },
+        {
+          "$ref": "#/$defs/Assign"
+        },
+        {
+          "$ref": "#/$defs/Attribute"
+        },
+        {
+          "$ref": "#/$defs/AugAssign"
+        },
+        {
+          "$ref": "#/$defs/BinOp"
+        },
+        {
+          "$ref": "#/$defs/BitAnd"
+        },
+        {
+          "$ref": "#/$defs/BitOr"
+        },
+        {
+          "$ref": "#/$defs/BitXor"
+        },
+        {
+          "$ref": "#/$defs/BoolOp"
+        },
+        {
+          "$ref": "#/$defs/Break"
+        },
+        {
+          "$ref": "#/$defs/Bytes"
+        },
+        {
+          "$ref": "#/$defs/Call"
+        },
+        {
+          "$ref": "#/$defs/Compare"
+        },
+        {
+          "$ref": "#/$defs/Constant"
+        },
+        {
+          "$ref": "#/$defs/Continue"
+        },
+        {
+          "$ref": "#/$defs/Delete"
+        },
+        {
+          "$ref": "#/$defs/Dict"
+        },
+        {
+          "$ref": "#/$defs/DictComp"
+        },
+        {
+          "$ref": "#/$defs/Div"
+        },
+        {
+          "$ref": "#/$defs/Eq"
+        },
+        {
+          "$ref": "#/$defs/ExceptHandler"
+        },
+        {
+          "$ref": "#/$defs/Expr"
+        },
+        {
+          "$ref": "#/$defs/FloorDiv"
+        },
+        {
+          "$ref": "#/$defs/For"
+        },
+        {
+          "$ref": "#/$defs/FormattedValue"
+        },
+        {
+          "$ref": "#/$defs/FunctionDef"
+        },
+        {
+          "$ref": "#/$defs/GeneratorExp"
+        },
+        {
+          "$ref": "#/$defs/Gt"
+        },
+        {
+          "$ref": "#/$defs/GtE"
+        },
+        {
+          "$ref": "#/$defs/If"
+        },
+        {
+          "$ref": "#/$defs/IfExp"
+        },
+        {
+          "$ref": "#/$defs/In"
+        },
+        {
+          "$ref": "#/$defs/Invert"
+        },
+        {
+          "$ref": "#/$defs/Is"
+        },
+        {
+          "$ref": "#/$defs/IsNot"
+        },
+        {
+          "$ref": "#/$defs/JoinedStr"
+        },
+        {
+          "$ref": "#/$defs/LShift"
+        },
+        {
+          "$ref": "#/$defs/Lambda"
+        },
+        {
+          "$ref": "#/$defs/List"
+        },
+        {
+          "$ref": "#/$defs/ListComp"
+        },
+        {
+          "$ref": "#/$defs/Lt"
+        },
+        {
+          "$ref": "#/$defs/LtE"
+        },
+        {
+          "$ref": "#/$defs/Mod"
+        },
+        {
+          "$ref": "#/$defs/Module"
+        },
+        {
+          "$ref": "#/$defs/Mult"
+        },
+        {
+          "$ref": "#/$defs/Name"
+        },
+        {
+          "$ref": "#/$defs/NamedExpr"
+        },
+        {
+          "$ref": "#/$defs/Nonlocal"
+        },
+        {
+          "$ref": "#/$defs/Not"
+        },
+        {
+          "$ref": "#/$defs/NotEq"
+        },
+        {
+          "$ref": "#/$defs/NotIn"
+        },
+        {
+          "$ref": "#/$defs/Or"
+        },
+        {
+          "$ref": "#/$defs/Pass"
+        },
+        {
+          "$ref": "#/$defs/RShift"
+        },
+        {
+          "$ref": "#/$defs/Raise"
+        },
+        {
+          "$ref": "#/$defs/Return"
+        },
+        {
+          "$ref": "#/$defs/Set"
+        },
+        {
+          "$ref": "#/$defs/SetComp"
+        },
+        {
+          "$ref": "#/$defs/Slice"
+        },
+        {
+          "$ref": "#/$defs/Starred"
+        },
+        {
+          "$ref": "#/$defs/Sub"
+        },
+        {
+          "$ref": "#/$defs/Subscript"
+        },
+        {
+          "$ref": "#/$defs/Try"
+        },
+        {
+          "$ref": "#/$defs/Tuple"
+        },
+        {
+          "$ref": "#/$defs/USub"
+        },
+        {
+          "$ref": "#/$defs/UnaryOp"
+        },
+        {
+          "$ref": "#/$defs/While"
+        },
+        {
+          "$ref": "#/$defs/With"
+        },
+        {
+          "$ref": "#/$defs/arg"
+        },
+        {
+          "$ref": "#/$defs/arguments"
+        },
+        {
+          "$ref": "#/$defs/comprehension"
+        },
+        {
+          "$ref": "#/$defs/keyword"
+        },
+        {
+          "$ref": "#/$defs/withitem"
+        }
+      ]
+    }
+  }
+}
