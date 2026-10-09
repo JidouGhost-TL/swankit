@@ -82,3 +82,9 @@ python3 tools/stage-corpus.py --sound-manifest "$SOUND_MANIFEST" --output "$STAG
 This creates a new `ws-sound` spec directory without changing existing specs.
 The additional `ws-sound-extra` and `ws-sound-captures` selections use
 `--sound-spec-dir`. All three remain external and are checked by the safe runner.
+
+[ws-patch](crates/ws-patch/README.md) parses, validates, applies and creates IPS
+patches, including RLE records and the optional EOF size extension. Overlap,
+growth and output bounds are explicit application policy. Enroll independent
+patch/base/target evidence with `--patch-manifest` in `tools/stage-corpus.py`;
+the new frozen `ws-patch` selection is checked by the same safe corpus runner.
