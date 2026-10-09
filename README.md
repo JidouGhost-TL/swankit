@@ -82,3 +82,9 @@ python3 tools/stage-corpus.py --sound-manifest "$SOUND_MANIFEST" --output "$STAG
 This creates a new `ws-sound` spec directory without changing existing specs.
 The additional `ws-sound-extra` and `ws-sound-captures` selections use
 `--sound-spec-dir`. All three remain external and are checked by the safe runner.
+
+[ws-save](crates/ws-save/README.md) provides save media, internal EEPROM owner
+profiles and parameterized checksums. [ws-saves](crates/ws-saves/README.md)
+interprets per-game JSON definitions for decoding, stored-field edits,
+verification and transactional repair. See the versioned
+[save definition format and read/write guide](docs/save-definitions.md).
