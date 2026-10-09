@@ -1,0 +1,1861 @@
+{
+  "schema": "swankit-text-def/1",
+  "id": "byte-pages-1",
+  "map": {
+    "schema": "swankit-charmap/1",
+    "unit": "byte",
+    "entries": [
+      {
+        "bytes": "00",
+        "text": "0"
+      },
+      {
+        "bytes": "01",
+        "text": "1"
+      },
+      {
+        "bytes": "02",
+        "text": "2"
+      },
+      {
+        "bytes": "03",
+        "text": "3"
+      },
+      {
+        "bytes": "04",
+        "text": "4"
+      },
+      {
+        "bytes": "05",
+        "text": "5"
+      },
+      {
+        "bytes": "06",
+        "text": "6"
+      },
+      {
+        "bytes": "07",
+        "text": "7"
+      },
+      {
+        "bytes": "08",
+        "text": "8"
+      },
+      {
+        "bytes": "09",
+        "text": "9"
+      },
+      {
+        "bytes": "0a",
+        "text": "＋"
+      },
+      {
+        "bytes": "0b",
+        "text": "－"
+      },
+      {
+        "bytes": "0c",
+        "text": "／"
+      },
+      {
+        "bytes": "0d",
+        "text": "＊"
+      },
+      {
+        "bytes": "0e",
+        "text": "＝"
+      },
+      {
+        "bytes": "0f",
+        "text": "{J}"
+      },
+      {
+        "bytes": "10",
+        "text": "。"
+      },
+      {
+        "bytes": "11",
+        "text": "、"
+      },
+      {
+        "bytes": "12",
+        "text": "！"
+      },
+      {
+        "bytes": "13",
+        "text": "？"
+      },
+      {
+        "bytes": "14",
+        "text": "×"
+      },
+      {
+        "bytes": "15",
+        "text": "＃"
+      },
+      {
+        "bytes": "16",
+        "text": "％"
+      },
+      {
+        "bytes": "17",
+        "text": "＆"
+      },
+      {
+        "bytes": "18",
+        "text": "："
+      },
+      {
+        "bytes": "19",
+        "text": "．"
+      },
+      {
+        "bytes": "1a",
+        "text": "”"
+      },
+      {
+        "bytes": "1b",
+        "text": "〜"
+      },
+      {
+        "bytes": "1c",
+        "text": "「"
+      },
+      {
+        "bytes": "1d",
+        "text": "」"
+      },
+      {
+        "bytes": "1e",
+        "text": "＜"
+      },
+      {
+        "bytes": "1f",
+        "text": "＞"
+      },
+      {
+        "bytes": "20",
+        "text": "○"
+      },
+      {
+        "bytes": "21",
+        "text": "●"
+      },
+      {
+        "bytes": "22",
+        "text": "▶"
+      },
+      {
+        "bytes": "23",
+        "text": "◀"
+      },
+      {
+        "bytes": "24",
+        "text": "▲"
+      },
+      {
+        "bytes": "25",
+        "text": "▼"
+      },
+      {
+        "bytes": "26",
+        "text": "♥"
+      },
+      {
+        "bytes": "27",
+        "text": "♦"
+      },
+      {
+        "bytes": "28",
+        "text": "♣"
+      },
+      {
+        "bytes": "29",
+        "text": "♠"
+      },
+      {
+        "bytes": "2a",
+        "text": "・"
+      },
+      {
+        "bytes": "2b",
+        "text": "↔"
+      },
+      {
+        "bytes": "2c",
+        "text": "Ａ"
+      },
+      {
+        "bytes": "2d",
+        "text": "Ｂ"
+      },
+      {
+        "bytes": "2e",
+        "text": "Ｃ"
+      },
+      {
+        "bytes": "2f",
+        "text": "あ"
+      },
+      {
+        "bytes": "30",
+        "text": "ア",
+        "page": 0
+      },
+      {
+        "bytes": "30",
+        "text": "あ",
+        "page": 1
+      },
+      {
+        "bytes": "30",
+        "text": "{Hあ}",
+        "page": 2
+      },
+      {
+        "bytes": "31",
+        "text": "イ",
+        "page": 0
+      },
+      {
+        "bytes": "31",
+        "text": "い",
+        "page": 1
+      },
+      {
+        "bytes": "31",
+        "text": "{Hい}",
+        "page": 2
+      },
+      {
+        "bytes": "32",
+        "text": "ウ",
+        "page": 0
+      },
+      {
+        "bytes": "32",
+        "text": "う",
+        "page": 1
+      },
+      {
+        "bytes": "32",
+        "text": "{Hう}",
+        "page": 2
+      },
+      {
+        "bytes": "33",
+        "text": "エ",
+        "page": 0
+      },
+      {
+        "bytes": "33",
+        "text": "え",
+        "page": 1
+      },
+      {
+        "bytes": "33",
+        "text": "{Hえ}",
+        "page": 2
+      },
+      {
+        "bytes": "34",
+        "text": "オ",
+        "page": 0
+      },
+      {
+        "bytes": "34",
+        "text": "お",
+        "page": 1
+      },
+      {
+        "bytes": "34",
+        "text": "{Hお}",
+        "page": 2
+      },
+      {
+        "bytes": "35",
+        "text": "カ",
+        "page": 0
+      },
+      {
+        "bytes": "35",
+        "text": "か",
+        "page": 1
+      },
+      {
+        "bytes": "35",
+        "text": "{Hか}",
+        "page": 2
+      },
+      {
+        "bytes": "36",
+        "text": "キ",
+        "page": 0
+      },
+      {
+        "bytes": "36",
+        "text": "き",
+        "page": 1
+      },
+      {
+        "bytes": "36",
+        "text": "{Hき}",
+        "page": 2
+      },
+      {
+        "bytes": "37",
+        "text": "ク",
+        "page": 0
+      },
+      {
+        "bytes": "37",
+        "text": "く",
+        "page": 1
+      },
+      {
+        "bytes": "37",
+        "text": "{Hく}",
+        "page": 2
+      },
+      {
+        "bytes": "38",
+        "text": "ケ",
+        "page": 0
+      },
+      {
+        "bytes": "38",
+        "text": "け",
+        "page": 1
+      },
+      {
+        "bytes": "38",
+        "text": "{Hけ}",
+        "page": 2
+      },
+      {
+        "bytes": "39",
+        "text": "コ",
+        "page": 0
+      },
+      {
+        "bytes": "39",
+        "text": "こ",
+        "page": 1
+      },
+      {
+        "bytes": "39",
+        "text": "{Hこ}",
+        "page": 2
+      },
+      {
+        "bytes": "3a",
+        "text": "サ",
+        "page": 0
+      },
+      {
+        "bytes": "3a",
+        "text": "さ",
+        "page": 1
+      },
+      {
+        "bytes": "3a",
+        "text": "{Hさ}",
+        "page": 2
+      },
+      {
+        "bytes": "3b",
+        "text": "シ",
+        "page": 0
+      },
+      {
+        "bytes": "3b",
+        "text": "し",
+        "page": 1
+      },
+      {
+        "bytes": "3b",
+        "text": "{Hし}",
+        "page": 2
+      },
+      {
+        "bytes": "3c",
+        "text": "ス",
+        "page": 0
+      },
+      {
+        "bytes": "3c",
+        "text": "す",
+        "page": 1
+      },
+      {
+        "bytes": "3c",
+        "text": "{Hす}",
+        "page": 2
+      },
+      {
+        "bytes": "3d",
+        "text": "セ",
+        "page": 0
+      },
+      {
+        "bytes": "3d",
+        "text": "せ",
+        "page": 1
+      },
+      {
+        "bytes": "3d",
+        "text": "{Hせ}",
+        "page": 2
+      },
+      {
+        "bytes": "3e",
+        "text": "ソ",
+        "page": 0
+      },
+      {
+        "bytes": "3e",
+        "text": "そ",
+        "page": 1
+      },
+      {
+        "bytes": "3e",
+        "text": "{Hそ}",
+        "page": 2
+      },
+      {
+        "bytes": "3f",
+        "text": "タ",
+        "page": 0
+      },
+      {
+        "bytes": "3f",
+        "text": "た",
+        "page": 1
+      },
+      {
+        "bytes": "3f",
+        "text": "{Hた}",
+        "page": 2
+      },
+      {
+        "bytes": "40",
+        "text": "チ",
+        "page": 0
+      },
+      {
+        "bytes": "40",
+        "text": "ち",
+        "page": 1
+      },
+      {
+        "bytes": "40",
+        "text": "{Hち}",
+        "page": 2
+      },
+      {
+        "bytes": "41",
+        "text": "ツ",
+        "page": 0
+      },
+      {
+        "bytes": "41",
+        "text": "つ",
+        "page": 1
+      },
+      {
+        "bytes": "41",
+        "text": "{Hつ}",
+        "page": 2
+      },
+      {
+        "bytes": "42",
+        "text": "テ",
+        "page": 0
+      },
+      {
+        "bytes": "42",
+        "text": "て",
+        "page": 1
+      },
+      {
+        "bytes": "42",
+        "text": "{Hて}",
+        "page": 2
+      },
+      {
+        "bytes": "43",
+        "text": "ト",
+        "page": 0
+      },
+      {
+        "bytes": "43",
+        "text": "と",
+        "page": 1
+      },
+      {
+        "bytes": "43",
+        "text": "{Hと}",
+        "page": 2
+      },
+      {
+        "bytes": "44",
+        "text": "ナ",
+        "page": 0
+      },
+      {
+        "bytes": "44",
+        "text": "な",
+        "page": 1
+      },
+      {
+        "bytes": "44",
+        "text": "{Hな}",
+        "page": 2
+      },
+      {
+        "bytes": "45",
+        "text": "ニ",
+        "page": 0
+      },
+      {
+        "bytes": "45",
+        "text": "に",
+        "page": 1
+      },
+      {
+        "bytes": "45",
+        "text": "{Hに}",
+        "page": 2
+      },
+      {
+        "bytes": "46",
+        "text": "ヌ",
+        "page": 0
+      },
+      {
+        "bytes": "46",
+        "text": "ぬ",
+        "page": 1
+      },
+      {
+        "bytes": "46",
+        "text": "{Hぬ}",
+        "page": 2
+      },
+      {
+        "bytes": "47",
+        "text": "ネ",
+        "page": 0
+      },
+      {
+        "bytes": "47",
+        "text": "ね",
+        "page": 1
+      },
+      {
+        "bytes": "47",
+        "text": "{Hね}",
+        "page": 2
+      },
+      {
+        "bytes": "48",
+        "text": "ノ",
+        "page": 0
+      },
+      {
+        "bytes": "48",
+        "text": "の",
+        "page": 1
+      },
+      {
+        "bytes": "48",
+        "text": "{Hの}",
+        "page": 2
+      },
+      {
+        "bytes": "49",
+        "text": "ハ",
+        "page": 0
+      },
+      {
+        "bytes": "49",
+        "text": "は",
+        "page": 1
+      },
+      {
+        "bytes": "49",
+        "text": "{Hは}",
+        "page": 2
+      },
+      {
+        "bytes": "4a",
+        "text": "ヒ",
+        "page": 0
+      },
+      {
+        "bytes": "4a",
+        "text": "ひ",
+        "page": 1
+      },
+      {
+        "bytes": "4a",
+        "text": "{Hひ}",
+        "page": 2
+      },
+      {
+        "bytes": "4b",
+        "text": "フ",
+        "page": 0
+      },
+      {
+        "bytes": "4b",
+        "text": "ふ",
+        "page": 1
+      },
+      {
+        "bytes": "4b",
+        "text": "{Hふ}",
+        "page": 2
+      },
+      {
+        "bytes": "4c",
+        "text": "ヘ",
+        "page": 0
+      },
+      {
+        "bytes": "4c",
+        "text": "へ",
+        "page": 1
+      },
+      {
+        "bytes": "4c",
+        "text": "{Hへ}",
+        "page": 2
+      },
+      {
+        "bytes": "4d",
+        "text": "ホ",
+        "page": 0
+      },
+      {
+        "bytes": "4d",
+        "text": "ほ",
+        "page": 1
+      },
+      {
+        "bytes": "4d",
+        "text": "{Hほ}",
+        "page": 2
+      },
+      {
+        "bytes": "4e",
+        "text": "マ",
+        "page": 0
+      },
+      {
+        "bytes": "4e",
+        "text": "ま",
+        "page": 1
+      },
+      {
+        "bytes": "4e",
+        "text": "{Hま}",
+        "page": 2
+      },
+      {
+        "bytes": "4f",
+        "text": "ミ",
+        "page": 0
+      },
+      {
+        "bytes": "4f",
+        "text": "み",
+        "page": 1
+      },
+      {
+        "bytes": "4f",
+        "text": "{Hみ}",
+        "page": 2
+      },
+      {
+        "bytes": "50",
+        "text": "ム",
+        "page": 0
+      },
+      {
+        "bytes": "50",
+        "text": "む",
+        "page": 1
+      },
+      {
+        "bytes": "50",
+        "text": "{Hむ}",
+        "page": 2
+      },
+      {
+        "bytes": "51",
+        "text": "メ",
+        "page": 0
+      },
+      {
+        "bytes": "51",
+        "text": "め",
+        "page": 1
+      },
+      {
+        "bytes": "51",
+        "text": "{Hめ}",
+        "page": 2
+      },
+      {
+        "bytes": "52",
+        "text": "モ",
+        "page": 0
+      },
+      {
+        "bytes": "52",
+        "text": "も",
+        "page": 1
+      },
+      {
+        "bytes": "52",
+        "text": "{Hも}",
+        "page": 2
+      },
+      {
+        "bytes": "53",
+        "text": "ヤ",
+        "page": 0
+      },
+      {
+        "bytes": "53",
+        "text": "や",
+        "page": 1
+      },
+      {
+        "bytes": "53",
+        "text": "{Hや}",
+        "page": 2
+      },
+      {
+        "bytes": "54",
+        "text": "ユ",
+        "page": 0
+      },
+      {
+        "bytes": "54",
+        "text": "ゆ",
+        "page": 1
+      },
+      {
+        "bytes": "54",
+        "text": "{Hゆ}",
+        "page": 2
+      },
+      {
+        "bytes": "55",
+        "text": "ヨ",
+        "page": 0
+      },
+      {
+        "bytes": "55",
+        "text": "よ",
+        "page": 1
+      },
+      {
+        "bytes": "55",
+        "text": "{Hよ}",
+        "page": 2
+      },
+      {
+        "bytes": "56",
+        "text": "ラ",
+        "page": 0
+      },
+      {
+        "bytes": "56",
+        "text": "ら",
+        "page": 1
+      },
+      {
+        "bytes": "56",
+        "text": "{Hら}",
+        "page": 2
+      },
+      {
+        "bytes": "57",
+        "text": "リ",
+        "page": 0
+      },
+      {
+        "bytes": "57",
+        "text": "り",
+        "page": 1
+      },
+      {
+        "bytes": "57",
+        "text": "{Hり}",
+        "page": 2
+      },
+      {
+        "bytes": "58",
+        "text": "ル",
+        "page": 0
+      },
+      {
+        "bytes": "58",
+        "text": "る",
+        "page": 1
+      },
+      {
+        "bytes": "58",
+        "text": "{Hる}",
+        "page": 2
+      },
+      {
+        "bytes": "59",
+        "text": "レ",
+        "page": 0
+      },
+      {
+        "bytes": "59",
+        "text": "れ",
+        "page": 1
+      },
+      {
+        "bytes": "59",
+        "text": "{Hれ}",
+        "page": 2
+      },
+      {
+        "bytes": "5a",
+        "text": "ロ",
+        "page": 0
+      },
+      {
+        "bytes": "5a",
+        "text": "ろ",
+        "page": 1
+      },
+      {
+        "bytes": "5a",
+        "text": "{Hろ}",
+        "page": 2
+      },
+      {
+        "bytes": "5b",
+        "text": "ワ",
+        "page": 0
+      },
+      {
+        "bytes": "5b",
+        "text": "わ",
+        "page": 1
+      },
+      {
+        "bytes": "5b",
+        "text": "{Hわ}",
+        "page": 2
+      },
+      {
+        "bytes": "5c",
+        "text": "ヲ",
+        "page": 0
+      },
+      {
+        "bytes": "5c",
+        "text": "を",
+        "page": 1
+      },
+      {
+        "bytes": "5c",
+        "text": "{Hを}",
+        "page": 2
+      },
+      {
+        "bytes": "5d",
+        "text": "ン",
+        "page": 0
+      },
+      {
+        "bytes": "5d",
+        "text": "ん",
+        "page": 1
+      },
+      {
+        "bytes": "5d",
+        "text": "{Hん}",
+        "page": 2
+      },
+      {
+        "bytes": "5e",
+        "text": "ァ",
+        "page": 0
+      },
+      {
+        "bytes": "5e",
+        "text": "ぁ",
+        "page": 1
+      },
+      {
+        "bytes": "5e",
+        "text": "{Hぁ}",
+        "page": 2
+      },
+      {
+        "bytes": "5f",
+        "text": "ィ",
+        "page": 0
+      },
+      {
+        "bytes": "5f",
+        "text": "ぃ",
+        "page": 1
+      },
+      {
+        "bytes": "5f",
+        "text": "{Hぃ}",
+        "page": 2
+      },
+      {
+        "bytes": "60",
+        "text": "ゥ",
+        "page": 0
+      },
+      {
+        "bytes": "60",
+        "text": "ぅ",
+        "page": 1
+      },
+      {
+        "bytes": "60",
+        "text": "{Hぅ}",
+        "page": 2
+      },
+      {
+        "bytes": "61",
+        "text": "ェ",
+        "page": 0
+      },
+      {
+        "bytes": "61",
+        "text": "ぇ",
+        "page": 1
+      },
+      {
+        "bytes": "61",
+        "text": "{Hぇ}",
+        "page": 2
+      },
+      {
+        "bytes": "62",
+        "text": "ォ",
+        "page": 0
+      },
+      {
+        "bytes": "62",
+        "text": "ぉ",
+        "page": 1
+      },
+      {
+        "bytes": "62",
+        "text": "{Hぉ}",
+        "page": 2
+      },
+      {
+        "bytes": "63",
+        "text": "ッ",
+        "page": 0
+      },
+      {
+        "bytes": "63",
+        "text": "っ",
+        "page": 1
+      },
+      {
+        "bytes": "63",
+        "text": "{Hっ}",
+        "page": 2
+      },
+      {
+        "bytes": "64",
+        "text": "ャ",
+        "page": 0
+      },
+      {
+        "bytes": "64",
+        "text": "ゃ",
+        "page": 1
+      },
+      {
+        "bytes": "64",
+        "text": "{Hゃ}",
+        "page": 2
+      },
+      {
+        "bytes": "65",
+        "text": "ュ",
+        "page": 0
+      },
+      {
+        "bytes": "65",
+        "text": "ゅ",
+        "page": 1
+      },
+      {
+        "bytes": "65",
+        "text": "{Hゅ}",
+        "page": 2
+      },
+      {
+        "bytes": "66",
+        "text": "ョ",
+        "page": 0
+      },
+      {
+        "bytes": "66",
+        "text": "ょ",
+        "page": 1
+      },
+      {
+        "bytes": "66",
+        "text": "{Hょ}",
+        "page": 2
+      },
+      {
+        "bytes": "67",
+        "text": "゛",
+        "page": 0
+      },
+      {
+        "bytes": "67",
+        "text": "゛",
+        "page": 1
+      },
+      {
+        "bytes": "67",
+        "text": "{H゛}",
+        "page": 2
+      },
+      {
+        "bytes": "68",
+        "text": "゜",
+        "page": 0
+      },
+      {
+        "bytes": "68",
+        "text": "゜",
+        "page": 1
+      },
+      {
+        "bytes": "68",
+        "text": "{H゜}",
+        "page": 2
+      },
+      {
+        "bytes": "69",
+        "text": "{Hあ}",
+        "page": 0
+      },
+      {
+        "bytes": "69",
+        "text": "ア",
+        "page": 1
+      },
+      {
+        "bytes": "69",
+        "text": "上",
+        "page": 2
+      },
+      {
+        "bytes": "6a",
+        "text": "{Hい}",
+        "page": 0
+      },
+      {
+        "bytes": "6a",
+        "text": "イ",
+        "page": 1
+      },
+      {
+        "bytes": "6a",
+        "text": "下",
+        "page": 2
+      },
+      {
+        "bytes": "6b",
+        "text": "{Hう}",
+        "page": 0
+      },
+      {
+        "bytes": "6b",
+        "text": "ウ",
+        "page": 1
+      },
+      {
+        "bytes": "6b",
+        "text": "左",
+        "page": 2
+      },
+      {
+        "bytes": "6c",
+        "text": "{Hえ}",
+        "page": 0
+      },
+      {
+        "bytes": "6c",
+        "text": "エ",
+        "page": 1
+      },
+      {
+        "bytes": "6c",
+        "text": "右",
+        "page": 2
+      },
+      {
+        "bytes": "6d",
+        "text": "{Hお}",
+        "page": 0
+      },
+      {
+        "bytes": "6d",
+        "text": "オ",
+        "page": 1
+      },
+      {
+        "bytes": "6d",
+        "text": "前",
+        "page": 2
+      },
+      {
+        "bytes": "6e",
+        "text": "{Hか}",
+        "page": 0
+      },
+      {
+        "bytes": "6e",
+        "text": "カ",
+        "page": 1
+      },
+      {
+        "bytes": "6e",
+        "text": "後",
+        "page": 2
+      },
+      {
+        "bytes": "6f",
+        "text": "{Hき}",
+        "page": 0
+      },
+      {
+        "bytes": "6f",
+        "text": "キ",
+        "page": 1
+      },
+      {
+        "bytes": "6f",
+        "text": "巨",
+        "page": 2
+      },
+      {
+        "bytes": "70",
+        "text": "上"
+      },
+      {
+        "bytes": "71",
+        "text": "下"
+      },
+      {
+        "bytes": "72",
+        "text": "左"
+      },
+      {
+        "bytes": "73",
+        "text": "右"
+      },
+      {
+        "bytes": "74",
+        "text": "前"
+      },
+      {
+        "bytes": "75",
+        "text": "後"
+      },
+      {
+        "bytes": "76",
+        "text": "巨"
+      },
+      {
+        "bytes": "77",
+        "text": "大"
+      },
+      {
+        "bytes": "78",
+        "text": "中"
+      },
+      {
+        "bytes": "79",
+        "text": "小"
+      },
+      {
+        "bytes": "7a",
+        "text": "肉"
+      },
+      {
+        "bytes": "7b",
+        "text": "月"
+      },
+      {
+        "bytes": "7c",
+        "text": "日"
+      },
+      {
+        "bytes": "7d",
+        "text": "時"
+      },
+      {
+        "bytes": "7e",
+        "text": "分"
+      },
+      {
+        "bytes": "7f",
+        "text": "秒"
+      },
+      {
+        "bytes": "80",
+        "text": "人"
+      },
+      {
+        "bytes": "81",
+        "text": "行"
+      },
+      {
+        "bytes": "82",
+        "text": "山"
+      },
+      {
+        "bytes": "83",
+        "text": "男"
+      },
+      {
+        "bytes": "84",
+        "text": "女"
+      },
+      {
+        "bytes": "85",
+        "text": "外"
+      },
+      {
+        "bytes": "86",
+        "text": "国"
+      },
+      {
+        "bytes": "87",
+        "text": "市"
+      },
+      {
+        "bytes": "88",
+        "text": "区"
+      },
+      {
+        "bytes": "89",
+        "text": "町"
+      },
+      {
+        "bytes": "8a",
+        "text": "村"
+      },
+      {
+        "bytes": "8b",
+        "text": "万"
+      },
+      {
+        "bytes": "8c",
+        "text": "{森:L}"
+      },
+      {
+        "bytes": "8d",
+        "text": "{森:R}"
+      },
+      {
+        "bytes": "8e",
+        "text": "{島:L}"
+      },
+      {
+        "bytes": "8f",
+        "text": "{島:R}"
+      },
+      {
+        "bytes": "90",
+        "text": "森"
+      },
+      {
+        "bytes": "91",
+        "text": "島"
+      },
+      {
+        "bytes": "92",
+        "text": "年"
+      },
+      {
+        "bytes": "93",
+        "text": "名"
+      },
+      {
+        "bytes": "94",
+        "text": "約"
+      },
+      {
+        "bytes": "95",
+        "text": "束"
+      },
+      {
+        "bytes": "96",
+        "text": "友"
+      },
+      {
+        "bytes": "97",
+        "text": "金"
+      },
+      {
+        "bytes": "98",
+        "text": "技"
+      },
+      {
+        "bytes": "99",
+        "text": "他"
+      },
+      {
+        "bytes": "9a",
+        "text": "地"
+      },
+      {
+        "bytes": "9b",
+        "text": "船"
+      },
+      {
+        "bytes": "9c",
+        "text": "列"
+      },
+      {
+        "bytes": "9d",
+        "text": "車"
+      },
+      {
+        "bytes": "9e",
+        "text": "飛"
+      },
+      {
+        "bytes": "9f",
+        "text": "宝"
+      },
+      {
+        "bytes": "a0",
+        "text": "念"
+      },
+      {
+        "bytes": "a1",
+        "text": "賞"
+      },
+      {
+        "bytes": "a2",
+        "text": "首"
+      },
+      {
+        "bytes": "a3",
+        "text": "遺"
+      },
+      {
+        "bytes": "a4",
+        "text": "跡"
+      },
+      {
+        "bytes": "a5",
+        "text": "職"
+      },
+      {
+        "bytes": "a6",
+        "text": "電"
+      },
+      {
+        "bytes": "a7",
+        "text": "脳"
+      },
+      {
+        "bytes": "a8",
+        "text": "話"
+      },
+      {
+        "bytes": "a9",
+        "text": "魔"
+      },
+      {
+        "bytes": "aa",
+        "text": "獣"
+      },
+      {
+        "bytes": "ab",
+        "text": "幻"
+      },
+      {
+        "bytes": "ac",
+        "text": "影"
+      },
+      {
+        "bytes": "ad",
+        "text": "団"
+      },
+      {
+        "bytes": "ae",
+        "text": "第"
+      },
+      {
+        "bytes": "af",
+        "text": "港"
+      },
+      {
+        "bytes": "8c8d",
+        "text": "森"
+      },
+      {
+        "bytes": "8e8f",
+        "text": "島"
+      },
+      {
+        "bytes": "b0",
+        "text": "<b0>"
+      },
+      {
+        "bytes": "b1",
+        "text": "<b1>"
+      },
+      {
+        "bytes": "b2",
+        "text": "<b2>"
+      },
+      {
+        "bytes": "b3",
+        "text": "<b3>"
+      },
+      {
+        "bytes": "b4",
+        "text": "<b4>"
+      },
+      {
+        "bytes": "b5",
+        "text": "<b5>"
+      },
+      {
+        "bytes": "b6",
+        "text": "<b6>"
+      },
+      {
+        "bytes": "b7",
+        "text": "<b7>"
+      },
+      {
+        "bytes": "b8",
+        "text": "<b8>"
+      },
+      {
+        "bytes": "b9",
+        "text": "<b9>"
+      },
+      {
+        "bytes": "ba",
+        "text": "<ba>"
+      },
+      {
+        "bytes": "bb",
+        "text": "<bb>"
+      },
+      {
+        "bytes": "bc",
+        "text": "<bc>"
+      },
+      {
+        "bytes": "bd",
+        "text": "<bd>"
+      },
+      {
+        "bytes": "be",
+        "text": "<be>"
+      },
+      {
+        "bytes": "bf",
+        "text": "<bf>"
+      },
+      {
+        "bytes": "c0",
+        "text": "<c0>"
+      },
+      {
+        "bytes": "c1",
+        "text": "<c1>"
+      },
+      {
+        "bytes": "c2",
+        "text": "<c2>"
+      },
+      {
+        "bytes": "c3",
+        "text": "<c3>"
+      },
+      {
+        "bytes": "c4",
+        "text": "<c4>"
+      },
+      {
+        "bytes": "c5",
+        "text": "<c5>"
+      },
+      {
+        "bytes": "c6",
+        "text": "<c6>"
+      },
+      {
+        "bytes": "c7",
+        "text": "<c7>"
+      },
+      {
+        "bytes": "c8",
+        "text": "<c8>"
+      },
+      {
+        "bytes": "c9",
+        "text": "<c9>"
+      },
+      {
+        "bytes": "ca",
+        "text": "<ca>"
+      },
+      {
+        "bytes": "cb",
+        "text": "<cb>"
+      },
+      {
+        "bytes": "cc",
+        "text": "<cc>"
+      },
+      {
+        "bytes": "cd",
+        "text": "<cd>"
+      },
+      {
+        "bytes": "ce",
+        "text": "<ce>"
+      },
+      {
+        "bytes": "cf",
+        "text": "<cf>"
+      },
+      {
+        "bytes": "d0",
+        "text": "<d0>"
+      },
+      {
+        "bytes": "d1",
+        "text": "<d1>"
+      },
+      {
+        "bytes": "d2",
+        "text": "<d2>"
+      },
+      {
+        "bytes": "d3",
+        "text": "<d3>"
+      },
+      {
+        "bytes": "d4",
+        "text": "<d4>"
+      },
+      {
+        "bytes": "d5",
+        "text": "<d5>"
+      },
+      {
+        "bytes": "d6",
+        "text": "<d6>"
+      },
+      {
+        "bytes": "d7",
+        "text": "<d7>"
+      },
+      {
+        "bytes": "d8",
+        "text": "<d8>"
+      },
+      {
+        "bytes": "d9",
+        "text": "<d9>"
+      },
+      {
+        "bytes": "da",
+        "text": "<da>"
+      },
+      {
+        "bytes": "db",
+        "text": "<db>"
+      },
+      {
+        "bytes": "dc",
+        "text": "<dc>"
+      },
+      {
+        "bytes": "dd",
+        "text": "<dd>"
+      },
+      {
+        "bytes": "de",
+        "text": "<de>"
+      },
+      {
+        "bytes": "df",
+        "text": "<df>"
+      },
+      {
+        "bytes": "e0",
+        "text": "<e0>"
+      },
+      {
+        "bytes": "e1",
+        "text": "<e1>"
+      },
+      {
+        "bytes": "e2",
+        "text": "<e2>"
+      },
+      {
+        "bytes": "e3",
+        "text": "<e3>"
+      },
+      {
+        "bytes": "e4",
+        "text": "<e4>"
+      },
+      {
+        "bytes": "e5",
+        "text": "<e5>"
+      },
+      {
+        "bytes": "e6",
+        "text": "<e6>"
+      },
+      {
+        "bytes": "e7",
+        "text": "<e7>"
+      },
+      {
+        "bytes": "e8",
+        "text": "<e8>"
+      },
+      {
+        "bytes": "e9",
+        "text": "<e9>"
+      },
+      {
+        "bytes": "ea",
+        "text": "<ea>"
+      },
+      {
+        "bytes": "eb",
+        "text": "<eb>"
+      },
+      {
+        "bytes": "ec",
+        "text": "<ec>"
+      },
+      {
+        "bytes": "ed",
+        "text": "<ed>"
+      },
+      {
+        "bytes": "ee",
+        "text": "<ee>"
+      },
+      {
+        "bytes": "ef",
+        "text": "<ef>"
+      },
+      {
+        "bytes": "f7",
+        "text": "<f7>"
+      },
+      {
+        "bytes": "f8",
+        "text": "<f8>"
+      },
+      {
+        "bytes": "f9",
+        "text": "<f9>"
+      }
+    ],
+    "controls": [
+      {
+        "code": 255,
+        "display": "",
+        "ends": true
+      },
+      {
+        "code": 254,
+        "display": "　"
+      },
+      {
+        "code": 253,
+        "display": "\n"
+      },
+      {
+        "code": 252,
+        "display": "[wait]\n"
+      },
+      {
+        "code": 250,
+        "display": "[indent+]"
+      },
+      {
+        "code": 251,
+        "display": "[indent-]"
+      },
+      {
+        "code": 240,
+        "display": "",
+        "set_page": 0
+      },
+      {
+        "code": 241,
+        "display": "",
+        "set_page": 1
+      },
+      {
+        "code": 242,
+        "display": "",
+        "set_page": 2
+      },
+      {
+        "code": 243,
+        "display": "[F3]"
+      },
+      {
+        "code": 244,
+        "display": "[F4]"
+      },
+      {
+        "code": 245,
+        "display": "[F5{args}]",
+        "argument_bytes": 2,
+        "argument_separator": " "
+      },
+      {
+        "code": 246,
+        "display": "[F6{args}]",
+        "argument_bytes": 1,
+        "argument_separator": " "
+      }
+    ],
+    "normalization": {
+      "compose_kana": true,
+      "long_dash_after_kana": true
+    }
+  },
+  "fonts": {
+    "common": {
+      "offset": 0,
+      "count": 48,
+      "stride": 32,
+      "format": "bpp2",
+      "tiles_wide": 1,
+      "tiles_high": 2
+    },
+    "page-0": {
+      "offset": 3328,
+      "count": 64,
+      "stride": 32,
+      "format": "bpp2",
+      "tiles_wide": 1,
+      "tiles_high": 2
+    },
+    "page-1": {
+      "offset": 1504,
+      "count": 64,
+      "stride": 32,
+      "format": "bpp2",
+      "tiles_wide": 1,
+      "tiles_high": 2
+    },
+    "page-2": {
+      "offset": 5152,
+      "count": 64,
+      "stride": 32,
+      "format": "bpp2",
+      "tiles_wide": 1,
+      "tiles_high": 2
+    },
+    "small": {
+      "offset": 6976,
+      "count": 32,
+      "stride": 32,
+      "format": "bpp2",
+      "tiles_wide": 1,
+      "tiles_high": 2
+    },
+    "wide": {
+      "offset": 7872,
+      "count": 32,
+      "stride": 64,
+      "format": "bpp2",
+      "tiles_wide": 2,
+      "tiles_high": 2,
+      "order": "column"
+    },
+    "common-vertical": {
+      "offset": 9920,
+      "count": 48,
+      "stride": 32,
+      "format": "bpp2",
+      "tiles_wide": 1,
+      "tiles_high": 2
+    },
+    "page-0-vertical": {
+      "offset": 13248,
+      "count": 64,
+      "stride": 32,
+      "format": "bpp2",
+      "tiles_wide": 1,
+      "tiles_high": 2
+    },
+    "page-1-vertical": {
+      "offset": 11424,
+      "count": 64,
+      "stride": 32,
+      "format": "bpp2",
+      "tiles_wide": 1,
+      "tiles_high": 2
+    },
+    "page-2-vertical": {
+      "offset": 15072,
+      "count": 64,
+      "stride": 32,
+      "format": "bpp2",
+      "tiles_wide": 1,
+      "tiles_high": 2
+    },
+    "small-vertical": {
+      "offset": 16896,
+      "count": 32,
+      "stride": 32,
+      "format": "bpp2",
+      "tiles_wide": 1,
+      "tiles_high": 2
+    },
+    "wide-vertical": {
+      "offset": 17792,
+      "count": 32,
+      "stride": 64,
+      "format": "bpp2",
+      "tiles_wide": 2,
+      "tiles_high": 2,
+      "order": "column"
+    }
+  },
+  "tables": {}
+}

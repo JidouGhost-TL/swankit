@@ -119,6 +119,25 @@ behavior evidence only and must have scaling, rotation and the icon area
 accounted for before comparing. Mesen's panel response is measured externally
 with synthetic swatches, never copied from its implementation.
 
+## Font storage and text policy
+
+Font images reuse the [WSdev Tile Data](https://ws.nesdev.org/wiki/Display/Tile_Data)
+layouts above through ws-gfx. A stored 1bpp glyph is a software asset format:
+one MSB-first byte per row, expanded to a 2bpp tile with a zero second plane.
+Tile order, stride, half-width padding and advance tables require explicit
+source definitions. They are not properties inferred from hardware.
+
+Character assignments, control operands, page switches and normalization are
+engine data. [Text definitions](text-definitions.md) documents their encoding
+sources and their separate raw-cell, normalized and exact-token representations.
+Unknown opcodes have no invented hardware interpretation.
+
+[WSdev FreyaBIOS](https://ws.nesdev.org/wiki/WonderWitch/FreyaBIOS#Fonts)
+identifies 8x8 ANK and ELISA Shift-JIS fonts in a WonderWitch cartridge BIOS.
+That documentation does not establish validated extraction metadata or bitmap
+parity for the cartridge BIOS or the console's internal boot ROM. No built-in
+BIOS font location or glyph bytes are claimed.
+
 # Sound hardware rules
 
 Sound policy is sourced from [WSdev Sound](https://ws.nesdev.org/wiki/Sound),

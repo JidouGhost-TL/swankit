@@ -5,7 +5,10 @@ A private Rust workspace for WonderSwan formats, built on Formatkit mechanisms.
 addresses. [ws-compress](crates/ws-compress/README.md) provides bounded
 compression streams with deterministic encoders. [ws-gfx](crates/ws-gfx/README.md)
 decodes tiles, palettes, maps and sprites and renders display snapshots to RGBA
-images. See [hardware rules](docs/hardware.md) and
+images. [ws-text](crates/ws-text/README.md) provides data-defined character
+maps, checked text tables, encoding and glyph extraction; see
+[text definitions](docs/text-definitions.md) for read/write examples.
+See [hardware rules](docs/hardware.md) and
 [contributor rules](CONTRIBUTING.md).
 
 Requires the existing Rust 1.94.1 toolchain with rustfmt and Clippy.
@@ -53,6 +56,20 @@ FORMATKIT_CORPUS_DIR="$STAGING_DIR" tools/ci.sh --corpus
 The manifest supplies independent Java expectations, source paths and oracle
 provenance. Existing expectations are preserved; a graphics spec cannot be
 overwritten. No corpus population counts or golden digests live in Rust tests.
+
+Text enrollment accepts independent string dumps and glyph image manifests:
+
+```sh
+python3 tools/stage-corpus.py --text-manifest "$TEXT_MANIFEST" --output "$STAGING_DIR"
+python3 tools/stage-corpus.py --text-manifest "$EXTRA_MANIFEST" \
+  --text-spec-dir ws-text-extra --output "$STAGING_DIR"
+FORMATKIT_CORPUS_DIR="$STAGING_DIR" tools/ci.sh --corpus
+```
+
+Both new text selections preserve existing frozen specs and version ledgers.
+The extra manifest covers pointer-table references and partial-dump diagnostics.
+Source and oracle hashes are checked before enrollment; all text and image
+expectations remain external.
 
 [ws-sound](crates/ws-sound/README.md) adds wave RAM decoding, sound register and
 noise policy, decoded driver records and bounded 24 kHz PCM previews. Independent

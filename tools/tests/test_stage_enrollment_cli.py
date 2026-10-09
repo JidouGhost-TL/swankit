@@ -59,6 +59,15 @@ class EnrollmentCliTests(unittest.TestCase):
             "expect": {"sha256": hashlib.sha256(wave.read_bytes()).hexdigest()},
         }]}))
 
+        self.text_manifest = root / "text.json"
+        self.text_manifest.write_text(json.dumps({"samples": [{
+            "name": "synthetic.text", "path": str(wave),
+            "args": {"strings": [], "fonts": []},
+            "references": [{"path": str(reference),
+                            "sha256": hashlib.sha256(reference.read_bytes()).hexdigest()}],
+            "expect": {"sha256": hashlib.sha256(wave.read_bytes()).hexdigest()},
+        }]}))
+
     def run_cli(self, *selection):
         environment = dict(os.environ)
         environment.pop("SWANKIT_PROGRESS_LOG", None)
@@ -83,7 +92,7 @@ class EnrollmentCliTests(unittest.TestCase):
         versions = json.loads((self.output / "versions.json").read_text())
         self.assertEqual(versions["existing"], self.versions["existing"])
         formats = {"--codec-manifest": "ws-compress", "--gfx-manifest": "ws-gfx",
-                   "--sound-manifest": "ws-sound"}
+                   "--sound-manifest": "ws-sound", "--text-manifest": "ws-text"}
         for option, _ in order:
             format_name = formats[option]
             spec = json.loads((self.output / format_name / "spec.json").read_text())
@@ -114,11 +123,18 @@ class EnrollmentCliTests(unittest.TestCase):
                           ("--gfx-manifest", self.gfx_manifest),
                           ("--codec-manifest", self.codec_manifest)))
 
+    def test_text_sound_graphics_codec_preserves_specs_and_refuses_overwrite(self):
+        self.enroll((("--text-manifest", self.text_manifest),
+                     ("--sound-manifest", self.sound_manifest),
+                     ("--gfx-manifest", self.gfx_manifest),
+                     ("--codec-manifest", self.codec_manifest)))
+
     def test_selection_is_required_and_mutually_exclusive_before_writing(self):
         frozen = self.frozen_files()
         options = (("--titles", self.output), ("--codec-manifest", self.codec_manifest),
                    ("--gfx-manifest", self.gfx_manifest),
-                   ("--sound-manifest", self.sound_manifest))
+                   ("--sound-manifest", self.sound_manifest),
+                   ("--text-manifest", self.text_manifest))
         selections = [()]
         selections.extend(options[a] + options[b]
                           for a in range(len(options)) for b in range(a + 1, len(options)))

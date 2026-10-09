@@ -1,0 +1,2278 @@
+{
+  "schema": "swankit-text-def/1",
+  "id": "word-dialog-1",
+  "map": {
+    "schema": "swankit-charmap/1",
+    "unit": "word-le",
+    "entries": [
+      {
+        "bytes": "0000",
+        "text": "0"
+      },
+      {
+        "bytes": "0100",
+        "text": "1"
+      },
+      {
+        "bytes": "0200",
+        "text": "2"
+      },
+      {
+        "bytes": "0300",
+        "text": "3"
+      },
+      {
+        "bytes": "0400",
+        "text": "4"
+      },
+      {
+        "bytes": "0500",
+        "text": "5"
+      },
+      {
+        "bytes": "0600",
+        "text": "6"
+      },
+      {
+        "bytes": "0700",
+        "text": "7"
+      },
+      {
+        "bytes": "0800",
+        "text": "8"
+      },
+      {
+        "bytes": "0900",
+        "text": "9"
+      },
+      {
+        "bytes": "0a00",
+        "text": "＋"
+      },
+      {
+        "bytes": "0b00",
+        "text": "－"
+      },
+      {
+        "bytes": "0c00",
+        "text": "／"
+      },
+      {
+        "bytes": "0d00",
+        "text": "＝"
+      },
+      {
+        "bytes": "0e00",
+        "text": "{J}"
+      },
+      {
+        "bytes": "0f00",
+        "text": "！"
+      },
+      {
+        "bytes": "1000",
+        "text": "？"
+      },
+      {
+        "bytes": "1100",
+        "text": "×"
+      },
+      {
+        "bytes": "1200",
+        "text": "”"
+      },
+      {
+        "bytes": "1300",
+        "text": "～"
+      },
+      {
+        "bytes": "1400",
+        "text": "＃"
+      },
+      {
+        "bytes": "1500",
+        "text": "％"
+      },
+      {
+        "bytes": "1600",
+        "text": "＆"
+      },
+      {
+        "bytes": "1700",
+        "text": "："
+      },
+      {
+        "bytes": "1800",
+        "text": "．"
+      },
+      {
+        "bytes": "1900",
+        "text": "・"
+      },
+      {
+        "bytes": "1a00",
+        "text": "。"
+      },
+      {
+        "bytes": "1b00",
+        "text": "、"
+      },
+      {
+        "bytes": "1c00",
+        "text": "「"
+      },
+      {
+        "bytes": "1d00",
+        "text": "」"
+      },
+      {
+        "bytes": "1e00",
+        "text": "（"
+      },
+      {
+        "bytes": "1f00",
+        "text": "）"
+      },
+      {
+        "bytes": "2000",
+        "text": "［"
+      },
+      {
+        "bytes": "2100",
+        "text": "］"
+      },
+      {
+        "bytes": "2200",
+        "text": "▶"
+      },
+      {
+        "bytes": "2300",
+        "text": "◀"
+      },
+      {
+        "bytes": "2400",
+        "text": "▲"
+      },
+      {
+        "bytes": "2500",
+        "text": "▼"
+      },
+      {
+        "bytes": "2600",
+        "text": "♥"
+      },
+      {
+        "bytes": "2700",
+        "text": "◆"
+      },
+      {
+        "bytes": "2800",
+        "text": "♣"
+      },
+      {
+        "bytes": "2900",
+        "text": "♠"
+      },
+      {
+        "bytes": "2a00",
+        "text": "A"
+      },
+      {
+        "bytes": "2b00",
+        "text": "B"
+      },
+      {
+        "bytes": "2c00",
+        "text": "C"
+      },
+      {
+        "bytes": "2d00",
+        "text": "D"
+      },
+      {
+        "bytes": "2e00",
+        "text": "E"
+      },
+      {
+        "bytes": "2f00",
+        "text": "F"
+      },
+      {
+        "bytes": "3000",
+        "text": "G"
+      },
+      {
+        "bytes": "3100",
+        "text": "H"
+      },
+      {
+        "bytes": "3200",
+        "text": "I"
+      },
+      {
+        "bytes": "3300",
+        "text": "J"
+      },
+      {
+        "bytes": "3400",
+        "text": "K"
+      },
+      {
+        "bytes": "3500",
+        "text": "L"
+      },
+      {
+        "bytes": "3600",
+        "text": "M"
+      },
+      {
+        "bytes": "3700",
+        "text": "N"
+      },
+      {
+        "bytes": "3800",
+        "text": "O"
+      },
+      {
+        "bytes": "3900",
+        "text": "P"
+      },
+      {
+        "bytes": "3a00",
+        "text": "Q"
+      },
+      {
+        "bytes": "3b00",
+        "text": "R"
+      },
+      {
+        "bytes": "3c00",
+        "text": "S"
+      },
+      {
+        "bytes": "3d00",
+        "text": "T"
+      },
+      {
+        "bytes": "3e00",
+        "text": "U"
+      },
+      {
+        "bytes": "3f00",
+        "text": "V"
+      },
+      {
+        "bytes": "4000",
+        "text": "W"
+      },
+      {
+        "bytes": "4100",
+        "text": "X"
+      },
+      {
+        "bytes": "4200",
+        "text": "Y"
+      },
+      {
+        "bytes": "4300",
+        "text": "Z"
+      },
+      {
+        "bytes": "4400",
+        "text": "ヴ"
+      },
+      {
+        "bytes": "4500",
+        "text": "゛"
+      },
+      {
+        "bytes": "4600",
+        "text": "あ"
+      },
+      {
+        "bytes": "4700",
+        "text": "い"
+      },
+      {
+        "bytes": "4800",
+        "text": "う"
+      },
+      {
+        "bytes": "4900",
+        "text": "え"
+      },
+      {
+        "bytes": "4a00",
+        "text": "お"
+      },
+      {
+        "bytes": "4b00",
+        "text": "ぁ"
+      },
+      {
+        "bytes": "4c00",
+        "text": "ぃ"
+      },
+      {
+        "bytes": "4d00",
+        "text": "ぅ"
+      },
+      {
+        "bytes": "4e00",
+        "text": "ぇ"
+      },
+      {
+        "bytes": "4f00",
+        "text": "ぉ"
+      },
+      {
+        "bytes": "5000",
+        "text": "か"
+      },
+      {
+        "bytes": "5100",
+        "text": "き"
+      },
+      {
+        "bytes": "5200",
+        "text": "く"
+      },
+      {
+        "bytes": "5300",
+        "text": "け"
+      },
+      {
+        "bytes": "5400",
+        "text": "こ"
+      },
+      {
+        "bytes": "5500",
+        "text": "が"
+      },
+      {
+        "bytes": "5600",
+        "text": "ぎ"
+      },
+      {
+        "bytes": "5700",
+        "text": "ぐ"
+      },
+      {
+        "bytes": "5800",
+        "text": "げ"
+      },
+      {
+        "bytes": "5900",
+        "text": "ご"
+      },
+      {
+        "bytes": "5a00",
+        "text": "さ"
+      },
+      {
+        "bytes": "5b00",
+        "text": "し"
+      },
+      {
+        "bytes": "5c00",
+        "text": "す"
+      },
+      {
+        "bytes": "5d00",
+        "text": "せ"
+      },
+      {
+        "bytes": "5e00",
+        "text": "そ"
+      },
+      {
+        "bytes": "5f00",
+        "text": "ざ"
+      },
+      {
+        "bytes": "6000",
+        "text": "じ"
+      },
+      {
+        "bytes": "6100",
+        "text": "ず"
+      },
+      {
+        "bytes": "6200",
+        "text": "ぜ"
+      },
+      {
+        "bytes": "6300",
+        "text": "ぞ"
+      },
+      {
+        "bytes": "6400",
+        "text": "た"
+      },
+      {
+        "bytes": "6500",
+        "text": "ち"
+      },
+      {
+        "bytes": "6600",
+        "text": "つ"
+      },
+      {
+        "bytes": "6700",
+        "text": "て"
+      },
+      {
+        "bytes": "6800",
+        "text": "と"
+      },
+      {
+        "bytes": "6900",
+        "text": "だ"
+      },
+      {
+        "bytes": "6a00",
+        "text": "ぢ"
+      },
+      {
+        "bytes": "6b00",
+        "text": "づ"
+      },
+      {
+        "bytes": "6c00",
+        "text": "で"
+      },
+      {
+        "bytes": "6d00",
+        "text": "ど"
+      },
+      {
+        "bytes": "6e00",
+        "text": "な"
+      },
+      {
+        "bytes": "6f00",
+        "text": "に"
+      },
+      {
+        "bytes": "7000",
+        "text": "ぬ"
+      },
+      {
+        "bytes": "7100",
+        "text": "ね"
+      },
+      {
+        "bytes": "7200",
+        "text": "の"
+      },
+      {
+        "bytes": "7300",
+        "text": "は"
+      },
+      {
+        "bytes": "7400",
+        "text": "ひ"
+      },
+      {
+        "bytes": "7500",
+        "text": "ふ"
+      },
+      {
+        "bytes": "7600",
+        "text": "へ"
+      },
+      {
+        "bytes": "7700",
+        "text": "ほ"
+      },
+      {
+        "bytes": "7800",
+        "text": "ば"
+      },
+      {
+        "bytes": "7900",
+        "text": "び"
+      },
+      {
+        "bytes": "7a00",
+        "text": "ぶ"
+      },
+      {
+        "bytes": "7b00",
+        "text": "べ"
+      },
+      {
+        "bytes": "7c00",
+        "text": "ぼ"
+      },
+      {
+        "bytes": "7d00",
+        "text": "ぱ"
+      },
+      {
+        "bytes": "7e00",
+        "text": "ぴ"
+      },
+      {
+        "bytes": "7f00",
+        "text": "ぷ"
+      },
+      {
+        "bytes": "8000",
+        "text": "ぺ"
+      },
+      {
+        "bytes": "8100",
+        "text": "ぽ"
+      },
+      {
+        "bytes": "8200",
+        "text": "ま"
+      },
+      {
+        "bytes": "8300",
+        "text": "み"
+      },
+      {
+        "bytes": "8400",
+        "text": "む"
+      },
+      {
+        "bytes": "8500",
+        "text": "め"
+      },
+      {
+        "bytes": "8600",
+        "text": "も"
+      },
+      {
+        "bytes": "8700",
+        "text": "ら"
+      },
+      {
+        "bytes": "8800",
+        "text": "り"
+      },
+      {
+        "bytes": "8900",
+        "text": "る"
+      },
+      {
+        "bytes": "8a00",
+        "text": "れ"
+      },
+      {
+        "bytes": "8b00",
+        "text": "ろ"
+      },
+      {
+        "bytes": "8c00",
+        "text": "わ"
+      },
+      {
+        "bytes": "8d00",
+        "text": "を"
+      },
+      {
+        "bytes": "8e00",
+        "text": "ん"
+      },
+      {
+        "bytes": "8f00",
+        "text": "や"
+      },
+      {
+        "bytes": "9000",
+        "text": "ゆ"
+      },
+      {
+        "bytes": "9100",
+        "text": "よ"
+      },
+      {
+        "bytes": "9200",
+        "text": "ゃ"
+      },
+      {
+        "bytes": "9300",
+        "text": "ゅ"
+      },
+      {
+        "bytes": "9400",
+        "text": "ょ"
+      },
+      {
+        "bytes": "9500",
+        "text": "っ"
+      },
+      {
+        "bytes": "9600",
+        "text": "ア"
+      },
+      {
+        "bytes": "9700",
+        "text": "イ"
+      },
+      {
+        "bytes": "9800",
+        "text": "ウ"
+      },
+      {
+        "bytes": "9900",
+        "text": "エ"
+      },
+      {
+        "bytes": "9a00",
+        "text": "オ"
+      },
+      {
+        "bytes": "9b00",
+        "text": "ァ"
+      },
+      {
+        "bytes": "9c00",
+        "text": "ィ"
+      },
+      {
+        "bytes": "9d00",
+        "text": "ゥ"
+      },
+      {
+        "bytes": "9e00",
+        "text": "ェ"
+      },
+      {
+        "bytes": "9f00",
+        "text": "ォ"
+      },
+      {
+        "bytes": "a000",
+        "text": "カ"
+      },
+      {
+        "bytes": "a100",
+        "text": "キ"
+      },
+      {
+        "bytes": "a200",
+        "text": "ク"
+      },
+      {
+        "bytes": "a300",
+        "text": "ケ"
+      },
+      {
+        "bytes": "a400",
+        "text": "コ"
+      },
+      {
+        "bytes": "a500",
+        "text": "ガ"
+      },
+      {
+        "bytes": "a600",
+        "text": "ギ"
+      },
+      {
+        "bytes": "a700",
+        "text": "グ"
+      },
+      {
+        "bytes": "a800",
+        "text": "ゲ"
+      },
+      {
+        "bytes": "a900",
+        "text": "ゴ"
+      },
+      {
+        "bytes": "aa00",
+        "text": "サ"
+      },
+      {
+        "bytes": "ab00",
+        "text": "シ"
+      },
+      {
+        "bytes": "ac00",
+        "text": "ス"
+      },
+      {
+        "bytes": "ad00",
+        "text": "セ"
+      },
+      {
+        "bytes": "ae00",
+        "text": "ソ"
+      },
+      {
+        "bytes": "af00",
+        "text": "ザ"
+      },
+      {
+        "bytes": "b000",
+        "text": "ジ"
+      },
+      {
+        "bytes": "b100",
+        "text": "ズ"
+      },
+      {
+        "bytes": "b200",
+        "text": "ゼ"
+      },
+      {
+        "bytes": "b300",
+        "text": "ゾ"
+      },
+      {
+        "bytes": "b400",
+        "text": "タ"
+      },
+      {
+        "bytes": "b500",
+        "text": "チ"
+      },
+      {
+        "bytes": "b600",
+        "text": "ツ"
+      },
+      {
+        "bytes": "b700",
+        "text": "テ"
+      },
+      {
+        "bytes": "b800",
+        "text": "ト"
+      },
+      {
+        "bytes": "b900",
+        "text": "ダ"
+      },
+      {
+        "bytes": "ba00",
+        "text": "ヂ"
+      },
+      {
+        "bytes": "bb00",
+        "text": "ヅ"
+      },
+      {
+        "bytes": "bc00",
+        "text": "デ"
+      },
+      {
+        "bytes": "bd00",
+        "text": "ド"
+      },
+      {
+        "bytes": "be00",
+        "text": "ナ"
+      },
+      {
+        "bytes": "bf00",
+        "text": "ニ"
+      },
+      {
+        "bytes": "c000",
+        "text": "ヌ"
+      },
+      {
+        "bytes": "c100",
+        "text": "ネ"
+      },
+      {
+        "bytes": "c200",
+        "text": "ノ"
+      },
+      {
+        "bytes": "c300",
+        "text": "ハ"
+      },
+      {
+        "bytes": "c400",
+        "text": "ヒ"
+      },
+      {
+        "bytes": "c500",
+        "text": "フ"
+      },
+      {
+        "bytes": "c600",
+        "text": "ヘ"
+      },
+      {
+        "bytes": "c700",
+        "text": "ホ"
+      },
+      {
+        "bytes": "c800",
+        "text": "バ"
+      },
+      {
+        "bytes": "c900",
+        "text": "ビ"
+      },
+      {
+        "bytes": "ca00",
+        "text": "ブ"
+      },
+      {
+        "bytes": "cb00",
+        "text": "ベ"
+      },
+      {
+        "bytes": "cc00",
+        "text": "ボ"
+      },
+      {
+        "bytes": "cd00",
+        "text": "パ"
+      },
+      {
+        "bytes": "ce00",
+        "text": "ピ"
+      },
+      {
+        "bytes": "cf00",
+        "text": "プ"
+      },
+      {
+        "bytes": "d000",
+        "text": "ペ"
+      },
+      {
+        "bytes": "d100",
+        "text": "ポ"
+      },
+      {
+        "bytes": "d200",
+        "text": "マ"
+      },
+      {
+        "bytes": "d300",
+        "text": "ミ"
+      },
+      {
+        "bytes": "d400",
+        "text": "ム"
+      },
+      {
+        "bytes": "d500",
+        "text": "メ"
+      },
+      {
+        "bytes": "d600",
+        "text": "モ"
+      },
+      {
+        "bytes": "d700",
+        "text": "ラ"
+      },
+      {
+        "bytes": "d800",
+        "text": "リ"
+      },
+      {
+        "bytes": "d900",
+        "text": "ル"
+      },
+      {
+        "bytes": "da00",
+        "text": "レ"
+      },
+      {
+        "bytes": "db00",
+        "text": "ロ"
+      },
+      {
+        "bytes": "dc00",
+        "text": "ワ"
+      },
+      {
+        "bytes": "dd00",
+        "text": "ヲ"
+      },
+      {
+        "bytes": "de00",
+        "text": "ン"
+      },
+      {
+        "bytes": "df00",
+        "text": "ッ"
+      },
+      {
+        "bytes": "e000",
+        "text": "ヤ"
+      },
+      {
+        "bytes": "e100",
+        "text": "ユ"
+      },
+      {
+        "bytes": "e200",
+        "text": "ヨ"
+      },
+      {
+        "bytes": "e300",
+        "text": "ャ"
+      },
+      {
+        "bytes": "e400",
+        "text": "ュ"
+      },
+      {
+        "bytes": "e500",
+        "text": "ョ"
+      },
+      {
+        "bytes": "e600",
+        "text": "月"
+      },
+      {
+        "bytes": "e700",
+        "text": "日"
+      },
+      {
+        "bytes": "e800",
+        "text": "時"
+      },
+      {
+        "bytes": "e900",
+        "text": "分"
+      },
+      {
+        "bytes": "ea00",
+        "text": "秒"
+      },
+      {
+        "bytes": "eb00",
+        "text": "幻"
+      },
+      {
+        "bytes": "ec00",
+        "text": "影"
+      },
+      {
+        "bytes": "ed00",
+        "text": "旅"
+      },
+      {
+        "bytes": "ee00",
+        "text": "団"
+      },
+      {
+        "bytes": "ef00",
+        "text": "念"
+      },
+      {
+        "bytes": "f000",
+        "text": "系"
+      },
+      {
+        "bytes": "f100",
+        "text": "強"
+      },
+      {
+        "bytes": "f200",
+        "text": "化"
+      },
+      {
+        "bytes": "f300",
+        "text": "変"
+      },
+      {
+        "bytes": "f400",
+        "text": "具"
+      },
+      {
+        "bytes": "f500",
+        "text": "現"
+      },
+      {
+        "bytes": "f600",
+        "text": "操"
+      },
+      {
+        "bytes": "f700",
+        "text": "作"
+      },
+      {
+        "bytes": "f800",
+        "text": "放"
+      },
+      {
+        "bytes": "f900",
+        "text": "出"
+      },
+      {
+        "bytes": "fa00",
+        "text": "特"
+      },
+      {
+        "bytes": "fb00",
+        "text": "質"
+      },
+      {
+        "bytes": "fc00",
+        "text": "街"
+      },
+      {
+        "bytes": "fd00",
+        "text": "男"
+      },
+      {
+        "bytes": "fe00",
+        "text": "女"
+      },
+      {
+        "bytes": "ff00",
+        "text": "外"
+      },
+      {
+        "bytes": "0001",
+        "text": "必"
+      },
+      {
+        "bytes": "0101",
+        "text": "名"
+      },
+      {
+        "bytes": "0201",
+        "text": "金"
+      },
+      {
+        "bytes": "0301",
+        "text": "技"
+      },
+      {
+        "bytes": "0401",
+        "text": "他"
+      },
+      {
+        "bytes": "0501",
+        "text": "宝"
+      },
+      {
+        "bytes": "0601",
+        "text": "賞"
+      },
+      {
+        "bytes": "0701",
+        "text": "首"
+      },
+      {
+        "bytes": "0801",
+        "text": "電"
+      },
+      {
+        "bytes": "0901",
+        "text": "脳"
+      },
+      {
+        "bytes": "0a01",
+        "text": "話"
+      },
+      {
+        "bytes": "0b01",
+        "text": "魔"
+      },
+      {
+        "bytes": "0c01",
+        "text": "殺"
+      },
+      {
+        "bytes": "0d01",
+        "text": "空"
+      },
+      {
+        "bytes": "0e01",
+        "text": "獣"
+      },
+      {
+        "bytes": "0f01",
+        "text": "箱"
+      },
+      {
+        "bytes": "1001",
+        "text": "一"
+      },
+      {
+        "bytes": "1101",
+        "text": "右"
+      },
+      {
+        "bytes": "1201",
+        "text": "雨"
+      },
+      {
+        "bytes": "1301",
+        "text": "円"
+      },
+      {
+        "bytes": "1401",
+        "text": "王"
+      },
+      {
+        "bytes": "1501",
+        "text": "音"
+      },
+      {
+        "bytes": "1601",
+        "text": "下"
+      },
+      {
+        "bytes": "1701",
+        "text": "火"
+      },
+      {
+        "bytes": "1801",
+        "text": "花"
+      },
+      {
+        "bytes": "1901",
+        "text": "選"
+      },
+      {
+        "bytes": "1a01",
+        "text": "学"
+      },
+      {
+        "bytes": "1b01",
+        "text": "気"
+      },
+      {
+        "bytes": "1c01",
+        "text": "九"
+      },
+      {
+        "bytes": "1d01",
+        "text": "休"
+      },
+      {
+        "bytes": "1e01",
+        "text": "玉"
+      },
+      {
+        "bytes": "1f01",
+        "text": "犬"
+      },
+      {
+        "bytes": "2001",
+        "text": "見"
+      },
+      {
+        "bytes": "2101",
+        "text": "五"
+      },
+      {
+        "bytes": "2201",
+        "text": "口"
+      },
+      {
+        "bytes": "2301",
+        "text": "校"
+      },
+      {
+        "bytes": "2401",
+        "text": "左"
+      },
+      {
+        "bytes": "2501",
+        "text": "三"
+      },
+      {
+        "bytes": "2601",
+        "text": "山"
+      },
+      {
+        "bytes": "2701",
+        "text": "子"
+      },
+      {
+        "bytes": "2801",
+        "text": "四"
+      },
+      {
+        "bytes": "2901",
+        "text": "糸"
+      },
+      {
+        "bytes": "2a01",
+        "text": "字"
+      },
+      {
+        "bytes": "2b01",
+        "text": "耳"
+      },
+      {
+        "bytes": "2c01",
+        "text": "七"
+      },
+      {
+        "bytes": "2d01",
+        "text": "車"
+      },
+      {
+        "bytes": "2e01",
+        "text": "手"
+      },
+      {
+        "bytes": "2f01",
+        "text": "十"
+      },
+      {
+        "bytes": "3001",
+        "text": "出"
+      },
+      {
+        "bytes": "3101",
+        "text": "小"
+      },
+      {
+        "bytes": "3201",
+        "text": "上"
+      },
+      {
+        "bytes": "3301",
+        "text": "森"
+      },
+      {
+        "bytes": "3401",
+        "text": "人"
+      },
+      {
+        "bytes": "3501",
+        "text": "水"
+      },
+      {
+        "bytes": "3601",
+        "text": "正"
+      },
+      {
+        "bytes": "3701",
+        "text": "生"
+      },
+      {
+        "bytes": "3801",
+        "text": "夕"
+      },
+      {
+        "bytes": "3901",
+        "text": "石"
+      },
+      {
+        "bytes": "3a01",
+        "text": "赤"
+      },
+      {
+        "bytes": "3b01",
+        "text": "千"
+      },
+      {
+        "bytes": "3c01",
+        "text": "川"
+      },
+      {
+        "bytes": "3d01",
+        "text": "先"
+      },
+      {
+        "bytes": "3e01",
+        "text": "早"
+      },
+      {
+        "bytes": "3f01",
+        "text": "草"
+      },
+      {
+        "bytes": "4001",
+        "text": "足"
+      },
+      {
+        "bytes": "4101",
+        "text": "村"
+      },
+      {
+        "bytes": "4201",
+        "text": "大"
+      },
+      {
+        "bytes": "4301",
+        "text": "攻"
+      },
+      {
+        "bytes": "4401",
+        "text": "中"
+      },
+      {
+        "bytes": "4501",
+        "text": "虫"
+      },
+      {
+        "bytes": "4601",
+        "text": "町"
+      },
+      {
+        "bytes": "4701",
+        "text": "天"
+      },
+      {
+        "bytes": "4801",
+        "text": "撃"
+      },
+      {
+        "bytes": "4901",
+        "text": "土"
+      },
+      {
+        "bytes": "4a01",
+        "text": "二"
+      },
+      {
+        "bytes": "4b01",
+        "text": "入"
+      },
+      {
+        "bytes": "4c01",
+        "text": "年"
+      },
+      {
+        "bytes": "4d01",
+        "text": "白"
+      },
+      {
+        "bytes": "4e01",
+        "text": "八"
+      },
+      {
+        "bytes": "4f01",
+        "text": "百"
+      },
+      {
+        "bytes": "5001",
+        "text": "文"
+      },
+      {
+        "bytes": "5101",
+        "text": "木"
+      },
+      {
+        "bytes": "5201",
+        "text": "本"
+      },
+      {
+        "bytes": "5301",
+        "text": "目"
+      },
+      {
+        "bytes": "5401",
+        "text": "立"
+      },
+      {
+        "bytes": "5501",
+        "text": "力"
+      },
+      {
+        "bytes": "5601",
+        "text": "集"
+      },
+      {
+        "bytes": "5701",
+        "text": "六"
+      },
+      {
+        "bytes": "5801",
+        "text": "引"
+      },
+      {
+        "bytes": "5901",
+        "text": "師"
+      },
+      {
+        "bytes": "5a01",
+        "text": "雲"
+      },
+      {
+        "bytes": "5b01",
+        "text": "匠"
+      },
+      {
+        "bytes": "5c01",
+        "text": "遠"
+      },
+      {
+        "bytes": "5d01",
+        "text": "何"
+      },
+      {
+        "bytes": "5e01",
+        "text": "緋"
+      },
+      {
+        "bytes": "5f01",
+        "text": "眼"
+      },
+      {
+        "bytes": "6001",
+        "text": "家"
+      },
+      {
+        "bytes": "6101",
+        "text": "族"
+      },
+      {
+        "bytes": "6201",
+        "text": "画"
+      },
+      {
+        "bytes": "6301",
+        "text": "回"
+      },
+      {
+        "bytes": "6401",
+        "text": "会"
+      },
+      {
+        "bytes": "6501",
+        "text": "海"
+      },
+      {
+        "bytes": "6601",
+        "text": "絵"
+      },
+      {
+        "bytes": "6701",
+        "text": "角"
+      },
+      {
+        "bytes": "6801",
+        "text": "楽"
+      },
+      {
+        "bytes": "6901",
+        "text": "活"
+      },
+      {
+        "bytes": "6a01",
+        "text": "間"
+      },
+      {
+        "bytes": "6b01",
+        "text": "丸"
+      },
+      {
+        "bytes": "6c01",
+        "text": "岩"
+      },
+      {
+        "bytes": "6d01",
+        "text": "顔"
+      },
+      {
+        "bytes": "6e01",
+        "text": "性"
+      },
+      {
+        "bytes": "6f01",
+        "text": "記"
+      },
+      {
+        "bytes": "7001",
+        "text": "帰"
+      },
+      {
+        "bytes": "7101",
+        "text": "世"
+      },
+      {
+        "bytes": "7201",
+        "text": "牛"
+      },
+      {
+        "bytes": "7301",
+        "text": "魚"
+      },
+      {
+        "bytes": "7401",
+        "text": "界"
+      },
+      {
+        "bytes": "7501",
+        "text": "使"
+      },
+      {
+        "bytes": "7601",
+        "text": "教"
+      },
+      {
+        "bytes": "7701",
+        "text": "近"
+      },
+      {
+        "bytes": "7801",
+        "text": "兄"
+      },
+      {
+        "bytes": "7901",
+        "text": "形"
+      },
+      {
+        "bytes": "7a01",
+        "text": "計"
+      },
+      {
+        "bytes": "7b01",
+        "text": "元"
+      },
+      {
+        "bytes": "7c01",
+        "text": "言"
+      },
+      {
+        "bytes": "7d01",
+        "text": "原"
+      },
+      {
+        "bytes": "7e01",
+        "text": "戸"
+      },
+      {
+        "bytes": "7f01",
+        "text": "古"
+      },
+      {
+        "bytes": "8001",
+        "text": "午"
+      },
+      {
+        "bytes": "8101",
+        "text": "後"
+      },
+      {
+        "bytes": "8201",
+        "text": "語"
+      },
+      {
+        "bytes": "8301",
+        "text": "工"
+      },
+      {
+        "bytes": "8401",
+        "text": "公"
+      },
+      {
+        "bytes": "8501",
+        "text": "広"
+      },
+      {
+        "bytes": "8601",
+        "text": "交"
+      },
+      {
+        "bytes": "8701",
+        "text": "光"
+      },
+      {
+        "bytes": "8801",
+        "text": "考"
+      },
+      {
+        "bytes": "8901",
+        "text": "行"
+      },
+      {
+        "bytes": "8a01",
+        "text": "高"
+      },
+      {
+        "bytes": "8b01",
+        "text": "黄"
+      },
+      {
+        "bytes": "8c01",
+        "text": "合"
+      },
+      {
+        "bytes": "8d01",
+        "text": "谷"
+      },
+      {
+        "bytes": "8e01",
+        "text": "国"
+      },
+      {
+        "bytes": "8f01",
+        "text": "黒"
+      },
+      {
+        "bytes": "9001",
+        "text": "今"
+      },
+      {
+        "bytes": "9101",
+        "text": "才"
+      },
+      {
+        "bytes": "9201",
+        "text": "細"
+      },
+      {
+        "bytes": "9301",
+        "text": "作"
+      },
+      {
+        "bytes": "9401",
+        "text": "算"
+      },
+      {
+        "bytes": "9501",
+        "text": "止"
+      },
+      {
+        "bytes": "9601",
+        "text": "市"
+      },
+      {
+        "bytes": "9701",
+        "text": "矢"
+      },
+      {
+        "bytes": "9801",
+        "text": "姉"
+      },
+      {
+        "bytes": "9901",
+        "text": "思"
+      },
+      {
+        "bytes": "9a01",
+        "text": "紙"
+      },
+      {
+        "bytes": "9b01",
+        "text": "寺"
+      },
+      {
+        "bytes": "9c01",
+        "text": "自"
+      },
+      {
+        "bytes": "9d01",
+        "text": "室"
+      },
+      {
+        "bytes": "9e01",
+        "text": "社"
+      },
+      {
+        "bytes": "9f01",
+        "text": "弱"
+      },
+      {
+        "bytes": "a001",
+        "text": "秋"
+      },
+      {
+        "bytes": "a101",
+        "text": "週"
+      },
+      {
+        "bytes": "a201",
+        "text": "春"
+      },
+      {
+        "bytes": "a301",
+        "text": "書"
+      },
+      {
+        "bytes": "a401",
+        "text": "少"
+      },
+      {
+        "bytes": "a501",
+        "text": "場"
+      },
+      {
+        "bytes": "a601",
+        "text": "色"
+      },
+      {
+        "bytes": "a701",
+        "text": "食"
+      },
+      {
+        "bytes": "a801",
+        "text": "心"
+      },
+      {
+        "bytes": "a901",
+        "text": "新"
+      },
+      {
+        "bytes": "aa01",
+        "text": "親"
+      },
+      {
+        "bytes": "ab01",
+        "text": "図"
+      },
+      {
+        "bytes": "ac01",
+        "text": "数"
+      },
+      {
+        "bytes": "ad01",
+        "text": "西"
+      },
+      {
+        "bytes": "ae01",
+        "text": "声"
+      },
+      {
+        "bytes": "af01",
+        "text": "星"
+      },
+      {
+        "bytes": "b001",
+        "text": "晴"
+      },
+      {
+        "bytes": "b101",
+        "text": "切"
+      },
+      {
+        "bytes": "b201",
+        "text": "雪"
+      },
+      {
+        "bytes": "b301",
+        "text": "船"
+      },
+      {
+        "bytes": "b401",
+        "text": "線"
+      },
+      {
+        "bytes": "b501",
+        "text": "前"
+      },
+      {
+        "bytes": "b601",
+        "text": "組"
+      },
+      {
+        "bytes": "b701",
+        "text": "走"
+      },
+      {
+        "bytes": "b801",
+        "text": "多"
+      },
+      {
+        "bytes": "b901",
+        "text": "太"
+      },
+      {
+        "bytes": "ba01",
+        "text": "体"
+      },
+      {
+        "bytes": "bb01",
+        "text": "台"
+      },
+      {
+        "bytes": "bc01",
+        "text": "地"
+      },
+      {
+        "bytes": "bd01",
+        "text": "池"
+      },
+      {
+        "bytes": "be01",
+        "text": "知"
+      },
+      {
+        "bytes": "bf01",
+        "text": "茶"
+      },
+      {
+        "bytes": "c001",
+        "text": "昼"
+      },
+      {
+        "bytes": "c101",
+        "text": "長"
+      },
+      {
+        "bytes": "c201",
+        "text": "鳥"
+      },
+      {
+        "bytes": "c301",
+        "text": "朝"
+      },
+      {
+        "bytes": "c401",
+        "text": "直"
+      },
+      {
+        "bytes": "c501",
+        "text": "通"
+      },
+      {
+        "bytes": "c601",
+        "text": "弟"
+      },
+      {
+        "bytes": "c701",
+        "text": "店"
+      },
+      {
+        "bytes": "c801",
+        "text": "点"
+      },
+      {
+        "bytes": "c901",
+        "text": "刀"
+      },
+      {
+        "bytes": "ca01",
+        "text": "冬"
+      },
+      {
+        "bytes": "cb01",
+        "text": "当"
+      },
+      {
+        "bytes": "cc01",
+        "text": "東"
+      },
+      {
+        "bytes": "cd01",
+        "text": "答"
+      },
+      {
+        "bytes": "ce01",
+        "text": "頭"
+      },
+      {
+        "bytes": "cf01",
+        "text": "同"
+      },
+      {
+        "bytes": "d001",
+        "text": "道"
+      },
+      {
+        "bytes": "d101",
+        "text": "読"
+      },
+      {
+        "bytes": "d201",
+        "text": "内"
+      },
+      {
+        "bytes": "d301",
+        "text": "南"
+      },
+      {
+        "bytes": "d401",
+        "text": "肉"
+      },
+      {
+        "bytes": "d501",
+        "text": "馬"
+      },
+      {
+        "bytes": "d601",
+        "text": "売"
+      },
+      {
+        "bytes": "d701",
+        "text": "買"
+      },
+      {
+        "bytes": "d801",
+        "text": "配"
+      },
+      {
+        "bytes": "d901",
+        "text": "半"
+      },
+      {
+        "bytes": "da01",
+        "text": "番"
+      },
+      {
+        "bytes": "db01",
+        "text": "父"
+      },
+      {
+        "bytes": "dc01",
+        "text": "風"
+      },
+      {
+        "bytes": "dd01",
+        "text": "聞"
+      },
+      {
+        "bytes": "de01",
+        "text": "米"
+      },
+      {
+        "bytes": "df01",
+        "text": "歩"
+      },
+      {
+        "bytes": "e001",
+        "text": "母"
+      },
+      {
+        "bytes": "e101",
+        "text": "方"
+      },
+      {
+        "bytes": "e201",
+        "text": "北"
+      },
+      {
+        "bytes": "e301",
+        "text": "毎"
+      },
+      {
+        "bytes": "e401",
+        "text": "妹"
+      },
+      {
+        "bytes": "e501",
+        "text": "万"
+      },
+      {
+        "bytes": "e601",
+        "text": "明"
+      },
+      {
+        "bytes": "e701",
+        "text": "鳴"
+      },
+      {
+        "bytes": "e801",
+        "text": "毛"
+      },
+      {
+        "bytes": "e901",
+        "text": "門"
+      },
+      {
+        "bytes": "ea01",
+        "text": "夜"
+      },
+      {
+        "bytes": "eb01",
+        "text": "野"
+      },
+      {
+        "bytes": "ec01",
+        "text": "友"
+      },
+      {
+        "bytes": "ed01",
+        "text": "用"
+      },
+      {
+        "bytes": "ee01",
+        "text": "曜"
+      },
+      {
+        "bytes": "ef01",
+        "text": "来"
+      },
+      {
+        "bytes": "f001",
+        "text": "里"
+      },
+      {
+        "bytes": "f101",
+        "text": "理"
+      },
+      {
+        "bytes": "f201",
+        "text": "闘"
+      },
+      {
+        "bytes": "f301",
+        "text": "勝"
+      },
+      {
+        "bytes": "f401",
+        "text": "戦"
+      },
+      {
+        "bytes": "f501",
+        "text": "階"
+      },
+      {
+        "bytes": "f601",
+        "text": "練"
+      },
+      {
+        "bytes": "f701",
+        "text": "凝"
+      },
+      {
+        "bytes": "f801",
+        "text": "隠"
+      },
+      {
+        "bytes": "f901",
+        "text": "纏"
+      },
+      {
+        "bytes": "fa01",
+        "text": "発"
+      },
+      {
+        "bytes": "fb01",
+        "text": "燃"
+      },
+      {
+        "bytes": "fc01",
+        "text": "舌"
+      },
+      {
+        "bytes": "fd01",
+        "text": "錬"
+      },
+      {
+        "bytes": "fe01",
+        "text": "絶"
+      },
+      {
+        "bytes": "ff01",
+        "text": "　"
+      }
+    ],
+    "controls": [
+      {
+        "code": 61440,
+        "display": "{num0}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": " ",
+        "argument_lengths": []
+      },
+      {
+        "code": 61696,
+        "display": "{num1}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": " ",
+        "argument_lengths": []
+      },
+      {
+        "code": 61952,
+        "display": "{F2-{lo:d}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": " ",
+        "argument_lengths": [
+          {
+            "low_min": 0,
+            "low_max": 2,
+            "bytes": 2
+          }
+        ]
+      },
+      {
+        "code": 62208,
+        "display": "{F3-{lo:d}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": " ",
+        "argument_lengths": [
+          {
+            "low_min": 0,
+            "low_max": 2,
+            "bytes": 2
+          }
+        ]
+      },
+      {
+        "code": 62464,
+        "display": "{F4-{lo:d}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": " ",
+        "argument_lengths": [
+          {
+            "low_min": 0,
+            "low_max": 2,
+            "bytes": 2
+          }
+        ]
+      },
+      {
+        "code": 62720,
+        "display": "{F5-{lo:d}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": " ",
+        "argument_lengths": [
+          {
+            "low_min": 0,
+            "low_max": 1,
+            "bytes": 2
+          }
+        ]
+      },
+      {
+        "code": 62976,
+        "display": "{F6-{lo:d}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": " ",
+        "argument_lengths": [
+          {
+            "low_min": 0,
+            "low_max": 1,
+            "bytes": 2
+          }
+        ]
+      },
+      {
+        "code": 63232,
+        "display": "{F7-{lo:d}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": " ",
+        "argument_lengths": [
+          {
+            "low_min": 0,
+            "low_max": 4,
+            "bytes": 2
+          }
+        ]
+      },
+      {
+        "code": 63488,
+        "display": "{F8-{lo:d}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": " ",
+        "argument_lengths": [
+          {
+            "low_min": 0,
+            "low_max": 4,
+            "bytes": 2
+          }
+        ]
+      },
+      {
+        "code": 63744,
+        "display": "{F9-{lo:d}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": " ",
+        "argument_lengths": [
+          {
+            "low_min": 0,
+            "low_max": 255,
+            "bytes": 2
+          }
+        ]
+      },
+      {
+        "code": 64000,
+        "display": "{col {lo:d}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": " ",
+        "argument_lengths": []
+      },
+      {
+        "code": 64256,
+        "display": "{waitB{lo:02x}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": " ",
+        "argument_lengths": []
+      },
+      {
+        "code": 64512,
+        "display": "{wait{lo:02x}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": " ",
+        "argument_lengths": []
+      },
+      {
+        "code": 64768,
+        "display": "\n",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": " ",
+        "argument_lengths": []
+      },
+      {
+        "code": 65024,
+        "display": "\n{page}\n",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": " ",
+        "argument_lengths": []
+      },
+      {
+        "code": 65280,
+        "display": "",
+        "mask": 65280,
+        "ends": true,
+        "argument_unit": "word-le",
+        "argument_separator": " ",
+        "argument_lengths": [],
+        "display_overrides": [
+          {
+            "low_min": 1,
+            "low_max": 255,
+            "display": "{end {lo:02x}}"
+          }
+        ]
+      }
+    ]
+  },
+  "fonts": {
+    "horizontal": {
+      "offset": 3276800,
+      "count": 512,
+      "stride": 128,
+      "format": "bpp4-planar",
+      "tiles_wide": 2,
+      "tiles_high": 2
+    },
+    "vertical": {
+      "offset": 3342336,
+      "count": 512,
+      "stride": 128,
+      "format": "bpp4-planar",
+      "tiles_wide": 2,
+      "tiles_high": 2
+    }
+  },
+  "tables": {}
+}
