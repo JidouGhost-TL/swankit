@@ -1,0 +1,19 @@
+[package]
+name = "ws-compress"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Bounded WonderSwan compression grammars and deterministic encoders"
+readme = "README.md"
+
+[dependencies]
+formatkit-core.workspace = true
+formatkit-codec.workspace = true
+formatkit-catalog.workspace = true
+
+[dev-dependencies]
+formatkit-corpus.workspace = true
+formatkit-corpus-test.workspace = true
+serde_json = "1"

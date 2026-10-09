@@ -1,8 +1,9 @@
 # swankit
 
 A private Rust workspace for WonderSwan formats, built on Formatkit mechanisms.
-The first crate, `ws-rom`, parses cartridge metadata, checks checksums and maps
-banked ROM addresses. See [hardware rules](docs/hardware.md) and
+`ws-rom` parses cartridge metadata, checks checksums and maps banked ROM
+addresses. [ws-compress](crates/ws-compress/README.md) provides bounded
+compression streams with deterministic encoders. See [hardware rules](docs/hardware.md) and
 [contributor rules](CONTRIBUTING.md).
 
 Requires the existing Rust 1.94.1 toolchain with rustfmt and Clippy.
@@ -31,3 +32,11 @@ The script creates symlinks and frozen JSON expectations from existing facts,
 plus independently computed SHA-256 digests and an explicit correction ledger.
 It refuses to overwrite existing staging. Source ROMs and facts are read-only.
 See [ws-rom](crates/ws-rom/README.md) for the API and later crate composition.
+
+Add a new codec namespace from an independently produced manifest with
+`tools/stage-corpus.py --codec-manifest "$ORACLE_MANIFEST" --output "$STAGING_DIR"`.
+The manifest supplies raw/stored/reference-encoded paths, independently checked
+hashes, consumed extents, evidence and slot-fit policy. Staging refuses to
+overwrite an existing codec namespace or pair set. It writes Formatkit codec
+pairs and frozen JSON digests outside Git. Run parity with the same explicit
+root and safe runner as cartridge validation; see the codec crate's README.

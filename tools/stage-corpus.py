@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import sys
 import subprocess
+import struct
 
 
 FIELDS = (
@@ -117,15 +118,97 @@ def stage(args):
     log(args.progress_log, "corpus staging", f"{len(records)} ROMs, {len(versions)} golden digests, {len(corrections)} corrections", "run safe corpus gate")
 
 
+def stage_codecs(args):
+    """Add a new frozen codec namespace from an independent oracle manifest.
+
+    The manifest and its binary inputs are external. Never derive expectations
+    from the Rust implementation under test, or change an existing namespace.
+    """
+    root = Path(__file__).resolve().parents[1]
+    output = args.output.resolve()
+    if output == root or root in output.parents:
+        raise ValueError("corpus staging must be outside the repository")
+    manifest_path = args.codec_manifest.resolve(strict=True)
+    manifest = json.loads(manifest_path.read_bytes())
+    records = manifest["records"]
+    if not records:
+        raise ValueError("codec manifest has no records")
+    sample_dir = output / "ws-compress"
+    if sample_dir.exists():
+        raise ValueError("codec namespace already exists; frozen specs must never be overwritten")
+    if (output / "ws-compress-enrollment.json").exists():
+        raise ValueError("codec enrollment already exists")
+    staged = []
+    codecs = set()
+    for record in records:
+        codec = record["codec"]
+        if codec not in ("lz-rle-7f", "lz-bits-16"):
+            raise ValueError("unknown codec in manifest")
+        codecs.add(codec)
+        raw = Path(record["raw_path"]).read_bytes()
+        stored = Path(record["stored_path"]).read_bytes()
+        encoded = Path(record["encoded_path"]).read_bytes()
+        for kind, data in (("raw", raw), ("stored", stored), ("encoded", encoded)):
+            if hashlib.sha256(data).hexdigest() != record[kind + "_sha256"]:
+                raise ValueError(f"independent {kind} digest differs from oracle manifest")
+        if len(raw) > 65536 or record["consumed"] != len(stored):
+            raise ValueError("invalid codec oracle extent")
+        if record["require_fit"] and len(encoded) > len(stored):
+            raise ValueError("reference encoder exceeds a required original slot")
+        label = codec.encode()
+        provenance = record["provenance"].encode()
+        pair = (b"SCEPAIR1" + struct.pack("<IIQQ", len(label), len(provenance), len(raw), len(stored))
+                + label + provenance + raw + stored)
+        key = hashlib.sha256(label + b"\0" + raw + b"\0" + stored).hexdigest()[:32] + ".pair"
+        expect = {
+            "codec": codec, "raw_len": len(raw), "stored_len": len(stored),
+            "raw_sha256": record["raw_sha256"], "stored_sha256": record["stored_sha256"],
+            "consumed": record["consumed"], "encoded_len": len(encoded),
+            "encoded_sha256": record["encoded_sha256"], "fits_original": len(encoded) <= len(stored),
+        }
+        sample = {"args": {"codec": codec, "require_fit": record["require_fit"],
+                           "provenance": record["provenance"], "evidence": record["evidence"]}, "expect": expect}
+        staged.append((codec, key, pair, sample))
+    for codec in codecs:
+        if (output / "_compress_pairs" / codec).exists():
+            raise ValueError("codec pairs already exist; frozen pairs must never be overwritten")
+    # Discovery and independent digest checks finish before any write.
+    sample_dir.mkdir(parents=True)
+    samples = {}
+    unique = set()
+    for index, (codec, key, pair, sample) in enumerate(staged):
+        pair_path = output / "_compress_pairs" / codec / key
+        if (codec, key) not in unique:
+            pair_path.parent.mkdir(parents=True, exist_ok=True)
+            pair_path.write_bytes(pair)
+            unique.add((codec, key))
+        name = f"sample-{index:06d}.pair"
+        (sample_dir / name).symlink_to(pair_path)
+        samples[name] = sample
+    write_json(sample_dir / "spec.json", {"format": "ws-compress", "samples": samples})
+    write_json(output / "ws-compress-enrollment.json", {
+        "oracle_manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+        "records": records, "oracle_sources": manifest["oracle_sources"],
+        "records_count": len(records), "unique_pairs": len(unique),
+    })
+    print(f"Staged {len(staged)} codec records, {len(unique)} unique Formatkit pairs, 1 frozen spec")
+    log(args.progress_log, "codec staging", f"{len(staged)} codec records, {len(unique)} unique pairs", "run safe corpus gate")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--titles", type=Path, required=True)
+    selection = parser.add_mutually_exclusive_group(required=True)
+    selection.add_argument("--titles", type=Path)
+    selection.add_argument("--codec-manifest", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--progress-log", default=os.environ.get("SWANKIT_PROGRESS_LOG"))
     args = parser.parse_args()
     log(args.progress_log, "corpus staging start", "0 ROMs enrolled", "validate existing ROMs and facts")
     try:
-        stage(args)
+        if args.codec_manifest:
+            stage_codecs(args)
+        else:
+            stage(args)
     except (OSError, ValueError, KeyError) as error:
         log(args.progress_log, "corpus staging blocked", "0 specs accepted", str(error))
         print(f"error: {error}", file=sys.stderr)
