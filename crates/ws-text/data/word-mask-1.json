@@ -1,0 +1,8642 @@
+{
+  "schema": "swankit-text-def/1",
+  "id": "word-mask-1",
+  "map": {
+    "schema": "swankit-charmap/1",
+    "unit": "word-le",
+    "entries": [
+      {
+        "bytes": "0000",
+        "text": "０"
+      },
+      {
+        "bytes": "0100",
+        "text": "１"
+      },
+      {
+        "bytes": "0200",
+        "text": "２"
+      },
+      {
+        "bytes": "0300",
+        "text": "３"
+      },
+      {
+        "bytes": "0400",
+        "text": "４"
+      },
+      {
+        "bytes": "0500",
+        "text": "５"
+      },
+      {
+        "bytes": "0600",
+        "text": "６"
+      },
+      {
+        "bytes": "0700",
+        "text": "７"
+      },
+      {
+        "bytes": "0800",
+        "text": "８"
+      },
+      {
+        "bytes": "0900",
+        "text": "９"
+      },
+      {
+        "bytes": "0a00",
+        "text": "＋"
+      },
+      {
+        "bytes": "0b00",
+        "text": "",
+        "aliases": [
+          "ー",
+          "一",
+          "－"
+        ]
+      },
+      {
+        "bytes": "0c00",
+        "text": "／"
+      },
+      {
+        "bytes": "0d00",
+        "text": "×"
+      },
+      {
+        "bytes": "0e00",
+        "text": "＝"
+      },
+      {
+        "bytes": "0f00",
+        "text": "{J}"
+      },
+      {
+        "bytes": "1000",
+        "text": "！"
+      },
+      {
+        "bytes": "1100",
+        "text": "？"
+      },
+      {
+        "bytes": "1200",
+        "text": "～"
+      },
+      {
+        "bytes": "1300",
+        "text": "％"
+      },
+      {
+        "bytes": "1400",
+        "text": "＆"
+      },
+      {
+        "bytes": "1500",
+        "text": "…"
+      },
+      {
+        "bytes": "1600",
+        "text": "．"
+      },
+      {
+        "bytes": "1700",
+        "text": "・"
+      },
+      {
+        "bytes": "1800",
+        "text": "。"
+      },
+      {
+        "bytes": "1900",
+        "text": "、"
+      },
+      {
+        "bytes": "1a00",
+        "text": "「"
+      },
+      {
+        "bytes": "1b00",
+        "text": "」"
+      },
+      {
+        "bytes": "1c00",
+        "text": "『"
+      },
+      {
+        "bytes": "1d00",
+        "text": "』"
+      },
+      {
+        "bytes": "1e00",
+        "text": "【"
+      },
+      {
+        "bytes": "1f00",
+        "text": "】"
+      },
+      {
+        "bytes": "2000",
+        "text": "（"
+      },
+      {
+        "bytes": "2100",
+        "text": "）"
+      },
+      {
+        "bytes": "2200",
+        "text": "♥"
+      },
+      {
+        "bytes": "2300",
+        "text": "◆"
+      },
+      {
+        "bytes": "2400",
+        "text": "♣"
+      },
+      {
+        "bytes": "2500",
+        "text": "♠"
+      },
+      {
+        "bytes": "2600",
+        "text": "{drop}"
+      },
+      {
+        "bytes": "2700",
+        "text": "♪"
+      },
+      {
+        "bytes": "2800",
+        "text": "▲"
+      },
+      {
+        "bytes": "2900",
+        "text": "："
+      },
+      {
+        "bytes": "2a00",
+        "text": "Ａ"
+      },
+      {
+        "bytes": "2b00",
+        "text": "Ｂ"
+      },
+      {
+        "bytes": "2c00",
+        "text": "Ｃ"
+      },
+      {
+        "bytes": "2d00",
+        "text": "Ｄ"
+      },
+      {
+        "bytes": "2e00",
+        "text": "Ｅ"
+      },
+      {
+        "bytes": "2f00",
+        "text": "Ｆ"
+      },
+      {
+        "bytes": "3000",
+        "text": "Ｇ"
+      },
+      {
+        "bytes": "3100",
+        "text": "Ｈ"
+      },
+      {
+        "bytes": "3200",
+        "text": "Ｉ"
+      },
+      {
+        "bytes": "3300",
+        "text": "Ｊ"
+      },
+      {
+        "bytes": "3400",
+        "text": "Ｋ"
+      },
+      {
+        "bytes": "3500",
+        "text": "Ｌ"
+      },
+      {
+        "bytes": "3600",
+        "text": "Ｍ"
+      },
+      {
+        "bytes": "3700",
+        "text": "Ｎ"
+      },
+      {
+        "bytes": "3800",
+        "text": "Ｏ"
+      },
+      {
+        "bytes": "3900",
+        "text": "Ｐ"
+      },
+      {
+        "bytes": "3a00",
+        "text": "Ｑ"
+      },
+      {
+        "bytes": "3b00",
+        "text": "Ｒ"
+      },
+      {
+        "bytes": "3c00",
+        "text": "Ｓ"
+      },
+      {
+        "bytes": "3d00",
+        "text": "Ｔ"
+      },
+      {
+        "bytes": "3e00",
+        "text": "Ｕ"
+      },
+      {
+        "bytes": "3f00",
+        "text": "Ｖ"
+      },
+      {
+        "bytes": "4000",
+        "text": "Ｗ"
+      },
+      {
+        "bytes": "4100",
+        "text": "Ｘ"
+      },
+      {
+        "bytes": "4200",
+        "text": "Ｙ"
+      },
+      {
+        "bytes": "4300",
+        "text": "Ｚ"
+      },
+      {
+        "bytes": "4400",
+        "text": "ヴ"
+      },
+      {
+        "bytes": "4500",
+        "text": "゛"
+      },
+      {
+        "bytes": "4600",
+        "text": "あ"
+      },
+      {
+        "bytes": "4700",
+        "text": "い"
+      },
+      {
+        "bytes": "4800",
+        "text": "う"
+      },
+      {
+        "bytes": "4900",
+        "text": "え"
+      },
+      {
+        "bytes": "4a00",
+        "text": "お"
+      },
+      {
+        "bytes": "4b00",
+        "text": "ぁ"
+      },
+      {
+        "bytes": "4c00",
+        "text": "ぃ"
+      },
+      {
+        "bytes": "4d00",
+        "text": "ぅ"
+      },
+      {
+        "bytes": "4e00",
+        "text": "ぇ"
+      },
+      {
+        "bytes": "4f00",
+        "text": "ぉ"
+      },
+      {
+        "bytes": "5000",
+        "text": "か"
+      },
+      {
+        "bytes": "5100",
+        "text": "き"
+      },
+      {
+        "bytes": "5200",
+        "text": "く"
+      },
+      {
+        "bytes": "5300",
+        "text": "け"
+      },
+      {
+        "bytes": "5400",
+        "text": "こ"
+      },
+      {
+        "bytes": "5500",
+        "text": "が"
+      },
+      {
+        "bytes": "5600",
+        "text": "ぎ"
+      },
+      {
+        "bytes": "5700",
+        "text": "ぐ"
+      },
+      {
+        "bytes": "5800",
+        "text": "げ"
+      },
+      {
+        "bytes": "5900",
+        "text": "ご"
+      },
+      {
+        "bytes": "5a00",
+        "text": "さ"
+      },
+      {
+        "bytes": "5b00",
+        "text": "し"
+      },
+      {
+        "bytes": "5c00",
+        "text": "す"
+      },
+      {
+        "bytes": "5d00",
+        "text": "せ"
+      },
+      {
+        "bytes": "5e00",
+        "text": "そ"
+      },
+      {
+        "bytes": "5f00",
+        "text": "ざ"
+      },
+      {
+        "bytes": "6000",
+        "text": "じ"
+      },
+      {
+        "bytes": "6100",
+        "text": "ず"
+      },
+      {
+        "bytes": "6200",
+        "text": "ぜ"
+      },
+      {
+        "bytes": "6300",
+        "text": "ぞ"
+      },
+      {
+        "bytes": "6400",
+        "text": "た"
+      },
+      {
+        "bytes": "6500",
+        "text": "ち"
+      },
+      {
+        "bytes": "6600",
+        "text": "つ"
+      },
+      {
+        "bytes": "6700",
+        "text": "て"
+      },
+      {
+        "bytes": "6800",
+        "text": "と"
+      },
+      {
+        "bytes": "6900",
+        "text": "だ"
+      },
+      {
+        "bytes": "6a00",
+        "text": "ぢ"
+      },
+      {
+        "bytes": "6b00",
+        "text": "づ"
+      },
+      {
+        "bytes": "6c00",
+        "text": "で"
+      },
+      {
+        "bytes": "6d00",
+        "text": "ど"
+      },
+      {
+        "bytes": "6e00",
+        "text": "な"
+      },
+      {
+        "bytes": "6f00",
+        "text": "に"
+      },
+      {
+        "bytes": "7000",
+        "text": "ぬ"
+      },
+      {
+        "bytes": "7100",
+        "text": "ね"
+      },
+      {
+        "bytes": "7200",
+        "text": "の"
+      },
+      {
+        "bytes": "7300",
+        "text": "は"
+      },
+      {
+        "bytes": "7400",
+        "text": "ひ"
+      },
+      {
+        "bytes": "7500",
+        "text": "ふ"
+      },
+      {
+        "bytes": "7600",
+        "text": "へ"
+      },
+      {
+        "bytes": "7700",
+        "text": "ほ"
+      },
+      {
+        "bytes": "7800",
+        "text": "ば"
+      },
+      {
+        "bytes": "7900",
+        "text": "び"
+      },
+      {
+        "bytes": "7a00",
+        "text": "ぶ"
+      },
+      {
+        "bytes": "7b00",
+        "text": "べ"
+      },
+      {
+        "bytes": "7c00",
+        "text": "ぼ"
+      },
+      {
+        "bytes": "7d00",
+        "text": "ぱ"
+      },
+      {
+        "bytes": "7e00",
+        "text": "ぴ"
+      },
+      {
+        "bytes": "7f00",
+        "text": "ぷ"
+      },
+      {
+        "bytes": "8000",
+        "text": "ぺ"
+      },
+      {
+        "bytes": "8100",
+        "text": "ぽ"
+      },
+      {
+        "bytes": "8200",
+        "text": "ま"
+      },
+      {
+        "bytes": "8300",
+        "text": "み"
+      },
+      {
+        "bytes": "8400",
+        "text": "む"
+      },
+      {
+        "bytes": "8500",
+        "text": "め"
+      },
+      {
+        "bytes": "8600",
+        "text": "も"
+      },
+      {
+        "bytes": "8700",
+        "text": "ら"
+      },
+      {
+        "bytes": "8800",
+        "text": "り"
+      },
+      {
+        "bytes": "8900",
+        "text": "る"
+      },
+      {
+        "bytes": "8a00",
+        "text": "れ"
+      },
+      {
+        "bytes": "8b00",
+        "text": "ろ"
+      },
+      {
+        "bytes": "8c00",
+        "text": "わ"
+      },
+      {
+        "bytes": "8d00",
+        "text": "を"
+      },
+      {
+        "bytes": "8e00",
+        "text": "ん"
+      },
+      {
+        "bytes": "8f00",
+        "text": "や"
+      },
+      {
+        "bytes": "9000",
+        "text": "ゆ"
+      },
+      {
+        "bytes": "9100",
+        "text": "よ"
+      },
+      {
+        "bytes": "9200",
+        "text": "ゃ"
+      },
+      {
+        "bytes": "9300",
+        "text": "ゅ"
+      },
+      {
+        "bytes": "9400",
+        "text": "ょ"
+      },
+      {
+        "bytes": "9500",
+        "text": "っ"
+      },
+      {
+        "bytes": "9600",
+        "text": "ア"
+      },
+      {
+        "bytes": "9700",
+        "text": "イ"
+      },
+      {
+        "bytes": "9800",
+        "text": "ウ"
+      },
+      {
+        "bytes": "9900",
+        "text": "エ"
+      },
+      {
+        "bytes": "9a00",
+        "text": "オ"
+      },
+      {
+        "bytes": "9b00",
+        "text": "ァ"
+      },
+      {
+        "bytes": "9c00",
+        "text": "ィ"
+      },
+      {
+        "bytes": "9d00",
+        "text": "ゥ"
+      },
+      {
+        "bytes": "9e00",
+        "text": "ェ"
+      },
+      {
+        "bytes": "9f00",
+        "text": "ォ"
+      },
+      {
+        "bytes": "a000",
+        "text": "カ"
+      },
+      {
+        "bytes": "a100",
+        "text": "キ"
+      },
+      {
+        "bytes": "a200",
+        "text": "ク"
+      },
+      {
+        "bytes": "a300",
+        "text": "ケ"
+      },
+      {
+        "bytes": "a400",
+        "text": "コ"
+      },
+      {
+        "bytes": "a500",
+        "text": "ガ"
+      },
+      {
+        "bytes": "a600",
+        "text": "ギ"
+      },
+      {
+        "bytes": "a700",
+        "text": "グ"
+      },
+      {
+        "bytes": "a800",
+        "text": "ゲ"
+      },
+      {
+        "bytes": "a900",
+        "text": "ゴ"
+      },
+      {
+        "bytes": "aa00",
+        "text": "サ"
+      },
+      {
+        "bytes": "ab00",
+        "text": "シ"
+      },
+      {
+        "bytes": "ac00",
+        "text": "ス"
+      },
+      {
+        "bytes": "ad00",
+        "text": "セ"
+      },
+      {
+        "bytes": "ae00",
+        "text": "ソ"
+      },
+      {
+        "bytes": "af00",
+        "text": "ザ"
+      },
+      {
+        "bytes": "b000",
+        "text": "ジ"
+      },
+      {
+        "bytes": "b100",
+        "text": "ズ"
+      },
+      {
+        "bytes": "b200",
+        "text": "ゼ"
+      },
+      {
+        "bytes": "b300",
+        "text": "ゾ"
+      },
+      {
+        "bytes": "b400",
+        "text": "タ"
+      },
+      {
+        "bytes": "b500",
+        "text": "チ"
+      },
+      {
+        "bytes": "b600",
+        "text": "ツ"
+      },
+      {
+        "bytes": "b700",
+        "text": "テ"
+      },
+      {
+        "bytes": "b800",
+        "text": "ト"
+      },
+      {
+        "bytes": "b900",
+        "text": "ダ"
+      },
+      {
+        "bytes": "ba00",
+        "text": "ヂ"
+      },
+      {
+        "bytes": "bb00",
+        "text": "ヅ"
+      },
+      {
+        "bytes": "bc00",
+        "text": "デ"
+      },
+      {
+        "bytes": "bd00",
+        "text": "ド"
+      },
+      {
+        "bytes": "be00",
+        "text": "ナ"
+      },
+      {
+        "bytes": "bf00",
+        "text": "ニ"
+      },
+      {
+        "bytes": "c000",
+        "text": "ヌ"
+      },
+      {
+        "bytes": "c100",
+        "text": "ネ"
+      },
+      {
+        "bytes": "c200",
+        "text": "ノ"
+      },
+      {
+        "bytes": "c300",
+        "text": "ハ"
+      },
+      {
+        "bytes": "c400",
+        "text": "ヒ"
+      },
+      {
+        "bytes": "c500",
+        "text": "フ"
+      },
+      {
+        "bytes": "c600",
+        "text": "ヘ"
+      },
+      {
+        "bytes": "c700",
+        "text": "ホ"
+      },
+      {
+        "bytes": "c800",
+        "text": "バ"
+      },
+      {
+        "bytes": "c900",
+        "text": "ビ"
+      },
+      {
+        "bytes": "ca00",
+        "text": "ブ"
+      },
+      {
+        "bytes": "cb00",
+        "text": "ベ"
+      },
+      {
+        "bytes": "cc00",
+        "text": "ボ"
+      },
+      {
+        "bytes": "cd00",
+        "text": "パ"
+      },
+      {
+        "bytes": "ce00",
+        "text": "ピ"
+      },
+      {
+        "bytes": "cf00",
+        "text": "プ"
+      },
+      {
+        "bytes": "d000",
+        "text": "ペ"
+      },
+      {
+        "bytes": "d100",
+        "text": "ポ"
+      },
+      {
+        "bytes": "d200",
+        "text": "マ"
+      },
+      {
+        "bytes": "d300",
+        "text": "ミ"
+      },
+      {
+        "bytes": "d400",
+        "text": "ム"
+      },
+      {
+        "bytes": "d500",
+        "text": "メ"
+      },
+      {
+        "bytes": "d600",
+        "text": "モ"
+      },
+      {
+        "bytes": "d700",
+        "text": "ラ"
+      },
+      {
+        "bytes": "d800",
+        "text": "リ"
+      },
+      {
+        "bytes": "d900",
+        "text": "ル"
+      },
+      {
+        "bytes": "da00",
+        "text": "レ"
+      },
+      {
+        "bytes": "db00",
+        "text": "ロ"
+      },
+      {
+        "bytes": "dc00",
+        "text": "ワ"
+      },
+      {
+        "bytes": "dd00",
+        "text": "ヲ"
+      },
+      {
+        "bytes": "de00",
+        "text": "ン"
+      },
+      {
+        "bytes": "df00",
+        "text": "ッ"
+      },
+      {
+        "bytes": "e000",
+        "text": "ヤ"
+      },
+      {
+        "bytes": "e100",
+        "text": "ユ"
+      },
+      {
+        "bytes": "e200",
+        "text": "ヨ"
+      },
+      {
+        "bytes": "e300",
+        "text": "ャ"
+      },
+      {
+        "bytes": "e400",
+        "text": "ュ"
+      },
+      {
+        "bytes": "e500",
+        "text": "ョ"
+      },
+      {
+        "bytes": "e600",
+        "text": "愛"
+      },
+      {
+        "bytes": "e700",
+        "text": "圧"
+      },
+      {
+        "bytes": "e800",
+        "text": "案"
+      },
+      {
+        "bytes": "e900",
+        "text": "以"
+      },
+      {
+        "bytes": "ea00",
+        "text": "位"
+      },
+      {
+        "bytes": "eb00",
+        "text": "囲"
+      },
+      {
+        "bytes": "ec00",
+        "text": "易"
+      },
+      {
+        "bytes": "ed00",
+        "text": "異"
+      },
+      {
+        "bytes": "ee00",
+        "text": "移"
+      },
+      {
+        "bytes": "ef00",
+        "text": "森"
+      },
+      {
+        "bytes": "f000",
+        "text": "衣"
+      },
+      {
+        "bytes": "f100",
+        "text": "遺"
+      },
+      {
+        "bytes": "f200",
+        "text": "域"
+      },
+      {
+        "bytes": "f300",
+        "text": "指"
+      },
+      {
+        "bytes": "f400",
+        "text": "印"
+      },
+      {
+        "bytes": "f500",
+        "text": "因"
+      },
+      {
+        "bytes": "f600",
+        "text": "引"
+      },
+      {
+        "bytes": "f700",
+        "text": "飲"
+      },
+      {
+        "bytes": "f800",
+        "text": "陰"
+      },
+      {
+        "bytes": "f900",
+        "text": "隠"
+      },
+      {
+        "bytes": "fa00",
+        "text": "営"
+      },
+      {
+        "bytes": "fb00",
+        "text": "影"
+      },
+      {
+        "bytes": "fc00",
+        "text": "右"
+      },
+      {
+        "bytes": "fd00",
+        "text": "映"
+      },
+      {
+        "bytes": "fe00",
+        "text": "定"
+      },
+      {
+        "bytes": "ff00",
+        "text": "栄"
+      },
+      {
+        "bytes": "0001",
+        "text": "永"
+      },
+      {
+        "bytes": "0101",
+        "text": "呪"
+      },
+      {
+        "bytes": "0201",
+        "text": "英"
+      },
+      {
+        "bytes": "0301",
+        "text": "衛"
+      },
+      {
+        "bytes": "0401",
+        "text": "液"
+      },
+      {
+        "bytes": "0501",
+        "text": "益"
+      },
+      {
+        "bytes": "0601",
+        "text": "円"
+      },
+      {
+        "bytes": "0701",
+        "text": "園"
+      },
+      {
+        "bytes": "0801",
+        "text": "延"
+      },
+      {
+        "bytes": "0901",
+        "text": "沿"
+      },
+      {
+        "bytes": "0a01",
+        "text": "演"
+      },
+      {
+        "bytes": "0b01",
+        "text": "遠"
+      },
+      {
+        "bytes": "0c01",
+        "text": "港"
+      },
+      {
+        "bytes": "0d01",
+        "text": "往"
+      },
+      {
+        "bytes": "0e01",
+        "text": "応"
+      },
+      {
+        "bytes": "0f01",
+        "text": "押"
+      },
+      {
+        "bytes": "1001",
+        "text": "御"
+      },
+      {
+        "bytes": "1101",
+        "text": "億"
+      },
+      {
+        "bytes": "1201",
+        "text": "憶"
+      },
+      {
+        "bytes": "1301",
+        "text": "全"
+      },
+      {
+        "bytes": "1401",
+        "text": "恩"
+      },
+      {
+        "bytes": "1501",
+        "text": "音"
+      },
+      {
+        "bytes": "1601",
+        "text": "下"
+      },
+      {
+        "bytes": "1701",
+        "text": "化"
+      },
+      {
+        "bytes": "1801",
+        "text": "仮"
+      },
+      {
+        "bytes": "1901",
+        "text": "何"
+      },
+      {
+        "bytes": "1a01",
+        "text": "価"
+      },
+      {
+        "bytes": "1b01",
+        "text": "加"
+      },
+      {
+        "bytes": "1c01",
+        "text": "可"
+      },
+      {
+        "bytes": "1d01",
+        "text": "夏"
+      },
+      {
+        "bytes": "1e01",
+        "text": "家"
+      },
+      {
+        "bytes": "1f01",
+        "text": "果"
+      },
+      {
+        "bytes": "2001",
+        "text": "歌"
+      },
+      {
+        "bytes": "2101",
+        "text": "河"
+      },
+      {
+        "bytes": "2201",
+        "text": "火"
+      },
+      {
+        "bytes": "2301",
+        "text": "花"
+      },
+      {
+        "bytes": "2401",
+        "text": "課"
+      },
+      {
+        "bytes": "2501",
+        "text": "貨"
+      },
+      {
+        "bytes": "2601",
+        "text": "過"
+      },
+      {
+        "bytes": "2701",
+        "text": "我"
+      },
+      {
+        "bytes": "2801",
+        "text": "画"
+      },
+      {
+        "bytes": "2901",
+        "text": "芽"
+      },
+      {
+        "bytes": "2a01",
+        "text": "恋"
+      },
+      {
+        "bytes": "2b01",
+        "text": "会"
+      },
+      {
+        "bytes": "2c01",
+        "text": "解"
+      },
+      {
+        "bytes": "2d01",
+        "text": "回"
+      },
+      {
+        "bytes": "2e01",
+        "text": "快"
+      },
+      {
+        "bytes": "2f01",
+        "text": "改"
+      },
+      {
+        "bytes": "3001",
+        "text": "械"
+      },
+      {
+        "bytes": "3101",
+        "text": "灰"
+      },
+      {
+        "bytes": "3201",
+        "text": "各"
+      },
+      {
+        "bytes": "3301",
+        "text": "界"
+      },
+      {
+        "bytes": "3401",
+        "text": "杖"
+      },
+      {
+        "bytes": "3501",
+        "text": "絵"
+      },
+      {
+        "bytes": "3601",
+        "text": "格"
+      },
+      {
+        "bytes": "3701",
+        "text": "階"
+      },
+      {
+        "bytes": "3801",
+        "text": "確"
+      },
+      {
+        "bytes": "3901",
+        "text": "覚"
+      },
+      {
+        "bytes": "3a01",
+        "text": "外"
+      },
+      {
+        "bytes": "3b01",
+        "text": "角"
+      },
+      {
+        "bytes": "3c01",
+        "text": "害"
+      },
+      {
+        "bytes": "3d01",
+        "text": "実"
+      },
+      {
+        "bytes": "3e01",
+        "text": "革"
+      },
+      {
+        "bytes": "3f01",
+        "text": "学"
+      },
+      {
+        "bytes": "4001",
+        "text": "員"
+      },
+      {
+        "bytes": "4101",
+        "text": "街"
+      },
+      {
+        "bytes": "4201",
+        "text": "楽"
+      },
+      {
+        "bytes": "4301",
+        "text": "額"
+      },
+      {
+        "bytes": "4401",
+        "text": "割"
+      },
+      {
+        "bytes": "4501",
+        "text": "活"
+      },
+      {
+        "bytes": "4601",
+        "text": "平"
+      },
+      {
+        "bytes": "4701",
+        "text": "刊"
+      },
+      {
+        "bytes": "4801",
+        "text": "巻"
+      },
+      {
+        "bytes": "4901",
+        "text": "完"
+      },
+      {
+        "bytes": "4a01",
+        "text": "官"
+      },
+      {
+        "bytes": "4b01",
+        "text": "干"
+      },
+      {
+        "bytes": "4c01",
+        "text": "幹"
+      },
+      {
+        "bytes": "4d01",
+        "text": "感"
+      },
+      {
+        "bytes": "4e01",
+        "text": "慣"
+      },
+      {
+        "bytes": "4f01",
+        "text": "看"
+      },
+      {
+        "bytes": "5001",
+        "text": "管"
+      },
+      {
+        "bytes": "5101",
+        "text": "簡"
+      },
+      {
+        "bytes": "5201",
+        "text": "観"
+      },
+      {
+        "bytes": "5301",
+        "text": "間"
+      },
+      {
+        "bytes": "5401",
+        "text": "関"
+      },
+      {
+        "bytes": "5501",
+        "text": "丸"
+      },
+      {
+        "bytes": "5601",
+        "text": "眼"
+      },
+      {
+        "bytes": "5701",
+        "text": "岩"
+      },
+      {
+        "bytes": "5801",
+        "text": "顔"
+      },
+      {
+        "bytes": "5901",
+        "text": "願"
+      },
+      {
+        "bytes": "5a01",
+        "text": "危"
+      },
+      {
+        "bytes": "5b01",
+        "text": "喜"
+      },
+      {
+        "bytes": "5c01",
+        "text": "器"
+      },
+      {
+        "bytes": "5d01",
+        "text": "基"
+      },
+      {
+        "bytes": "5e01",
+        "text": "寄"
+      },
+      {
+        "bytes": "5f01",
+        "text": "希"
+      },
+      {
+        "bytes": "6001",
+        "text": "揮"
+      },
+      {
+        "bytes": "6101",
+        "text": "機"
+      },
+      {
+        "bytes": "6201",
+        "text": "疑"
+      },
+      {
+        "bytes": "6301",
+        "text": "義"
+      },
+      {
+        "bytes": "6401",
+        "text": "帰"
+      },
+      {
+        "bytes": "6501",
+        "text": "気"
+      },
+      {
+        "bytes": "6601",
+        "text": "議"
+      },
+      {
+        "bytes": "6701",
+        "text": "真"
+      },
+      {
+        "bytes": "6801",
+        "text": "規"
+      },
+      {
+        "bytes": "6901",
+        "text": "記"
+      },
+      {
+        "bytes": "6a01",
+        "text": "貴"
+      },
+      {
+        "bytes": "6b01",
+        "text": "逆"
+      },
+      {
+        "bytes": "6c01",
+        "text": "久"
+      },
+      {
+        "bytes": "6d01",
+        "text": "休"
+      },
+      {
+        "bytes": "6e01",
+        "text": "技"
+      },
+      {
+        "bytes": "6f01",
+        "text": "吸"
+      },
+      {
+        "bytes": "7001",
+        "text": "救"
+      },
+      {
+        "bytes": "7101",
+        "text": "求"
+      },
+      {
+        "bytes": "7201",
+        "text": "泣"
+      },
+      {
+        "bytes": "7301",
+        "text": "給"
+      },
+      {
+        "bytes": "7401",
+        "text": "旧"
+      },
+      {
+        "bytes": "7501",
+        "text": "剣"
+      },
+      {
+        "bytes": "7601",
+        "text": "居"
+      },
+      {
+        "bytes": "7701",
+        "text": "巨"
+      },
+      {
+        "bytes": "7801",
+        "text": "挙"
+      },
+      {
+        "bytes": "7901",
+        "text": "許"
+      },
+      {
+        "bytes": "7a01",
+        "text": "注"
+      },
+      {
+        "bytes": "7b01",
+        "text": "魚"
+      },
+      {
+        "bytes": "7c01",
+        "text": "供"
+      },
+      {
+        "bytes": "7d01",
+        "text": "競"
+      },
+      {
+        "bytes": "7e01",
+        "text": "共"
+      },
+      {
+        "bytes": "7f01",
+        "text": "協"
+      },
+      {
+        "bytes": "8001",
+        "text": "境"
+      },
+      {
+        "bytes": "8101",
+        "text": "強"
+      },
+      {
+        "bytes": "8201",
+        "text": "教"
+      },
+      {
+        "bytes": "8301",
+        "text": "胸"
+      },
+      {
+        "bytes": "8401",
+        "text": "興"
+      },
+      {
+        "bytes": "8501",
+        "text": "意"
+      },
+      {
+        "bytes": "8601",
+        "text": "鏡"
+      },
+      {
+        "bytes": "8701",
+        "text": "凝"
+      },
+      {
+        "bytes": "8801",
+        "text": "極"
+      },
+      {
+        "bytes": "8901",
+        "text": "玉"
+      },
+      {
+        "bytes": "8a01",
+        "text": "開"
+      },
+      {
+        "bytes": "8b01",
+        "text": "均"
+      },
+      {
+        "bytes": "8c01",
+        "text": "禁"
+      },
+      {
+        "bytes": "8d01",
+        "text": "筋"
+      },
+      {
+        "bytes": "8e01",
+        "text": "近"
+      },
+      {
+        "bytes": "8f01",
+        "text": "金"
+      },
+      {
+        "bytes": "9001",
+        "text": "始"
+      },
+      {
+        "bytes": "9101",
+        "text": "句"
+      },
+      {
+        "bytes": "9201",
+        "text": "具"
+      },
+      {
+        "bytes": "9301",
+        "text": "空"
+      },
+      {
+        "bytes": "9401",
+        "text": "型"
+      },
+      {
+        "bytes": "9501",
+        "text": "形"
+      },
+      {
+        "bytes": "9601",
+        "text": "径"
+      },
+      {
+        "bytes": "9701",
+        "text": "敬"
+      },
+      {
+        "bytes": "9801",
+        "text": "景"
+      },
+      {
+        "bytes": "9901",
+        "text": "系"
+      },
+      {
+        "bytes": "9a01",
+        "text": "経"
+      },
+      {
+        "bytes": "9b01",
+        "text": "訓"
+      },
+      {
+        "bytes": "9c01",
+        "text": "群"
+      },
+      {
+        "bytes": "9d01",
+        "text": "軍"
+      },
+      {
+        "bytes": "9e01",
+        "text": "蛍"
+      },
+      {
+        "bytes": "9f01",
+        "text": "計"
+      },
+      {
+        "bytes": "a001",
+        "text": "警"
+      },
+      {
+        "bytes": "a101",
+        "text": "兄"
+      },
+      {
+        "bytes": "a201",
+        "text": "芸"
+      },
+      {
+        "bytes": "a301",
+        "text": "劇"
+      },
+      {
+        "bytes": "a401",
+        "text": "撃"
+      },
+      {
+        "bytes": "a501",
+        "text": "激"
+      },
+      {
+        "bytes": "a601",
+        "text": "欠"
+      },
+      {
+        "bytes": "a701",
+        "text": "潔"
+      },
+      {
+        "bytes": "a801",
+        "text": "穴"
+      },
+      {
+        "bytes": "a901",
+        "text": "結"
+      },
+      {
+        "bytes": "aa01",
+        "text": "月"
+      },
+      {
+        "bytes": "ab01",
+        "text": "件"
+      },
+      {
+        "bytes": "ac01",
+        "text": "健"
+      },
+      {
+        "bytes": "ad01",
+        "text": "券"
+      },
+      {
+        "bytes": "ae01",
+        "text": "堅"
+      },
+      {
+        "bytes": "af01",
+        "text": "建"
+      },
+      {
+        "bytes": "b001",
+        "text": "拳"
+      },
+      {
+        "bytes": "b101",
+        "text": "検"
+      },
+      {
+        "bytes": "b201",
+        "text": "権"
+      },
+      {
+        "bytes": "b301",
+        "text": "瞬"
+      },
+      {
+        "bytes": "b401",
+        "text": "見"
+      },
+      {
+        "bytes": "b501",
+        "text": "険"
+      },
+      {
+        "bytes": "b601",
+        "text": "験"
+      },
+      {
+        "bytes": "b701",
+        "text": "元"
+      },
+      {
+        "bytes": "b801",
+        "text": "原"
+      },
+      {
+        "bytes": "b901",
+        "text": "号"
+      },
+      {
+        "bytes": "ba01",
+        "text": "幻"
+      },
+      {
+        "bytes": "bb01",
+        "text": "減"
+      },
+      {
+        "bytes": "bc01",
+        "text": "源"
+      },
+      {
+        "bytes": "bd01",
+        "text": "現"
+      },
+      {
+        "bytes": "be01",
+        "text": "言"
+      },
+      {
+        "bytes": "bf01",
+        "text": "限"
+      },
+      {
+        "bytes": "c001",
+        "text": "古"
+      },
+      {
+        "bytes": "c101",
+        "text": "呼"
+      },
+      {
+        "bytes": "c201",
+        "text": "固"
+      },
+      {
+        "bytes": "c301",
+        "text": "己"
+      },
+      {
+        "bytes": "c401",
+        "text": "故"
+      },
+      {
+        "bytes": "c501",
+        "text": "誇"
+      },
+      {
+        "bytes": "c601",
+        "text": "仲"
+      },
+      {
+        "bytes": "c701",
+        "text": "午"
+      },
+      {
+        "bytes": "c801",
+        "text": "後"
+      },
+      {
+        "bytes": "c901",
+        "text": "語"
+      },
+      {
+        "bytes": "ca01",
+        "text": "誤"
+      },
+      {
+        "bytes": "cb01",
+        "text": "護"
+      },
+      {
+        "bytes": "cc01",
+        "text": "交"
+      },
+      {
+        "bytes": "cd01",
+        "text": "光"
+      },
+      {
+        "bytes": "ce01",
+        "text": "公"
+      },
+      {
+        "bytes": "cf01",
+        "text": "功"
+      },
+      {
+        "bytes": "d001",
+        "text": "効"
+      },
+      {
+        "bytes": "d101",
+        "text": "厚"
+      },
+      {
+        "bytes": "d201",
+        "text": "口"
+      },
+      {
+        "bytes": "d301",
+        "text": "構"
+      },
+      {
+        "bytes": "d401",
+        "text": "消"
+      },
+      {
+        "bytes": "d501",
+        "text": "好"
+      },
+      {
+        "bytes": "d601",
+        "text": "孝"
+      },
+      {
+        "bytes": "d701",
+        "text": "工"
+      },
+      {
+        "bytes": "d801",
+        "text": "硬"
+      },
+      {
+        "bytes": "d901",
+        "text": "広"
+      },
+      {
+        "bytes": "da01",
+        "text": "考"
+      },
+      {
+        "bytes": "db01",
+        "text": "幸"
+      },
+      {
+        "bytes": "dc01",
+        "text": "行"
+      },
+      {
+        "bytes": "dd01",
+        "text": "講"
+      },
+      {
+        "bytes": "de01",
+        "text": "攻"
+      },
+      {
+        "bytes": "df01",
+        "text": "鉱"
+      },
+      {
+        "bytes": "e001",
+        "text": "鋼"
+      },
+      {
+        "bytes": "e101",
+        "text": "降"
+      },
+      {
+        "bytes": "e201",
+        "text": "高"
+      },
+      {
+        "bytes": "e301",
+        "text": "合"
+      },
+      {
+        "bytes": "e401",
+        "text": "刻"
+      },
+      {
+        "bytes": "e501",
+        "text": "告"
+      },
+      {
+        "bytes": "e601",
+        "text": "国"
+      },
+      {
+        "bytes": "e701",
+        "text": "黒"
+      },
+      {
+        "bytes": "e801",
+        "text": "骨"
+      },
+      {
+        "bytes": "e901",
+        "text": "込"
+      },
+      {
+        "bytes": "ea01",
+        "text": "今"
+      },
+      {
+        "bytes": "eb01",
+        "text": "困"
+      },
+      {
+        "bytes": "ec01",
+        "text": "混"
+      },
+      {
+        "bytes": "ed01",
+        "text": "左"
+      },
+      {
+        "bytes": "ee01",
+        "text": "差"
+      },
+      {
+        "bytes": "ef01",
+        "text": "査"
+      },
+      {
+        "bytes": "f001",
+        "text": "砂"
+      },
+      {
+        "bytes": "f101",
+        "text": "鎖"
+      },
+      {
+        "bytes": "f201",
+        "text": "再"
+      },
+      {
+        "bytes": "f301",
+        "text": "最"
+      },
+      {
+        "bytes": "f401",
+        "text": "妻"
+      },
+      {
+        "bytes": "f501",
+        "text": "才"
+      },
+      {
+        "bytes": "f601",
+        "text": "採"
+      },
+      {
+        "bytes": "f701",
+        "text": "済"
+      },
+      {
+        "bytes": "f801",
+        "text": "災"
+      },
+      {
+        "bytes": "f901",
+        "text": "細"
+      },
+      {
+        "bytes": "fa01",
+        "text": "裁"
+      },
+      {
+        "bytes": "fb01",
+        "text": "際"
+      },
+      {
+        "bytes": "fc01",
+        "text": "在"
+      },
+      {
+        "bytes": "fd01",
+        "text": "材"
+      },
+      {
+        "bytes": "fe01",
+        "text": "罪"
+      },
+      {
+        "bytes": "ff01",
+        "text": "財"
+      },
+      {
+        "bytes": "0002",
+        "text": "作"
+      },
+      {
+        "bytes": "0102",
+        "text": "昨"
+      },
+      {
+        "bytes": "0202",
+        "text": "策"
+      },
+      {
+        "bytes": "0302",
+        "text": "由"
+      },
+      {
+        "bytes": "0402",
+        "text": "冊"
+      },
+      {
+        "bytes": "0502",
+        "text": "察"
+      },
+      {
+        "bytes": "0602",
+        "text": "賛"
+      },
+      {
+        "bytes": "0702",
+        "text": "酸"
+      },
+      {
+        "bytes": "0802",
+        "text": "残"
+      },
+      {
+        "bytes": "0902",
+        "text": "{g209}"
+      },
+      {
+        "bytes": "0a02",
+        "text": "仕"
+      },
+      {
+        "bytes": "0b02",
+        "text": "殺"
+      },
+      {
+        "bytes": "0c02",
+        "text": "使"
+      },
+      {
+        "bytes": "0d02",
+        "text": "雑"
+      },
+      {
+        "bytes": "0e02",
+        "text": "司"
+      },
+      {
+        "bytes": "0f02",
+        "text": "史"
+      },
+      {
+        "bytes": "1002",
+        "text": "安"
+      },
+      {
+        "bytes": "1102",
+        "text": "士"
+      },
+      {
+        "bytes": "1202",
+        "text": "負"
+      },
+      {
+        "bytes": "1302",
+        "text": "姿"
+      },
+      {
+        "bytes": "1402",
+        "text": "子"
+      },
+      {
+        "bytes": "1502",
+        "text": "参"
+      },
+      {
+        "bytes": "1602",
+        "text": "山"
+      },
+      {
+        "bytes": "1702",
+        "text": "市"
+      },
+      {
+        "bytes": "1802",
+        "text": "師"
+      },
+      {
+        "bytes": "1902",
+        "text": "散"
+      },
+      {
+        "bytes": "1a02",
+        "text": "志"
+      },
+      {
+        "bytes": "1b02",
+        "text": "思"
+      },
+      {
+        "bytes": "1c02",
+        "text": "支"
+      },
+      {
+        "bytes": "1d02",
+        "text": "産"
+      },
+      {
+        "bytes": "1e02",
+        "text": "去"
+      },
+      {
+        "bytes": "1f02",
+        "text": "算"
+      },
+      {
+        "bytes": "2002",
+        "text": "枝"
+      },
+      {
+        "bytes": "2102",
+        "text": "止"
+      },
+      {
+        "bytes": "2202",
+        "text": "死"
+      },
+      {
+        "bytes": "2302",
+        "text": "氏"
+      },
+      {
+        "bytes": "2402",
+        "text": "私"
+      },
+      {
+        "bytes": "2502",
+        "text": "糸"
+      },
+      {
+        "bytes": "2602",
+        "text": "紙"
+      },
+      {
+        "bytes": "2702",
+        "text": "至"
+      },
+      {
+        "bytes": "2802",
+        "text": "視"
+      },
+      {
+        "bytes": "2902",
+        "text": "詞"
+      },
+      {
+        "bytes": "2a02",
+        "text": "試"
+      },
+      {
+        "bytes": "2b02",
+        "text": "誌"
+      },
+      {
+        "bytes": "2c02",
+        "text": "資"
+      },
+      {
+        "bytes": "2d02",
+        "text": "飼"
+      },
+      {
+        "bytes": "2e02",
+        "text": "事"
+      },
+      {
+        "bytes": "2f02",
+        "text": "似"
+      },
+      {
+        "bytes": "3002",
+        "text": "児"
+      },
+      {
+        "bytes": "3102",
+        "text": "字"
+      },
+      {
+        "bytes": "3202",
+        "text": "持"
+      },
+      {
+        "bytes": "3302",
+        "text": "時"
+      },
+      {
+        "bytes": "3402",
+        "text": "治"
+      },
+      {
+        "bytes": "3502",
+        "text": "磁"
+      },
+      {
+        "bytes": "3602",
+        "text": "示"
+      },
+      {
+        "bytes": "3702",
+        "text": "耳"
+      },
+      {
+        "bytes": "3802",
+        "text": "自"
+      },
+      {
+        "bytes": "3902",
+        "text": "辞"
+      },
+      {
+        "bytes": "3a02",
+        "text": "式"
+      },
+      {
+        "bytes": "3b02",
+        "text": "識"
+      },
+      {
+        "bytes": "3c02",
+        "text": "業"
+      },
+      {
+        "bytes": "3d02",
+        "text": "失"
+      },
+      {
+        "bytes": "3e02",
+        "text": "室"
+      },
+      {
+        "bytes": "3f02",
+        "text": "質"
+      },
+      {
+        "bytes": "4002",
+        "text": "舎"
+      },
+      {
+        "bytes": "4102",
+        "text": "射"
+      },
+      {
+        "bytes": "4202",
+        "text": "捨"
+      },
+      {
+        "bytes": "4302",
+        "text": "社"
+      },
+      {
+        "bytes": "4402",
+        "text": "者"
+      },
+      {
+        "bytes": "4502",
+        "text": "謝"
+      },
+      {
+        "bytes": "4602",
+        "text": "車"
+      },
+      {
+        "bytes": "4702",
+        "text": "借"
+      },
+      {
+        "bytes": "4802",
+        "text": "若"
+      },
+      {
+        "bytes": "4902",
+        "text": "弱"
+      },
+      {
+        "bytes": "4a02",
+        "text": "守"
+      },
+      {
+        "bytes": "4b02",
+        "text": "手"
+      },
+      {
+        "bytes": "4c02",
+        "text": "種"
+      },
+      {
+        "bytes": "4d02",
+        "text": "首"
+      },
+      {
+        "bytes": "4e02",
+        "text": "樹"
+      },
+      {
+        "bytes": "4f02",
+        "text": "収"
+      },
+      {
+        "bytes": "5002",
+        "text": "周"
+      },
+      {
+        "bytes": "5102",
+        "text": "賊"
+      },
+      {
+        "bytes": "5202",
+        "text": "従"
+      },
+      {
+        "bytes": "5302",
+        "text": "蟲"
+      },
+      {
+        "bytes": "5402",
+        "text": "獣"
+      },
+      {
+        "bytes": "5502",
+        "text": "修"
+      },
+      {
+        "bytes": "5602",
+        "text": "縦"
+      },
+      {
+        "bytes": "5702",
+        "text": "霧"
+      },
+      {
+        "bytes": "5802",
+        "text": "重"
+      },
+      {
+        "bytes": "5902",
+        "text": "祝"
+      },
+      {
+        "bytes": "5a02",
+        "text": "縮"
+      },
+      {
+        "bytes": "5b02",
+        "text": "熟"
+      },
+      {
+        "bytes": "5c02",
+        "text": "汞"
+      },
+      {
+        "bytes": "5d02",
+        "text": "出"
+      },
+      {
+        "bytes": "5e02",
+        "text": "術"
+      },
+      {
+        "bytes": "5f02",
+        "text": "襲"
+      },
+      {
+        "bytes": "6002",
+        "text": "趣"
+      },
+      {
+        "bytes": "6102",
+        "text": "寿"
+      },
+      {
+        "bytes": "6202",
+        "text": "週"
+      },
+      {
+        "bytes": "6302",
+        "text": "集"
+      },
+      {
+        "bytes": "6402",
+        "text": "準"
+      },
+      {
+        "bytes": "6502",
+        "text": "純"
+      },
+      {
+        "bytes": "6602",
+        "text": "順"
+      },
+      {
+        "bytes": "6702",
+        "text": "処"
+      },
+      {
+        "bytes": "6802",
+        "text": "初"
+      },
+      {
+        "bytes": "6902",
+        "text": "所"
+      },
+      {
+        "bytes": "6a02",
+        "text": "湖"
+      },
+      {
+        "bytes": "6b02",
+        "text": "書"
+      },
+      {
+        "bytes": "6c02",
+        "text": "藷"
+      },
+      {
+        "bytes": "6d02",
+        "text": "女"
+      },
+      {
+        "bytes": "6e02",
+        "text": "序"
+      },
+      {
+        "bytes": "6f02",
+        "text": "除"
+      },
+      {
+        "bytes": "7002",
+        "text": "傷"
+      },
+      {
+        "bytes": "7102",
+        "text": "勝"
+      },
+      {
+        "bytes": "7202",
+        "text": "匠"
+      },
+      {
+        "bytes": "7302",
+        "text": "館"
+      },
+      {
+        "bytes": "7402",
+        "text": "将"
+      },
+      {
+        "bytes": "7502",
+        "text": "小"
+      },
+      {
+        "bytes": "7602",
+        "text": "少"
+      },
+      {
+        "bytes": "7702",
+        "text": "承"
+      },
+      {
+        "bytes": "7802",
+        "text": "招"
+      },
+      {
+        "bytes": "7902",
+        "text": "塔"
+      },
+      {
+        "bytes": "7a02",
+        "text": "焼"
+      },
+      {
+        "bytes": "7b02",
+        "text": "照"
+      },
+      {
+        "bytes": "7c02",
+        "text": "省"
+      },
+      {
+        "bytes": "7d02",
+        "text": "笑"
+      },
+      {
+        "bytes": "7e02",
+        "text": "証"
+      },
+      {
+        "bytes": "7f02",
+        "text": "象"
+      },
+      {
+        "bytes": "8002",
+        "text": "賞"
+      },
+      {
+        "bytes": "8102",
+        "text": "障"
+      },
+      {
+        "bytes": "8202",
+        "text": "上"
+      },
+      {
+        "bytes": "8302",
+        "text": "城"
+      },
+      {
+        "bytes": "8402",
+        "text": "場"
+      },
+      {
+        "bytes": "8502",
+        "text": "常"
+      },
+      {
+        "bytes": "8602",
+        "text": "情"
+      },
+      {
+        "bytes": "8702",
+        "text": "条"
+      },
+      {
+        "bytes": "8802",
+        "text": "状"
+      },
+      {
+        "bytes": "8902",
+        "text": "神"
+      },
+      {
+        "bytes": "8a02",
+        "text": "洞"
+      },
+      {
+        "bytes": "8b02",
+        "text": "殖"
+      },
+      {
+        "bytes": "8c02",
+        "text": "織"
+      },
+      {
+        "bytes": "8d02",
+        "text": "職"
+      },
+      {
+        "bytes": "8e02",
+        "text": "親"
+      },
+      {
+        "bytes": "8f02",
+        "text": "色"
+      },
+      {
+        "bytes": "9002",
+        "text": "身"
+      },
+      {
+        "bytes": "9102",
+        "text": "食"
+      },
+      {
+        "bytes": "9202",
+        "text": "針"
+      },
+      {
+        "bytes": "9302",
+        "text": "人"
+      },
+      {
+        "bytes": "9402",
+        "text": "仁"
+      },
+      {
+        "bytes": "9502",
+        "text": "信"
+      },
+      {
+        "bytes": "9602",
+        "text": "侵"
+      },
+      {
+        "bytes": "9702",
+        "text": "心"
+      },
+      {
+        "bytes": "9802",
+        "text": "新"
+      },
+      {
+        "bytes": "9902",
+        "text": "図"
+      },
+      {
+        "bytes": "9a02",
+        "text": "垂"
+      },
+      {
+        "bytes": "9b02",
+        "text": "推"
+      },
+      {
+        "bytes": "9c02",
+        "text": "水"
+      },
+      {
+        "bytes": "9d02",
+        "text": "数"
+      },
+      {
+        "bytes": "9e02",
+        "text": "寸"
+      },
+      {
+        "bytes": "9f02",
+        "text": "世"
+      },
+      {
+        "bytes": "a002",
+        "text": "制"
+      },
+      {
+        "bytes": "a102",
+        "text": "勢"
+      },
+      {
+        "bytes": "a202",
+        "text": "性"
+      },
+      {
+        "bytes": "a302",
+        "text": "成"
+      },
+      {
+        "bytes": "a402",
+        "text": "政"
+      },
+      {
+        "bytes": "a502",
+        "text": "星"
+      },
+      {
+        "bytes": "a602",
+        "text": "晴"
+      },
+      {
+        "bytes": "a702",
+        "text": "正"
+      },
+      {
+        "bytes": "a802",
+        "text": "清"
+      },
+      {
+        "bytes": "a902",
+        "text": "生"
+      },
+      {
+        "bytes": "aa02",
+        "text": "盛"
+      },
+      {
+        "bytes": "ab02",
+        "text": "精"
+      },
+      {
+        "bytes": "ac02",
+        "text": "聖"
+      },
+      {
+        "bytes": "ad02",
+        "text": "声"
+      },
+      {
+        "bytes": "ae02",
+        "text": "製"
+      },
+      {
+        "bytes": "af02",
+        "text": "西"
+      },
+      {
+        "bytes": "b002",
+        "text": "誠"
+      },
+      {
+        "bytes": "b102",
+        "text": "静"
+      },
+      {
+        "bytes": "b202",
+        "text": "税"
+      },
+      {
+        "bytes": "b302",
+        "text": "席"
+      },
+      {
+        "bytes": "b402",
+        "text": "石"
+      },
+      {
+        "bytes": "b502",
+        "text": "積"
+      },
+      {
+        "bytes": "b602",
+        "text": "績"
+      },
+      {
+        "bytes": "b702",
+        "text": "責"
+      },
+      {
+        "bytes": "b802",
+        "text": "赤"
+      },
+      {
+        "bytes": "b902",
+        "text": "切"
+      },
+      {
+        "bytes": "ba02",
+        "text": "接"
+      },
+      {
+        "bytes": "bb02",
+        "text": "折"
+      },
+      {
+        "bytes": "bc02",
+        "text": "設"
+      },
+      {
+        "bytes": "bd02",
+        "text": "節"
+      },
+      {
+        "bytes": "be02",
+        "text": "説"
+      },
+      {
+        "bytes": "bf02",
+        "text": "絶"
+      },
+      {
+        "bytes": "c002",
+        "text": "舌"
+      },
+      {
+        "bytes": "c102",
+        "text": "先"
+      },
+      {
+        "bytes": "c202",
+        "text": "千"
+      },
+      {
+        "bytes": "c302",
+        "text": "宣"
+      },
+      {
+        "bytes": "c402",
+        "text": "専"
+      },
+      {
+        "bytes": "c502",
+        "text": "戦"
+      },
+      {
+        "bytes": "c602",
+        "text": "泉"
+      },
+      {
+        "bytes": "c702",
+        "text": "浅"
+      },
+      {
+        "bytes": "c802",
+        "text": "線"
+      },
+      {
+        "bytes": "c902",
+        "text": "祖"
+      },
+      {
+        "bytes": "ca02",
+        "text": "薦"
+      },
+      {
+        "bytes": "cb02",
+        "text": "組"
+      },
+      {
+        "bytes": "cc02",
+        "text": "選"
+      },
+      {
+        "bytes": "cd02",
+        "text": "窟"
+      },
+      {
+        "bytes": "ce02",
+        "text": "創"
+      },
+      {
+        "bytes": "cf02",
+        "text": "前"
+      },
+      {
+        "bytes": "d002",
+        "text": "善"
+      },
+      {
+        "bytes": "d102",
+        "text": "漸"
+      },
+      {
+        "bytes": "d202",
+        "text": "然"
+      },
+      {
+        "bytes": "d302",
+        "text": "跡"
+      },
+      {
+        "bytes": "d402",
+        "text": "層"
+      },
+      {
+        "bytes": "d502",
+        "text": "操"
+      },
+      {
+        "bytes": "d602",
+        "text": "早"
+      },
+      {
+        "bytes": "d702",
+        "text": "巣"
+      },
+      {
+        "bytes": "d802",
+        "text": "争"
+      },
+      {
+        "bytes": "d902",
+        "text": "窓"
+      },
+      {
+        "bytes": "da02",
+        "text": "総"
+      },
+      {
+        "bytes": "db02",
+        "text": "草"
+      },
+      {
+        "bytes": "dc02",
+        "text": "装"
+      },
+      {
+        "bytes": "dd02",
+        "text": "走"
+      },
+      {
+        "bytes": "de02",
+        "text": "海"
+      },
+      {
+        "bytes": "df02",
+        "text": "像"
+      },
+      {
+        "bytes": "e002",
+        "text": "増"
+      },
+      {
+        "bytes": "e102",
+        "text": "臓"
+      },
+      {
+        "bytes": "e202",
+        "text": "蔵"
+      },
+      {
+        "bytes": "e302",
+        "text": "造"
+      },
+      {
+        "bytes": "e402",
+        "text": "側"
+      },
+      {
+        "bytes": "e502",
+        "text": "則"
+      },
+      {
+        "bytes": "e602",
+        "text": "束"
+      },
+      {
+        "bytes": "e702",
+        "text": "測"
+      },
+      {
+        "bytes": "e802",
+        "text": "足"
+      },
+      {
+        "bytes": "e902",
+        "text": "速"
+      },
+      {
+        "bytes": "ea02",
+        "text": "属"
+      },
+      {
+        "bytes": "eb02",
+        "text": "族"
+      },
+      {
+        "bytes": "ec02",
+        "text": "続"
+      },
+      {
+        "bytes": "ed02",
+        "text": "卒"
+      },
+      {
+        "bytes": "ee02",
+        "text": "存"
+      },
+      {
+        "bytes": "ef02",
+        "text": "孫"
+      },
+      {
+        "bytes": "f002",
+        "text": "江"
+      },
+      {
+        "bytes": "f102",
+        "text": "損"
+      },
+      {
+        "bytes": "f202",
+        "text": "他"
+      },
+      {
+        "bytes": "f302",
+        "text": "多"
+      },
+      {
+        "bytes": "f402",
+        "text": "太"
+      },
+      {
+        "bytes": "f502",
+        "text": "体"
+      },
+      {
+        "bytes": "f602",
+        "text": "対"
+      },
+      {
+        "bytes": "f702",
+        "text": "帯"
+      },
+      {
+        "bytes": "f802",
+        "text": "態"
+      },
+      {
+        "bytes": "f902",
+        "text": "袋"
+      },
+      {
+        "bytes": "fa02",
+        "text": "貸"
+      },
+      {
+        "bytes": "fb02",
+        "text": "退"
+      },
+      {
+        "bytes": "fc02",
+        "text": "隊"
+      },
+      {
+        "bytes": "fd02",
+        "text": "台"
+      },
+      {
+        "bytes": "fe02",
+        "text": "大"
+      },
+      {
+        "bytes": "ff02",
+        "text": "題"
+      },
+      {
+        "bytes": "0003",
+        "text": "誰"
+      },
+      {
+        "bytes": "0103",
+        "text": "達"
+      },
+      {
+        "bytes": "0203",
+        "text": "団"
+      },
+      {
+        "bytes": "0303",
+        "text": "断"
+      },
+      {
+        "bytes": "0403",
+        "text": "暖"
+      },
+      {
+        "bytes": "0503",
+        "text": "段"
+      },
+      {
+        "bytes": "0603",
+        "text": "男"
+      },
+      {
+        "bytes": "0703",
+        "text": "値"
+      },
+      {
+        "bytes": "0803",
+        "text": "知"
+      },
+      {
+        "bytes": "0903",
+        "text": "地"
+      },
+      {
+        "bytes": "0a03",
+        "text": "単"
+      },
+      {
+        "bytes": "0b03",
+        "text": "担"
+      },
+      {
+        "bytes": "0c03",
+        "text": "探"
+      },
+      {
+        "bytes": "0d03",
+        "text": "置"
+      },
+      {
+        "bytes": "0e03",
+        "text": "中"
+      },
+      {
+        "bytes": "0f03",
+        "text": "忠"
+      },
+      {
+        "bytes": "1003",
+        "text": "昼"
+      },
+      {
+        "bytes": "1103",
+        "text": "祠"
+      },
+      {
+        "bytes": "1203",
+        "text": "貯"
+      },
+      {
+        "bytes": "1303",
+        "text": "張"
+      },
+      {
+        "bytes": "1403",
+        "text": "朝"
+      },
+      {
+        "bytes": "1503",
+        "text": "超"
+      },
+      {
+        "bytes": "1603",
+        "text": "長"
+      },
+      {
+        "bytes": "1703",
+        "text": "頂"
+      },
+      {
+        "bytes": "1803",
+        "text": "直"
+      },
+      {
+        "bytes": "1903",
+        "text": "痛"
+      },
+      {
+        "bytes": "1a03",
+        "text": "通"
+      },
+      {
+        "bytes": "1b03",
+        "text": "低"
+      },
+      {
+        "bytes": "1c03",
+        "text": "停"
+      },
+      {
+        "bytes": "1d03",
+        "text": "底"
+      },
+      {
+        "bytes": "1e03",
+        "text": "程"
+      },
+      {
+        "bytes": "1f03",
+        "text": "点"
+      },
+      {
+        "bytes": "2003",
+        "text": "伝"
+      },
+      {
+        "bytes": "2103",
+        "text": "電"
+      },
+      {
+        "bytes": "2203",
+        "text": "敵"
+      },
+      {
+        "bytes": "2303",
+        "text": "的"
+      },
+      {
+        "bytes": "2403",
+        "text": "適"
+      },
+      {
+        "bytes": "2503",
+        "text": "典"
+      },
+      {
+        "bytes": "2603",
+        "text": "天"
+      },
+      {
+        "bytes": "2703",
+        "text": "努"
+      },
+      {
+        "bytes": "2803",
+        "text": "展"
+      },
+      {
+        "bytes": "2903",
+        "text": "店"
+      },
+      {
+        "bytes": "2a03",
+        "text": "度"
+      },
+      {
+        "bytes": "2b03",
+        "text": "土"
+      },
+      {
+        "bytes": "2c03",
+        "text": "纏"
+      },
+      {
+        "bytes": "2d03",
+        "text": "倒"
+      },
+      {
+        "bytes": "2e03",
+        "text": "党"
+      },
+      {
+        "bytes": "2f03",
+        "text": "刀"
+      },
+      {
+        "bytes": "3003",
+        "text": "島"
+      },
+      {
+        "bytes": "3103",
+        "text": "東"
+      },
+      {
+        "bytes": "3203",
+        "text": "盗"
+      },
+      {
+        "bytes": "3303",
+        "text": "当"
+      },
+      {
+        "bytes": "3403",
+        "text": "答"
+      },
+      {
+        "bytes": "3503",
+        "text": "統"
+      },
+      {
+        "bytes": "3603",
+        "text": "討"
+      },
+      {
+        "bytes": "3703",
+        "text": "頭"
+      },
+      {
+        "bytes": "3803",
+        "text": "闘"
+      },
+      {
+        "bytes": "3903",
+        "text": "働"
+      },
+      {
+        "bytes": "3a03",
+        "text": "動"
+      },
+      {
+        "bytes": "3b03",
+        "text": "同"
+      },
+      {
+        "bytes": "3c03",
+        "text": "堂"
+      },
+      {
+        "bytes": "3d03",
+        "text": "導"
+      },
+      {
+        "bytes": "3e03",
+        "text": "道"
+      },
+      {
+        "bytes": "3f03",
+        "text": "銅"
+      },
+      {
+        "bytes": "4003",
+        "text": "得"
+      },
+      {
+        "bytes": "4103",
+        "text": "徳"
+      },
+      {
+        "bytes": "4203",
+        "text": "特"
+      },
+      {
+        "bytes": "4303",
+        "text": "毒"
+      },
+      {
+        "bytes": "4403",
+        "text": "独"
+      },
+      {
+        "bytes": "4503",
+        "text": "読"
+      },
+      {
+        "bytes": "4603",
+        "text": "内"
+      },
+      {
+        "bytes": "4703",
+        "text": "南"
+      },
+      {
+        "bytes": "4803",
+        "text": "難"
+      },
+      {
+        "bytes": "4903",
+        "text": "契"
+      },
+      {
+        "bytes": "4a03",
+        "text": "肉"
+      },
+      {
+        "bytes": "4b03",
+        "text": "日"
+      },
+      {
+        "bytes": "4c03",
+        "text": "入"
+      },
+      {
+        "bytes": "4d03",
+        "text": "納"
+      },
+      {
+        "bytes": "4e03",
+        "text": "能"
+      },
+      {
+        "bytes": "4f03",
+        "text": "韮"
+      },
+      {
+        "bytes": "5003",
+        "text": "任"
+      },
+      {
+        "bytes": "5103",
+        "text": "認"
+      },
+      {
+        "bytes": "5203",
+        "text": "派"
+      },
+      {
+        "bytes": "5303",
+        "text": "破"
+      },
+      {
+        "bytes": "5403",
+        "text": "熱"
+      },
+      {
+        "bytes": "5503",
+        "text": "年"
+      },
+      {
+        "bytes": "5603",
+        "text": "念"
+      },
+      {
+        "bytes": "5703",
+        "text": "決"
+      },
+      {
+        "bytes": "5803",
+        "text": "燃"
+      },
+      {
+        "bytes": "5903",
+        "text": "排"
+      },
+      {
+        "bytes": "5a03",
+        "text": "敗"
+      },
+      {
+        "bytes": "5b03",
+        "text": "背"
+      },
+      {
+        "bytes": "5c03",
+        "text": "落"
+      },
+      {
+        "bytes": "5d03",
+        "text": "配"
+      },
+      {
+        "bytes": "5e03",
+        "text": "買"
+      },
+      {
+        "bytes": "5f03",
+        "text": "売"
+      },
+      {
+        "bytes": "6003",
+        "text": "博"
+      },
+      {
+        "bytes": "6103",
+        "text": "白"
+      },
+      {
+        "bytes": "6203",
+        "text": "終"
+      },
+      {
+        "bytes": "6303",
+        "text": "発"
+      },
+      {
+        "bytes": "6403",
+        "text": "判"
+      },
+      {
+        "bytes": "6503",
+        "text": "半"
+      },
+      {
+        "bytes": "6603",
+        "text": "版"
+      },
+      {
+        "bytes": "6703",
+        "text": "犯"
+      },
+      {
+        "bytes": "6803",
+        "text": "繁"
+      },
+      {
+        "bytes": "6903",
+        "text": "晩"
+      },
+      {
+        "bytes": "6a03",
+        "text": "番"
+      },
+      {
+        "bytes": "6b03",
+        "text": "否"
+      },
+      {
+        "bytes": "6c03",
+        "text": "比"
+      },
+      {
+        "bytes": "6d03",
+        "text": "秘"
+      },
+      {
+        "bytes": "6e03",
+        "text": "緋"
+      },
+      {
+        "bytes": "6f03",
+        "text": "費"
+      },
+      {
+        "bytes": "7003",
+        "text": "非"
+      },
+      {
+        "bytes": "7103",
+        "text": "飛"
+      },
+      {
+        "bytes": "7203",
+        "text": "備"
+      },
+      {
+        "bytes": "7303",
+        "text": "票"
+      },
+      {
+        "bytes": "7403",
+        "text": "評"
+      },
+      {
+        "bytes": "7503",
+        "text": "病"
+      },
+      {
+        "bytes": "7603",
+        "text": "秒"
+      },
+      {
+        "bytes": "7703",
+        "text": "品"
+      },
+      {
+        "bytes": "7803",
+        "text": "必"
+      },
+      {
+        "bytes": "7903",
+        "text": "敏"
+      },
+      {
+        "bytes": "7a03",
+        "text": "百"
+      },
+      {
+        "bytes": "7b03",
+        "text": "不"
+      },
+      {
+        "bytes": "7c03",
+        "text": "付"
+      },
+      {
+        "bytes": "7d03",
+        "text": "夫"
+      },
+      {
+        "bytes": "7e03",
+        "text": "婦"
+      },
+      {
+        "bytes": "7f03",
+        "text": "標"
+      },
+      {
+        "bytes": "8003",
+        "text": "布"
+      },
+      {
+        "bytes": "8103",
+        "text": "父"
+      },
+      {
+        "bytes": "8203",
+        "text": "武"
+      },
+      {
+        "bytes": "8303",
+        "text": "部"
+      },
+      {
+        "bytes": "8403",
+        "text": "風"
+      },
+      {
+        "bytes": "8503",
+        "text": "副"
+      },
+      {
+        "bytes": "8603",
+        "text": "復"
+      },
+      {
+        "bytes": "8703",
+        "text": "腹"
+      },
+      {
+        "bytes": "8803",
+        "text": "複"
+      },
+      {
+        "bytes": "8903",
+        "text": "物"
+      },
+      {
+        "bytes": "8a03",
+        "text": "分"
+      },
+      {
+        "bytes": "8b03",
+        "text": "奮"
+      },
+      {
+        "bytes": "8c03",
+        "text": "粉"
+      },
+      {
+        "bytes": "8d03",
+        "text": "文"
+      },
+      {
+        "bytes": "8e03",
+        "text": "聞"
+      },
+      {
+        "bytes": "8f03",
+        "text": "兵"
+      },
+      {
+        "bytes": "9003",
+        "text": "並"
+      },
+      {
+        "bytes": "9103",
+        "text": "閉"
+      },
+      {
+        "bytes": "9203",
+        "text": "別"
+      },
+      {
+        "bytes": "9303",
+        "text": "変"
+      },
+      {
+        "bytes": "9403",
+        "text": "片"
+      },
+      {
+        "bytes": "9503",
+        "text": "編"
+      },
+      {
+        "bytes": "9603",
+        "text": "辺"
+      },
+      {
+        "bytes": "9703",
+        "text": "保"
+      },
+      {
+        "bytes": "9803",
+        "text": "歩"
+      },
+      {
+        "bytes": "9903",
+        "text": "補"
+      },
+      {
+        "bytes": "9a03",
+        "text": "墓"
+      },
+      {
+        "bytes": "9b03",
+        "text": "掌"
+      },
+      {
+        "bytes": "9c03",
+        "text": "母"
+      },
+      {
+        "bytes": "9d03",
+        "text": "運"
+      },
+      {
+        "bytes": "9e03",
+        "text": "報"
+      },
+      {
+        "bytes": "9f03",
+        "text": "宝"
+      },
+      {
+        "bytes": "a003",
+        "text": "放"
+      },
+      {
+        "bytes": "a103",
+        "text": "方"
+      },
+      {
+        "bytes": "a203",
+        "text": "法"
+      },
+      {
+        "bytes": "a303",
+        "text": "暴"
+      },
+      {
+        "bytes": "a403",
+        "text": "望"
+      },
+      {
+        "bytes": "a503",
+        "text": "棒"
+      },
+      {
+        "bytes": "a603",
+        "text": "防"
+      },
+      {
+        "bytes": "a703",
+        "text": "北"
+      },
+      {
+        "bytes": "a803",
+        "text": "邪"
+      },
+      {
+        "bytes": "a903",
+        "text": "亡"
+      },
+      {
+        "bytes": "aa03",
+        "text": "忘"
+      },
+      {
+        "bytes": "ab03",
+        "text": "本"
+      },
+      {
+        "bytes": "ac03",
+        "text": "魔"
+      },
+      {
+        "bytes": "ad03",
+        "text": "枚"
+      },
+      {
+        "bytes": "ae03",
+        "text": "毎"
+      },
+      {
+        "bytes": "af03",
+        "text": "幕"
+      },
+      {
+        "bytes": "b003",
+        "text": "末"
+      },
+      {
+        "bytes": "b103",
+        "text": "万"
+      },
+      {
+        "bytes": "b203",
+        "text": "満"
+      },
+      {
+        "bytes": "b303",
+        "text": "未"
+      },
+      {
+        "bytes": "b403",
+        "text": "密"
+      },
+      {
+        "bytes": "b503",
+        "text": "脈"
+      },
+      {
+        "bytes": "b603",
+        "text": "民"
+      },
+      {
+        "bytes": "b703",
+        "text": "務"
+      },
+      {
+        "bytes": "b803",
+        "text": "夢"
+      },
+      {
+        "bytes": "b903",
+        "text": "無"
+      },
+      {
+        "bytes": "ba03",
+        "text": "名"
+      },
+      {
+        "bytes": "bb03",
+        "text": "命"
+      },
+      {
+        "bytes": "bc03",
+        "text": "明"
+      },
+      {
+        "bytes": "bd03",
+        "text": "盟"
+      },
+      {
+        "bytes": "be03",
+        "text": "迷"
+      },
+      {
+        "bytes": "bf03",
+        "text": "滅"
+      },
+      {
+        "bytes": "c003",
+        "text": "面"
+      },
+      {
+        "bytes": "c103",
+        "text": "猛"
+      },
+      {
+        "bytes": "c203",
+        "text": "木"
+      },
+      {
+        "bytes": "c303",
+        "text": "目"
+      },
+      {
+        "bytes": "c403",
+        "text": "問"
+      },
+      {
+        "bytes": "c503",
+        "text": "門"
+      },
+      {
+        "bytes": "c603",
+        "text": "夜"
+      },
+      {
+        "bytes": "c703",
+        "text": "野"
+      },
+      {
+        "bytes": "c803",
+        "text": "約"
+      },
+      {
+        "bytes": "c903",
+        "text": "訳"
+      },
+      {
+        "bytes": "ca03",
+        "text": "夕"
+      },
+      {
+        "bytes": "cb03",
+        "text": "余"
+      },
+      {
+        "bytes": "cc03",
+        "text": "預"
+      },
+      {
+        "bytes": "cd03",
+        "text": "傭"
+      },
+      {
+        "bytes": "ce03",
+        "text": "幼"
+      },
+      {
+        "bytes": "cf03",
+        "text": "優"
+      },
+      {
+        "bytes": "d003",
+        "text": "容"
+      },
+      {
+        "bytes": "d103",
+        "text": "勇"
+      },
+      {
+        "bytes": "d203",
+        "text": "友"
+      },
+      {
+        "bytes": "d303",
+        "text": "様"
+      },
+      {
+        "bytes": "d403",
+        "text": "有"
+      },
+      {
+        "bytes": "d503",
+        "text": "用"
+      },
+      {
+        "bytes": "d603",
+        "text": "葉"
+      },
+      {
+        "bytes": "d703",
+        "text": "要"
+      },
+      {
+        "bytes": "d803",
+        "text": "欲"
+      },
+      {
+        "bytes": "d903",
+        "text": "浴"
+      },
+      {
+        "bytes": "da03",
+        "text": "翌"
+      },
+      {
+        "bytes": "db03",
+        "text": "来"
+      },
+      {
+        "bytes": "dc03",
+        "text": "乱"
+      },
+      {
+        "bytes": "dd03",
+        "text": "卵"
+      },
+      {
+        "bytes": "de03",
+        "text": "覧"
+      },
+      {
+        "bytes": "df03",
+        "text": "利"
+      },
+      {
+        "bytes": "e003",
+        "text": "理"
+      },
+      {
+        "bytes": "e103",
+        "text": "裏"
+      },
+      {
+        "bytes": "e203",
+        "text": "律"
+      },
+      {
+        "bytes": "e303",
+        "text": "率"
+      },
+      {
+        "bytes": "e403",
+        "text": "立"
+      },
+      {
+        "bytes": "e503",
+        "text": "略"
+      },
+      {
+        "bytes": "e603",
+        "text": "流"
+      },
+      {
+        "bytes": "e703",
+        "text": "留"
+      },
+      {
+        "bytes": "e803",
+        "text": "旅"
+      },
+      {
+        "bytes": "e903",
+        "text": "料"
+      },
+      {
+        "bytes": "ea03",
+        "text": "良"
+      },
+      {
+        "bytes": "eb03",
+        "text": "量"
+      },
+      {
+        "bytes": "ec03",
+        "text": "力"
+      },
+      {
+        "bytes": "ed03",
+        "text": "臨"
+      },
+      {
+        "bytes": "ee03",
+        "text": "輪"
+      },
+      {
+        "bytes": "ef03",
+        "text": "類"
+      },
+      {
+        "bytes": "f003",
+        "text": "令"
+      },
+      {
+        "bytes": "f103",
+        "text": "例"
+      },
+      {
+        "bytes": "f203",
+        "text": "冷"
+      },
+      {
+        "bytes": "f303",
+        "text": "練"
+      },
+      {
+        "bytes": "f403",
+        "text": "録"
+      },
+      {
+        "bytes": "f503",
+        "text": "論"
+      },
+      {
+        "bytes": "f603",
+        "text": "連"
+      },
+      {
+        "bytes": "f703",
+        "text": "話"
+      },
+      {
+        "bytes": "f803",
+        "text": "惑"
+      },
+      {
+        "bytes": "f903",
+        "text": "勞"
+      },
+      {
+        "bytes": "fa03",
+        "text": "狼"
+      },
+      {
+        "bytes": "fb03",
+        "text": "老"
+      },
+      {
+        "bytes": "fc03",
+        "text": "丈"
+      },
+      {
+        "bytes": "fd03",
+        "text": "相"
+      },
+      {
+        "bytes": "fe03",
+        "text": "途"
+      },
+      {
+        "bytes": "ff03",
+        "text": "村"
+      },
+      {
+        "bytes": "0004",
+        "text": "　"
+      },
+      {
+        "bytes": "0104",
+        "text": "゜"
+      },
+      {
+        "bytes": "0204",
+        "text": "ヶ"
+      },
+      {
+        "bytes": "0304",
+        "text": "闇"
+      },
+      {
+        "bytes": "0404",
+        "text": "王"
+      },
+      {
+        "bytes": "0504",
+        "text": "黄"
+      },
+      {
+        "bytes": "0604",
+        "text": "温"
+      },
+      {
+        "bytes": "0704",
+        "text": "鎧"
+      },
+      {
+        "bytes": "0804",
+        "text": "兜"
+      },
+      {
+        "bytes": "0904",
+        "text": "鎌"
+      },
+      {
+        "bytes": "0a04",
+        "text": "冠"
+      },
+      {
+        "bytes": "0b04",
+        "text": "岸"
+      },
+      {
+        "bytes": "0c04",
+        "text": "奇"
+      },
+      {
+        "bytes": "0d04",
+        "text": "騎"
+      },
+      {
+        "bytes": "0e04",
+        "text": "鬼"
+      },
+      {
+        "bytes": "0f04",
+        "text": "弓"
+      },
+      {
+        "bytes": "1004",
+        "text": "恐"
+      },
+      {
+        "bytes": "1104",
+        "text": "靴"
+      },
+      {
+        "bytes": "1204",
+        "text": "懸"
+      },
+      {
+        "bytes": "1304",
+        "text": "賢"
+      },
+      {
+        "bytes": "1404",
+        "text": "孤"
+      },
+      {
+        "bytes": "1504",
+        "text": "枯"
+      },
+      {
+        "bytes": "1604",
+        "text": "香"
+      },
+      {
+        "bytes": "1704",
+        "text": "魂"
+      },
+      {
+        "bytes": "1804",
+        "text": "挫"
+      },
+      {
+        "bytes": "1904",
+        "text": "剤"
+      },
+      {
+        "bytes": "1a04",
+        "text": "写"
+      },
+      {
+        "bytes": "1b04",
+        "text": "蛇"
+      },
+      {
+        "bytes": "1c04",
+        "text": "主"
+      },
+      {
+        "bytes": "1d04",
+        "text": "珠"
+      },
+      {
+        "bytes": "1e04",
+        "text": "酒"
+      },
+      {
+        "bytes": "1f04",
+        "text": "盾"
+      },
+      {
+        "bytes": "2004",
+        "text": "商"
+      },
+      {
+        "bytes": "2104",
+        "text": "沼"
+      },
+      {
+        "bytes": "2204",
+        "text": "乗"
+      },
+      {
+        "bytes": "2304",
+        "text": "飾"
+      },
+      {
+        "bytes": "2404",
+        "text": "伸"
+      },
+      {
+        "bytes": "2504",
+        "text": "陣"
+      },
+      {
+        "bytes": "2604",
+        "text": "吹"
+      },
+      {
+        "bytes": "2704",
+        "text": "睡"
+      },
+      {
+        "bytes": "2804",
+        "text": "整"
+      },
+      {
+        "bytes": "2904",
+        "text": "想"
+      },
+      {
+        "bytes": "2a04",
+        "text": "槍"
+      },
+      {
+        "bytes": "2b04",
+        "text": "痩"
+      },
+      {
+        "bytes": "2c04",
+        "text": "即"
+      },
+      {
+        "bytes": "2d04",
+        "text": "息"
+      },
+      {
+        "bytes": "2e04",
+        "text": "代"
+      },
+      {
+        "bytes": "2f04",
+        "text": "宅"
+      },
+      {
+        "bytes": "3004",
+        "text": "誰"
+      },
+      {
+        "bytes": "3104",
+        "text": "池"
+      },
+      {
+        "bytes": "3204",
+        "text": "蝶"
+      },
+      {
+        "bytes": "3304",
+        "text": "珍"
+      },
+      {
+        "bytes": "3404",
+        "text": "槌"
+      },
+      {
+        "bytes": "3504",
+        "text": "坪"
+      },
+      {
+        "bytes": "3604",
+        "text": "賭"
+      },
+      {
+        "bytes": "3704",
+        "text": "都"
+      },
+      {
+        "bytes": "3804",
+        "text": "虹"
+      },
+      {
+        "bytes": "3904",
+        "text": "猫"
+      },
+      {
+        "bytes": "3a04",
+        "text": "俳"
+      },
+      {
+        "bytes": "3b04",
+        "text": "秤"
+      },
+      {
+        "bytes": "3c04",
+        "text": "爆"
+      },
+      {
+        "bytes": "3d04",
+        "text": "箱"
+      },
+      {
+        "bytes": "3e04",
+        "text": "肌"
+      },
+      {
+        "bytes": "3f04",
+        "text": "罰"
+      },
+      {
+        "bytes": "4004",
+        "text": "悲"
+      },
+      {
+        "bytes": "4104",
+        "text": "美"
+      },
+      {
+        "bytes": "4204",
+        "text": "怖"
+      },
+      {
+        "bytes": "4304",
+        "text": "浮"
+      },
+      {
+        "bytes": "4404",
+        "text": "返"
+      },
+      {
+        "bytes": "4504",
+        "text": "便"
+      },
+      {
+        "bytes": "4604",
+        "text": "豊"
+      },
+      {
+        "bytes": "4704",
+        "text": "眠"
+      },
+      {
+        "bytes": "4804",
+        "text": "毛"
+      },
+      {
+        "bytes": "4904",
+        "text": "薬"
+      },
+      {
+        "bytes": "4a04",
+        "text": "予"
+      },
+      {
+        "bytes": "4b04",
+        "text": "湧"
+      },
+      {
+        "bytes": "4c04",
+        "text": "遊"
+      },
+      {
+        "bytes": "4d04",
+        "text": "陽"
+      },
+      {
+        "bytes": "4e04",
+        "text": "林"
+      },
+      {
+        "bytes": "4f04",
+        "text": "壷"
+      },
+      {
+        "bytes": "5004",
+        "text": "媚"
+      },
+      {
+        "bytes": "5104",
+        "text": "籠"
+      },
+      {
+        "bytes": "5204",
+        "text": "受"
+      },
+      {
+        "bytes": "5304",
+        "text": "青"
+      },
+      {
+        "bytes": "5404",
+        "text": "娘"
+      },
+      {
+        "bytes": "5504",
+        "text": "悪"
+      },
+      {
+        "bytes": "5604",
+        "text": "船"
+      },
+      {
+        "bytes": "5704",
+        "text": "屋"
+      },
+      {
+        "bytes": "5804",
+        "text": "床"
+      },
+      {
+        "bytes": "5904",
+        "text": "味"
+      },
+      {
+        "bytes": "5a04",
+        "text": "路"
+      },
+      {
+        "bytes": "5b04",
+        "text": "鉄"
+      },
+      {
+        "bytes": "5c04",
+        "text": "住"
+      },
+      {
+        "bytes": "5d04",
+        "text": "係"
+      },
+      {
+        "bytes": "5e04",
+        "text": "壁"
+      },
+      {
+        "bytes": "5f04",
+        "text": "板"
+      },
+      {
+        "bytes": "6004",
+        "text": "漁"
+      },
+      {
+        "bytes": "6104",
+        "text": "虫"
+      },
+      {
+        "bytes": "6204",
+        "text": "向"
+      },
+      {
+        "bytes": "6304",
+        "text": "列"
+      },
+      {
+        "bytes": "6404",
+        "text": "称"
+      },
+      {
+        "bytes": "6504",
+        "text": "竜"
+      },
+      {
+        "bytes": "6604",
+        "text": "隣"
+      },
+      {
+        "bytes": "6704",
+        "text": "待"
+      },
+      {
+        "bytes": "6804",
+        "text": "▼"
+      },
+      {
+        "bytes": "6904",
+        "text": "　"
+      },
+      {
+        "bytes": "6a04",
+        "text": "　"
+      },
+      {
+        "bytes": "6b04",
+        "text": "　"
+      },
+      {
+        "bytes": "6c04",
+        "text": "　"
+      },
+      {
+        "bytes": "6d04",
+        "text": "　"
+      },
+      {
+        "bytes": "6e04",
+        "text": "　"
+      },
+      {
+        "bytes": "6f04",
+        "text": "　"
+      },
+      {
+        "bytes": "7004",
+        "text": "　"
+      },
+      {
+        "bytes": "7104",
+        "text": "　"
+      },
+      {
+        "bytes": "7204",
+        "text": "　"
+      },
+      {
+        "bytes": "7304",
+        "text": "　"
+      },
+      {
+        "bytes": "7404",
+        "text": "　"
+      },
+      {
+        "bytes": "7504",
+        "text": "　"
+      },
+      {
+        "bytes": "7604",
+        "text": "　"
+      },
+      {
+        "bytes": "7704",
+        "text": "　"
+      },
+      {
+        "bytes": "7804",
+        "text": "　"
+      },
+      {
+        "bytes": "7904",
+        "text": "　"
+      },
+      {
+        "bytes": "7a04",
+        "text": "　"
+      },
+      {
+        "bytes": "7b04",
+        "text": "　"
+      },
+      {
+        "bytes": "7c04",
+        "text": "　"
+      },
+      {
+        "bytes": "7d04",
+        "text": "　"
+      },
+      {
+        "bytes": "7e04",
+        "text": "　"
+      },
+      {
+        "bytes": "7f04",
+        "text": "　"
+      },
+      {
+        "bytes": "8004",
+        "text": "　"
+      },
+      {
+        "bytes": "8104",
+        "text": "　"
+      },
+      {
+        "bytes": "8204",
+        "text": "　"
+      },
+      {
+        "bytes": "8304",
+        "text": "　"
+      },
+      {
+        "bytes": "8404",
+        "text": "　"
+      },
+      {
+        "bytes": "8504",
+        "text": "　"
+      },
+      {
+        "bytes": "8604",
+        "text": "　"
+      },
+      {
+        "bytes": "8704",
+        "text": "　"
+      },
+      {
+        "bytes": "8804",
+        "text": "　"
+      },
+      {
+        "bytes": "8904",
+        "text": "　"
+      },
+      {
+        "bytes": "8a04",
+        "text": "　"
+      },
+      {
+        "bytes": "8b04",
+        "text": "　"
+      },
+      {
+        "bytes": "8c04",
+        "text": "　"
+      },
+      {
+        "bytes": "8d04",
+        "text": "　"
+      },
+      {
+        "bytes": "8e04",
+        "text": "　"
+      },
+      {
+        "bytes": "8f04",
+        "text": "　"
+      },
+      {
+        "bytes": "9004",
+        "text": "　"
+      },
+      {
+        "bytes": "9104",
+        "text": "　"
+      },
+      {
+        "bytes": "9204",
+        "text": "　"
+      },
+      {
+        "bytes": "9304",
+        "text": "　"
+      },
+      {
+        "bytes": "9404",
+        "text": "　"
+      },
+      {
+        "bytes": "9504",
+        "text": "　"
+      },
+      {
+        "bytes": "9604",
+        "text": "　"
+      },
+      {
+        "bytes": "9704",
+        "text": "　"
+      },
+      {
+        "bytes": "9804",
+        "text": "　"
+      },
+      {
+        "bytes": "9904",
+        "text": "　"
+      },
+      {
+        "bytes": "9a04",
+        "text": "　"
+      },
+      {
+        "bytes": "9b04",
+        "text": "　"
+      },
+      {
+        "bytes": "9c04",
+        "text": "　"
+      },
+      {
+        "bytes": "9d04",
+        "text": "　"
+      },
+      {
+        "bytes": "9e04",
+        "text": "　"
+      },
+      {
+        "bytes": "9f04",
+        "text": "　"
+      },
+      {
+        "bytes": "a004",
+        "text": "　"
+      },
+      {
+        "bytes": "a104",
+        "text": "　"
+      },
+      {
+        "bytes": "a204",
+        "text": "　"
+      },
+      {
+        "bytes": "a304",
+        "text": "　"
+      },
+      {
+        "bytes": "a404",
+        "text": "　"
+      },
+      {
+        "bytes": "a504",
+        "text": "　"
+      },
+      {
+        "bytes": "a604",
+        "text": "　"
+      },
+      {
+        "bytes": "a704",
+        "text": "　"
+      },
+      {
+        "bytes": "a804",
+        "text": "　"
+      },
+      {
+        "bytes": "a904",
+        "text": "　"
+      },
+      {
+        "bytes": "aa04",
+        "text": "　"
+      },
+      {
+        "bytes": "ab04",
+        "text": "　"
+      },
+      {
+        "bytes": "ac04",
+        "text": "　"
+      },
+      {
+        "bytes": "ad04",
+        "text": "　"
+      },
+      {
+        "bytes": "ae04",
+        "text": "　"
+      },
+      {
+        "bytes": "af04",
+        "text": "　"
+      },
+      {
+        "bytes": "b004",
+        "text": "　"
+      },
+      {
+        "bytes": "b104",
+        "text": "　"
+      },
+      {
+        "bytes": "b204",
+        "text": "　"
+      },
+      {
+        "bytes": "b304",
+        "text": "　"
+      },
+      {
+        "bytes": "b404",
+        "text": "　"
+      },
+      {
+        "bytes": "b504",
+        "text": "　"
+      },
+      {
+        "bytes": "b604",
+        "text": "　"
+      },
+      {
+        "bytes": "b704",
+        "text": "　"
+      },
+      {
+        "bytes": "b804",
+        "text": "　"
+      },
+      {
+        "bytes": "b904",
+        "text": "　"
+      },
+      {
+        "bytes": "ba04",
+        "text": "　"
+      },
+      {
+        "bytes": "bb04",
+        "text": "　"
+      },
+      {
+        "bytes": "bc04",
+        "text": "　"
+      },
+      {
+        "bytes": "bd04",
+        "text": "　"
+      },
+      {
+        "bytes": "be04",
+        "text": "　"
+      },
+      {
+        "bytes": "bf04",
+        "text": "　"
+      },
+      {
+        "bytes": "c004",
+        "text": "　"
+      },
+      {
+        "bytes": "c104",
+        "text": "　"
+      },
+      {
+        "bytes": "c204",
+        "text": "　"
+      },
+      {
+        "bytes": "c304",
+        "text": "　"
+      },
+      {
+        "bytes": "c404",
+        "text": "　"
+      },
+      {
+        "bytes": "c504",
+        "text": "　"
+      },
+      {
+        "bytes": "c604",
+        "text": "　"
+      },
+      {
+        "bytes": "c704",
+        "text": "　"
+      },
+      {
+        "bytes": "c804",
+        "text": "　"
+      },
+      {
+        "bytes": "c904",
+        "text": "　"
+      },
+      {
+        "bytes": "ca04",
+        "text": "　"
+      },
+      {
+        "bytes": "cb04",
+        "text": "　"
+      },
+      {
+        "bytes": "cc04",
+        "text": "　"
+      },
+      {
+        "bytes": "cd04",
+        "text": "　"
+      },
+      {
+        "bytes": "ce04",
+        "text": "　"
+      },
+      {
+        "bytes": "cf04",
+        "text": "　"
+      },
+      {
+        "bytes": "d004",
+        "text": "　"
+      },
+      {
+        "bytes": "d104",
+        "text": "　"
+      },
+      {
+        "bytes": "d204",
+        "text": "　"
+      },
+      {
+        "bytes": "d304",
+        "text": "　"
+      },
+      {
+        "bytes": "d404",
+        "text": "　"
+      },
+      {
+        "bytes": "d504",
+        "text": "　"
+      },
+      {
+        "bytes": "d604",
+        "text": "　"
+      },
+      {
+        "bytes": "d704",
+        "text": "　"
+      },
+      {
+        "bytes": "d804",
+        "text": "　"
+      },
+      {
+        "bytes": "d904",
+        "text": "　"
+      },
+      {
+        "bytes": "da04",
+        "text": "　"
+      },
+      {
+        "bytes": "db04",
+        "text": "　"
+      },
+      {
+        "bytes": "dc04",
+        "text": "　"
+      },
+      {
+        "bytes": "dd04",
+        "text": "　"
+      },
+      {
+        "bytes": "de04",
+        "text": "　"
+      },
+      {
+        "bytes": "df04",
+        "text": "　"
+      },
+      {
+        "bytes": "e004",
+        "text": "　"
+      },
+      {
+        "bytes": "e104",
+        "text": "　"
+      },
+      {
+        "bytes": "e204",
+        "text": "　"
+      },
+      {
+        "bytes": "e304",
+        "text": "　"
+      },
+      {
+        "bytes": "e404",
+        "text": "　"
+      },
+      {
+        "bytes": "e504",
+        "text": "　"
+      },
+      {
+        "bytes": "e604",
+        "text": "　"
+      },
+      {
+        "bytes": "e704",
+        "text": "　"
+      },
+      {
+        "bytes": "e804",
+        "text": "　"
+      },
+      {
+        "bytes": "e904",
+        "text": "　"
+      },
+      {
+        "bytes": "ea04",
+        "text": "　"
+      },
+      {
+        "bytes": "eb04",
+        "text": "　"
+      },
+      {
+        "bytes": "ec04",
+        "text": "　"
+      },
+      {
+        "bytes": "ed04",
+        "text": "　"
+      },
+      {
+        "bytes": "ee04",
+        "text": "　"
+      },
+      {
+        "bytes": "ef04",
+        "text": "　"
+      },
+      {
+        "bytes": "f004",
+        "text": "　"
+      },
+      {
+        "bytes": "f104",
+        "text": "　"
+      },
+      {
+        "bytes": "f204",
+        "text": "　"
+      },
+      {
+        "bytes": "f304",
+        "text": "　"
+      },
+      {
+        "bytes": "f404",
+        "text": "　"
+      },
+      {
+        "bytes": "f504",
+        "text": "　"
+      },
+      {
+        "bytes": "f604",
+        "text": "　"
+      },
+      {
+        "bytes": "f704",
+        "text": "　"
+      },
+      {
+        "bytes": "f804",
+        "text": "　"
+      },
+      {
+        "bytes": "f904",
+        "text": "　"
+      },
+      {
+        "bytes": "fa04",
+        "text": "　"
+      },
+      {
+        "bytes": "fb04",
+        "text": "　"
+      },
+      {
+        "bytes": "fc04",
+        "text": "　"
+      },
+      {
+        "bytes": "fd04",
+        "text": "　"
+      },
+      {
+        "bytes": "fe04",
+        "text": "　"
+      },
+      {
+        "bytes": "ff04",
+        "text": "　"
+      },
+      {
+        "bytes": "0005",
+        "text": "{g500}"
+      },
+      {
+        "bytes": "0105",
+        "text": "{g501}"
+      },
+      {
+        "bytes": "0205",
+        "text": "{g502}"
+      },
+      {
+        "bytes": "0305",
+        "text": "{g503}"
+      },
+      {
+        "bytes": "0405",
+        "text": "{g504}"
+      },
+      {
+        "bytes": "0505",
+        "text": "{g505}"
+      },
+      {
+        "bytes": "0605",
+        "text": "{g506}"
+      },
+      {
+        "bytes": "0705",
+        "text": "{g507}"
+      },
+      {
+        "bytes": "0805",
+        "text": "{g508}"
+      },
+      {
+        "bytes": "0905",
+        "text": "{g509}"
+      },
+      {
+        "bytes": "0a05",
+        "text": "{g50a}"
+      },
+      {
+        "bytes": "0b05",
+        "text": "{g50b}"
+      },
+      {
+        "bytes": "0c05",
+        "text": "{g50c}"
+      },
+      {
+        "bytes": "0d05",
+        "text": "{g50d}"
+      },
+      {
+        "bytes": "0e05",
+        "text": "{g50e}"
+      },
+      {
+        "bytes": "0f05",
+        "text": "{g50f}"
+      },
+      {
+        "bytes": "1005",
+        "text": "{g510}"
+      },
+      {
+        "bytes": "1105",
+        "text": "{g511}"
+      },
+      {
+        "bytes": "1205",
+        "text": "{g512}"
+      },
+      {
+        "bytes": "1305",
+        "text": "{g513}"
+      },
+      {
+        "bytes": "1405",
+        "text": "{g514}"
+      },
+      {
+        "bytes": "1505",
+        "text": "{g515}"
+      },
+      {
+        "bytes": "1605",
+        "text": "{g516}"
+      },
+      {
+        "bytes": "1705",
+        "text": "{g517}"
+      },
+      {
+        "bytes": "1805",
+        "text": "{g518}"
+      },
+      {
+        "bytes": "1905",
+        "text": "{g519}"
+      },
+      {
+        "bytes": "1a05",
+        "text": "{g51a}"
+      },
+      {
+        "bytes": "1b05",
+        "text": "{g51b}"
+      },
+      {
+        "bytes": "1c05",
+        "text": "{g51c}"
+      },
+      {
+        "bytes": "1d05",
+        "text": "{g51d}"
+      },
+      {
+        "bytes": "1e05",
+        "text": "{g51e}"
+      },
+      {
+        "bytes": "1f05",
+        "text": "{g51f}"
+      },
+      {
+        "bytes": "2005",
+        "text": "{g520}"
+      },
+      {
+        "bytes": "2105",
+        "text": "{g521}"
+      },
+      {
+        "bytes": "2205",
+        "text": "{g522}"
+      },
+      {
+        "bytes": "2305",
+        "text": "{g523}"
+      },
+      {
+        "bytes": "2405",
+        "text": "{g524}"
+      },
+      {
+        "bytes": "2505",
+        "text": "{g525}"
+      },
+      {
+        "bytes": "2605",
+        "text": "{g526}"
+      },
+      {
+        "bytes": "2705",
+        "text": "{g527}"
+      },
+      {
+        "bytes": "2805",
+        "text": "{g528}"
+      },
+      {
+        "bytes": "2905",
+        "text": "{g529}"
+      },
+      {
+        "bytes": "2a05",
+        "text": "{g52a}"
+      },
+      {
+        "bytes": "2b05",
+        "text": "{g52b}"
+      },
+      {
+        "bytes": "2c05",
+        "text": "{g52c}"
+      },
+      {
+        "bytes": "2d05",
+        "text": "{g52d}"
+      },
+      {
+        "bytes": "2e05",
+        "text": "{g52e}"
+      },
+      {
+        "bytes": "2f05",
+        "text": "{g52f}"
+      },
+      {
+        "bytes": "3005",
+        "text": "{g530}"
+      },
+      {
+        "bytes": "3105",
+        "text": "{g531}"
+      },
+      {
+        "bytes": "3205",
+        "text": "{g532}"
+      },
+      {
+        "bytes": "3305",
+        "text": "{g533}"
+      },
+      {
+        "bytes": "3405",
+        "text": "{g534}"
+      },
+      {
+        "bytes": "3505",
+        "text": "{g535}"
+      },
+      {
+        "bytes": "3605",
+        "text": "{g536}"
+      },
+      {
+        "bytes": "3705",
+        "text": "{g537}"
+      },
+      {
+        "bytes": "3805",
+        "text": "{g538}"
+      },
+      {
+        "bytes": "3905",
+        "text": "{g539}"
+      },
+      {
+        "bytes": "3a05",
+        "text": "{g53a}"
+      },
+      {
+        "bytes": "3b05",
+        "text": "{g53b}"
+      },
+      {
+        "bytes": "3c05",
+        "text": "{g53c}"
+      },
+      {
+        "bytes": "3d05",
+        "text": "{g53d}"
+      },
+      {
+        "bytes": "3e05",
+        "text": "{g53e}"
+      },
+      {
+        "bytes": "3f05",
+        "text": "{g53f}"
+      },
+      {
+        "bytes": "4005",
+        "text": "{g540}"
+      },
+      {
+        "bytes": "4105",
+        "text": "{g541}"
+      },
+      {
+        "bytes": "4205",
+        "text": "{g542}"
+      },
+      {
+        "bytes": "4305",
+        "text": "{g543}"
+      },
+      {
+        "bytes": "4405",
+        "text": "{g544}"
+      },
+      {
+        "bytes": "4505",
+        "text": "{g545}"
+      },
+      {
+        "bytes": "4605",
+        "text": "{g546}"
+      },
+      {
+        "bytes": "4705",
+        "text": "{g547}"
+      },
+      {
+        "bytes": "4805",
+        "text": "{g548}"
+      },
+      {
+        "bytes": "4905",
+        "text": "{g549}"
+      },
+      {
+        "bytes": "4a05",
+        "text": "{g54a}"
+      },
+      {
+        "bytes": "4b05",
+        "text": "{g54b}"
+      },
+      {
+        "bytes": "4c05",
+        "text": "{g54c}"
+      },
+      {
+        "bytes": "4d05",
+        "text": "{g54d}"
+      },
+      {
+        "bytes": "4e05",
+        "text": "{g54e}"
+      },
+      {
+        "bytes": "4f05",
+        "text": "{g54f}"
+      },
+      {
+        "bytes": "5005",
+        "text": "{g550}"
+      },
+      {
+        "bytes": "5105",
+        "text": "{g551}"
+      },
+      {
+        "bytes": "5205",
+        "text": "{g552}"
+      },
+      {
+        "bytes": "5305",
+        "text": "{g553}"
+      },
+      {
+        "bytes": "5405",
+        "text": "{g554}"
+      },
+      {
+        "bytes": "5505",
+        "text": "{g555}"
+      },
+      {
+        "bytes": "5605",
+        "text": "{g556}"
+      },
+      {
+        "bytes": "5705",
+        "text": "{g557}"
+      },
+      {
+        "bytes": "5805",
+        "text": "{g558}"
+      },
+      {
+        "bytes": "5905",
+        "text": "{g559}"
+      },
+      {
+        "bytes": "5a05",
+        "text": "{g55a}"
+      },
+      {
+        "bytes": "5b05",
+        "text": "{g55b}"
+      },
+      {
+        "bytes": "5c05",
+        "text": "{g55c}"
+      },
+      {
+        "bytes": "5d05",
+        "text": "{g55d}"
+      },
+      {
+        "bytes": "5e05",
+        "text": "{g55e}"
+      },
+      {
+        "bytes": "5f05",
+        "text": "{g55f}"
+      },
+      {
+        "bytes": "6005",
+        "text": "{g560}"
+      },
+      {
+        "bytes": "6105",
+        "text": "{g561}"
+      },
+      {
+        "bytes": "6205",
+        "text": "{g562}"
+      },
+      {
+        "bytes": "6305",
+        "text": "{g563}"
+      },
+      {
+        "bytes": "6405",
+        "text": "{g564}"
+      },
+      {
+        "bytes": "6505",
+        "text": "{g565}"
+      },
+      {
+        "bytes": "6605",
+        "text": "{g566}"
+      },
+      {
+        "bytes": "6705",
+        "text": "{g567}"
+      },
+      {
+        "bytes": "6805",
+        "text": "{g568}"
+      },
+      {
+        "bytes": "6905",
+        "text": "{g569}"
+      },
+      {
+        "bytes": "6a05",
+        "text": "{g56a}"
+      },
+      {
+        "bytes": "6b05",
+        "text": "{g56b}"
+      },
+      {
+        "bytes": "6c05",
+        "text": "{g56c}"
+      },
+      {
+        "bytes": "6d05",
+        "text": "{g56d}"
+      },
+      {
+        "bytes": "6e05",
+        "text": "{g56e}"
+      },
+      {
+        "bytes": "6f05",
+        "text": "{g56f}"
+      },
+      {
+        "bytes": "7005",
+        "text": "{g570}"
+      },
+      {
+        "bytes": "7105",
+        "text": "{g571}"
+      },
+      {
+        "bytes": "7205",
+        "text": "{g572}"
+      },
+      {
+        "bytes": "7305",
+        "text": "{g573}"
+      },
+      {
+        "bytes": "7405",
+        "text": "{g574}"
+      },
+      {
+        "bytes": "7505",
+        "text": "{g575}"
+      },
+      {
+        "bytes": "7605",
+        "text": "{g576}"
+      },
+      {
+        "bytes": "7705",
+        "text": "{g577}"
+      },
+      {
+        "bytes": "7805",
+        "text": "{g578}"
+      },
+      {
+        "bytes": "7905",
+        "text": "{g579}"
+      },
+      {
+        "bytes": "7a05",
+        "text": "{g57a}"
+      },
+      {
+        "bytes": "7b05",
+        "text": "{g57b}"
+      },
+      {
+        "bytes": "7c05",
+        "text": "{g57c}"
+      },
+      {
+        "bytes": "7d05",
+        "text": "{g57d}"
+      },
+      {
+        "bytes": "7e05",
+        "text": "{g57e}"
+      },
+      {
+        "bytes": "7f05",
+        "text": "{g57f}"
+      },
+      {
+        "bytes": "8005",
+        "text": "{g580}"
+      },
+      {
+        "bytes": "8105",
+        "text": "{g581}"
+      },
+      {
+        "bytes": "8205",
+        "text": "{g582}"
+      },
+      {
+        "bytes": "8305",
+        "text": "{g583}"
+      },
+      {
+        "bytes": "8405",
+        "text": "{g584}"
+      },
+      {
+        "bytes": "8505",
+        "text": "{g585}"
+      },
+      {
+        "bytes": "8605",
+        "text": "{g586}"
+      },
+      {
+        "bytes": "8705",
+        "text": "{g587}"
+      },
+      {
+        "bytes": "8805",
+        "text": "{g588}"
+      },
+      {
+        "bytes": "8905",
+        "text": "{g589}"
+      },
+      {
+        "bytes": "8a05",
+        "text": "{g58a}"
+      },
+      {
+        "bytes": "8b05",
+        "text": "{g58b}"
+      },
+      {
+        "bytes": "8c05",
+        "text": "{g58c}"
+      },
+      {
+        "bytes": "8d05",
+        "text": "{g58d}"
+      },
+      {
+        "bytes": "8e05",
+        "text": "{g58e}"
+      },
+      {
+        "bytes": "8f05",
+        "text": "{g58f}"
+      },
+      {
+        "bytes": "9005",
+        "text": "{g590}"
+      },
+      {
+        "bytes": "9105",
+        "text": "{g591}"
+      },
+      {
+        "bytes": "9205",
+        "text": "{g592}"
+      },
+      {
+        "bytes": "9305",
+        "text": "{g593}"
+      },
+      {
+        "bytes": "9405",
+        "text": "{g594}"
+      },
+      {
+        "bytes": "9505",
+        "text": "{g595}"
+      },
+      {
+        "bytes": "9605",
+        "text": "{g596}"
+      },
+      {
+        "bytes": "9705",
+        "text": "{g597}"
+      },
+      {
+        "bytes": "9805",
+        "text": "{g598}"
+      },
+      {
+        "bytes": "9905",
+        "text": "{g599}"
+      },
+      {
+        "bytes": "9a05",
+        "text": "{g59a}"
+      },
+      {
+        "bytes": "9b05",
+        "text": "{g59b}"
+      },
+      {
+        "bytes": "9c05",
+        "text": "{g59c}"
+      },
+      {
+        "bytes": "9d05",
+        "text": "{g59d}"
+      },
+      {
+        "bytes": "9e05",
+        "text": "{g59e}"
+      },
+      {
+        "bytes": "9f05",
+        "text": "{g59f}"
+      },
+      {
+        "bytes": "a005",
+        "text": "{g5a0}"
+      },
+      {
+        "bytes": "a105",
+        "text": "{g5a1}"
+      },
+      {
+        "bytes": "a205",
+        "text": "{g5a2}"
+      },
+      {
+        "bytes": "a305",
+        "text": "{g5a3}"
+      },
+      {
+        "bytes": "a405",
+        "text": "{g5a4}"
+      },
+      {
+        "bytes": "a505",
+        "text": "{g5a5}"
+      },
+      {
+        "bytes": "a605",
+        "text": "{g5a6}"
+      },
+      {
+        "bytes": "a705",
+        "text": "{g5a7}"
+      },
+      {
+        "bytes": "a805",
+        "text": "{g5a8}"
+      },
+      {
+        "bytes": "a905",
+        "text": "{g5a9}"
+      },
+      {
+        "bytes": "aa05",
+        "text": "{g5aa}"
+      },
+      {
+        "bytes": "ab05",
+        "text": "{g5ab}"
+      },
+      {
+        "bytes": "ac05",
+        "text": "{g5ac}"
+      },
+      {
+        "bytes": "ad05",
+        "text": "{g5ad}"
+      },
+      {
+        "bytes": "ae05",
+        "text": "{g5ae}"
+      },
+      {
+        "bytes": "af05",
+        "text": "{g5af}"
+      },
+      {
+        "bytes": "b005",
+        "text": "{g5b0}"
+      },
+      {
+        "bytes": "b105",
+        "text": "{g5b1}"
+      },
+      {
+        "bytes": "b205",
+        "text": "{g5b2}"
+      },
+      {
+        "bytes": "b305",
+        "text": "{g5b3}"
+      },
+      {
+        "bytes": "b405",
+        "text": "{g5b4}"
+      },
+      {
+        "bytes": "b505",
+        "text": "{g5b5}"
+      },
+      {
+        "bytes": "b605",
+        "text": "{g5b6}"
+      },
+      {
+        "bytes": "b705",
+        "text": "{g5b7}"
+      },
+      {
+        "bytes": "b805",
+        "text": "{g5b8}"
+      },
+      {
+        "bytes": "b905",
+        "text": "{g5b9}"
+      },
+      {
+        "bytes": "ba05",
+        "text": "{g5ba}"
+      },
+      {
+        "bytes": "bb05",
+        "text": "{g5bb}"
+      },
+      {
+        "bytes": "bc05",
+        "text": "{g5bc}"
+      },
+      {
+        "bytes": "bd05",
+        "text": "{g5bd}"
+      },
+      {
+        "bytes": "be05",
+        "text": "{g5be}"
+      },
+      {
+        "bytes": "bf05",
+        "text": "{g5bf}"
+      },
+      {
+        "bytes": "c005",
+        "text": "{g5c0}"
+      },
+      {
+        "bytes": "c105",
+        "text": "{g5c1}"
+      },
+      {
+        "bytes": "c205",
+        "text": "{g5c2}"
+      },
+      {
+        "bytes": "c305",
+        "text": "{g5c3}"
+      },
+      {
+        "bytes": "c405",
+        "text": "{g5c4}"
+      },
+      {
+        "bytes": "c505",
+        "text": "{g5c5}"
+      },
+      {
+        "bytes": "c605",
+        "text": "{g5c6}"
+      },
+      {
+        "bytes": "c705",
+        "text": "{g5c7}"
+      },
+      {
+        "bytes": "c805",
+        "text": "{g5c8}"
+      },
+      {
+        "bytes": "c905",
+        "text": "{g5c9}"
+      },
+      {
+        "bytes": "ca05",
+        "text": "{g5ca}"
+      },
+      {
+        "bytes": "cb05",
+        "text": "{g5cb}"
+      },
+      {
+        "bytes": "cc05",
+        "text": "{g5cc}"
+      },
+      {
+        "bytes": "cd05",
+        "text": "{g5cd}"
+      },
+      {
+        "bytes": "ce05",
+        "text": "{g5ce}"
+      },
+      {
+        "bytes": "cf05",
+        "text": "{g5cf}"
+      },
+      {
+        "bytes": "d005",
+        "text": "{g5d0}"
+      },
+      {
+        "bytes": "d105",
+        "text": "{g5d1}"
+      },
+      {
+        "bytes": "d205",
+        "text": "{g5d2}"
+      },
+      {
+        "bytes": "d305",
+        "text": "{g5d3}"
+      },
+      {
+        "bytes": "d405",
+        "text": "{g5d4}"
+      },
+      {
+        "bytes": "d505",
+        "text": "{g5d5}"
+      },
+      {
+        "bytes": "d605",
+        "text": "{g5d6}"
+      },
+      {
+        "bytes": "d705",
+        "text": "{g5d7}"
+      },
+      {
+        "bytes": "d805",
+        "text": "{g5d8}"
+      },
+      {
+        "bytes": "d905",
+        "text": "{g5d9}"
+      },
+      {
+        "bytes": "da05",
+        "text": "{g5da}"
+      },
+      {
+        "bytes": "db05",
+        "text": "{g5db}"
+      },
+      {
+        "bytes": "dc05",
+        "text": "{g5dc}"
+      },
+      {
+        "bytes": "dd05",
+        "text": "{g5dd}"
+      },
+      {
+        "bytes": "de05",
+        "text": "{g5de}"
+      },
+      {
+        "bytes": "df05",
+        "text": "{g5df}"
+      },
+      {
+        "bytes": "e005",
+        "text": "{g5e0}"
+      },
+      {
+        "bytes": "e105",
+        "text": "{g5e1}"
+      },
+      {
+        "bytes": "e205",
+        "text": "{g5e2}"
+      },
+      {
+        "bytes": "e305",
+        "text": "{g5e3}"
+      },
+      {
+        "bytes": "e405",
+        "text": "{g5e4}"
+      },
+      {
+        "bytes": "e505",
+        "text": "{g5e5}"
+      },
+      {
+        "bytes": "e605",
+        "text": "{g5e6}"
+      },
+      {
+        "bytes": "e705",
+        "text": "{g5e7}"
+      },
+      {
+        "bytes": "e805",
+        "text": "{g5e8}"
+      },
+      {
+        "bytes": "e905",
+        "text": "{g5e9}"
+      },
+      {
+        "bytes": "ea05",
+        "text": "{g5ea}"
+      },
+      {
+        "bytes": "eb05",
+        "text": "{g5eb}"
+      },
+      {
+        "bytes": "ec05",
+        "text": "{g5ec}"
+      },
+      {
+        "bytes": "ed05",
+        "text": "{g5ed}"
+      },
+      {
+        "bytes": "ee05",
+        "text": "{g5ee}"
+      },
+      {
+        "bytes": "ef05",
+        "text": "{g5ef}"
+      },
+      {
+        "bytes": "f005",
+        "text": "{g5f0}"
+      },
+      {
+        "bytes": "f105",
+        "text": "{g5f1}"
+      },
+      {
+        "bytes": "f205",
+        "text": "{g5f2}"
+      },
+      {
+        "bytes": "f305",
+        "text": "{g5f3}"
+      },
+      {
+        "bytes": "f405",
+        "text": "{g5f4}"
+      },
+      {
+        "bytes": "f505",
+        "text": "{g5f5}"
+      },
+      {
+        "bytes": "f605",
+        "text": "{g5f6}"
+      },
+      {
+        "bytes": "f705",
+        "text": "{g5f7}"
+      },
+      {
+        "bytes": "f805",
+        "text": "{g5f8}"
+      },
+      {
+        "bytes": "f905",
+        "text": "{g5f9}"
+      },
+      {
+        "bytes": "fa05",
+        "text": "{g5fa}"
+      },
+      {
+        "bytes": "fb05",
+        "text": "{g5fb}"
+      },
+      {
+        "bytes": "fc05",
+        "text": "{g5fc}"
+      },
+      {
+        "bytes": "fd05",
+        "text": "{g5fd}"
+      },
+      {
+        "bytes": "fe05",
+        "text": "{g5fe}"
+      },
+      {
+        "bytes": "ff05",
+        "text": "{g5ff}"
+      },
+      {
+        "bytes": "0006",
+        "text": "{g600}"
+      },
+      {
+        "bytes": "0106",
+        "text": "{g601}"
+      },
+      {
+        "bytes": "0206",
+        "text": "{g602}"
+      },
+      {
+        "bytes": "0306",
+        "text": "{g603}"
+      },
+      {
+        "bytes": "0406",
+        "text": "{g604}"
+      },
+      {
+        "bytes": "0506",
+        "text": "{g605}"
+      },
+      {
+        "bytes": "0606",
+        "text": "{g606}"
+      },
+      {
+        "bytes": "0706",
+        "text": "{g607}"
+      },
+      {
+        "bytes": "0806",
+        "text": "{g608}"
+      },
+      {
+        "bytes": "0906",
+        "text": "{g609}"
+      },
+      {
+        "bytes": "0a06",
+        "text": "{g60a}"
+      },
+      {
+        "bytes": "0b06",
+        "text": "{g60b}"
+      },
+      {
+        "bytes": "0c06",
+        "text": "{g60c}"
+      },
+      {
+        "bytes": "0d06",
+        "text": "{g60d}"
+      },
+      {
+        "bytes": "0e06",
+        "text": "{g60e}"
+      },
+      {
+        "bytes": "0f06",
+        "text": "{g60f}"
+      },
+      {
+        "bytes": "1006",
+        "text": "{g610}"
+      },
+      {
+        "bytes": "1106",
+        "text": "{g611}"
+      },
+      {
+        "bytes": "1206",
+        "text": "{g612}"
+      },
+      {
+        "bytes": "1306",
+        "text": "{g613}"
+      },
+      {
+        "bytes": "1406",
+        "text": "{g614}"
+      },
+      {
+        "bytes": "1506",
+        "text": "{g615}"
+      },
+      {
+        "bytes": "1606",
+        "text": "{g616}"
+      },
+      {
+        "bytes": "1706",
+        "text": "{g617}"
+      },
+      {
+        "bytes": "1806",
+        "text": "{g618}"
+      },
+      {
+        "bytes": "1906",
+        "text": "{g619}"
+      },
+      {
+        "bytes": "1a06",
+        "text": "{g61a}"
+      },
+      {
+        "bytes": "1b06",
+        "text": "{g61b}"
+      },
+      {
+        "bytes": "1c06",
+        "text": "{g61c}"
+      },
+      {
+        "bytes": "1d06",
+        "text": "{g61d}"
+      },
+      {
+        "bytes": "1e06",
+        "text": "{g61e}"
+      },
+      {
+        "bytes": "1f06",
+        "text": "{g61f}"
+      },
+      {
+        "bytes": "2006",
+        "text": "{g620}"
+      },
+      {
+        "bytes": "2106",
+        "text": "{g621}"
+      },
+      {
+        "bytes": "2206",
+        "text": "{g622}"
+      },
+      {
+        "bytes": "2306",
+        "text": "{g623}"
+      },
+      {
+        "bytes": "2406",
+        "text": "{g624}"
+      },
+      {
+        "bytes": "2506",
+        "text": "{g625}"
+      },
+      {
+        "bytes": "2606",
+        "text": "{g626}"
+      },
+      {
+        "bytes": "2706",
+        "text": "{g627}"
+      },
+      {
+        "bytes": "2806",
+        "text": "{g628}"
+      },
+      {
+        "bytes": "2906",
+        "text": "{g629}"
+      },
+      {
+        "bytes": "2a06",
+        "text": "{g62a}"
+      },
+      {
+        "bytes": "2b06",
+        "text": "{g62b}"
+      },
+      {
+        "bytes": "2c06",
+        "text": "{g62c}"
+      },
+      {
+        "bytes": "2d06",
+        "text": "{g62d}"
+      },
+      {
+        "bytes": "2e06",
+        "text": "{g62e}"
+      },
+      {
+        "bytes": "2f06",
+        "text": "{g62f}"
+      },
+      {
+        "bytes": "3006",
+        "text": "{g630}"
+      },
+      {
+        "bytes": "3106",
+        "text": "{g631}"
+      },
+      {
+        "bytes": "3206",
+        "text": "{g632}"
+      },
+      {
+        "bytes": "3306",
+        "text": "{g633}"
+      },
+      {
+        "bytes": "3406",
+        "text": "{g634}"
+      },
+      {
+        "bytes": "3506",
+        "text": "{g635}"
+      },
+      {
+        "bytes": "3606",
+        "text": "{g636}"
+      },
+      {
+        "bytes": "3706",
+        "text": "{g637}"
+      },
+      {
+        "bytes": "3806",
+        "text": "{g638}"
+      },
+      {
+        "bytes": "3906",
+        "text": "{g639}"
+      },
+      {
+        "bytes": "3a06",
+        "text": "{g63a}"
+      },
+      {
+        "bytes": "3b06",
+        "text": "{g63b}"
+      },
+      {
+        "bytes": "3c06",
+        "text": "{g63c}"
+      },
+      {
+        "bytes": "3d06",
+        "text": "{g63d}"
+      },
+      {
+        "bytes": "3e06",
+        "text": "{g63e}"
+      },
+      {
+        "bytes": "3f06",
+        "text": "{g63f}"
+      },
+      {
+        "bytes": "4006",
+        "text": "{g640}"
+      },
+      {
+        "bytes": "4106",
+        "text": "{g641}"
+      },
+      {
+        "bytes": "4206",
+        "text": "{g642}"
+      },
+      {
+        "bytes": "4306",
+        "text": "{g643}"
+      },
+      {
+        "bytes": "4406",
+        "text": "{g644}"
+      },
+      {
+        "bytes": "4506",
+        "text": "{g645}"
+      },
+      {
+        "bytes": "4606",
+        "text": "{g646}"
+      },
+      {
+        "bytes": "4706",
+        "text": "{g647}"
+      },
+      {
+        "bytes": "4806",
+        "text": "{g648}"
+      },
+      {
+        "bytes": "4906",
+        "text": "{g649}"
+      },
+      {
+        "bytes": "4a06",
+        "text": "{g64a}"
+      },
+      {
+        "bytes": "4b06",
+        "text": "{g64b}"
+      },
+      {
+        "bytes": "4c06",
+        "text": "{g64c}"
+      },
+      {
+        "bytes": "4d06",
+        "text": "{g64d}"
+      },
+      {
+        "bytes": "4e06",
+        "text": "{g64e}"
+      },
+      {
+        "bytes": "4f06",
+        "text": "{g64f}"
+      },
+      {
+        "bytes": "5006",
+        "text": "{g650}"
+      },
+      {
+        "bytes": "5106",
+        "text": "{g651}"
+      },
+      {
+        "bytes": "5206",
+        "text": "{g652}"
+      },
+      {
+        "bytes": "5306",
+        "text": "{g653}"
+      },
+      {
+        "bytes": "5406",
+        "text": "{g654}"
+      },
+      {
+        "bytes": "5506",
+        "text": "{g655}"
+      },
+      {
+        "bytes": "5606",
+        "text": "{g656}"
+      },
+      {
+        "bytes": "5706",
+        "text": "{g657}"
+      },
+      {
+        "bytes": "5806",
+        "text": "{g658}"
+      },
+      {
+        "bytes": "5906",
+        "text": "{g659}"
+      },
+      {
+        "bytes": "5a06",
+        "text": "{g65a}"
+      },
+      {
+        "bytes": "5b06",
+        "text": "{g65b}"
+      },
+      {
+        "bytes": "5c06",
+        "text": "{g65c}"
+      },
+      {
+        "bytes": "5d06",
+        "text": "{g65d}"
+      },
+      {
+        "bytes": "5e06",
+        "text": "{g65e}"
+      },
+      {
+        "bytes": "5f06",
+        "text": "{g65f}"
+      },
+      {
+        "bytes": "6006",
+        "text": "{g660}"
+      },
+      {
+        "bytes": "6106",
+        "text": "{g661}"
+      },
+      {
+        "bytes": "6206",
+        "text": "{g662}"
+      },
+      {
+        "bytes": "6306",
+        "text": "{g663}"
+      },
+      {
+        "bytes": "6406",
+        "text": "{g664}"
+      },
+      {
+        "bytes": "6506",
+        "text": "{g665}"
+      },
+      {
+        "bytes": "6606",
+        "text": "{g666}"
+      },
+      {
+        "bytes": "6706",
+        "text": "{g667}"
+      },
+      {
+        "bytes": "6806",
+        "text": "{g668}"
+      },
+      {
+        "bytes": "6906",
+        "text": "{g669}"
+      },
+      {
+        "bytes": "6a06",
+        "text": "{g66a}"
+      },
+      {
+        "bytes": "6b06",
+        "text": "{g66b}"
+      },
+      {
+        "bytes": "6c06",
+        "text": "{g66c}"
+      },
+      {
+        "bytes": "6d06",
+        "text": "{g66d}"
+      },
+      {
+        "bytes": "6e06",
+        "text": "{g66e}"
+      },
+      {
+        "bytes": "6f06",
+        "text": "{g66f}"
+      },
+      {
+        "bytes": "7006",
+        "text": "{g670}"
+      },
+      {
+        "bytes": "7106",
+        "text": "{g671}"
+      },
+      {
+        "bytes": "7206",
+        "text": "{g672}"
+      },
+      {
+        "bytes": "7306",
+        "text": "{g673}"
+      },
+      {
+        "bytes": "7406",
+        "text": "{g674}"
+      },
+      {
+        "bytes": "7506",
+        "text": "{g675}"
+      },
+      {
+        "bytes": "7606",
+        "text": "{g676}"
+      },
+      {
+        "bytes": "7706",
+        "text": "{g677}"
+      },
+      {
+        "bytes": "7806",
+        "text": "{g678}"
+      },
+      {
+        "bytes": "7906",
+        "text": "{g679}"
+      },
+      {
+        "bytes": "7a06",
+        "text": "{g67a}"
+      },
+      {
+        "bytes": "7b06",
+        "text": "{g67b}"
+      },
+      {
+        "bytes": "7c06",
+        "text": "{g67c}"
+      },
+      {
+        "bytes": "7d06",
+        "text": "{g67d}"
+      },
+      {
+        "bytes": "7e06",
+        "text": "{g67e}"
+      },
+      {
+        "bytes": "7f06",
+        "text": "{g67f}"
+      },
+      {
+        "bytes": "8006",
+        "text": "{g680}"
+      },
+      {
+        "bytes": "8106",
+        "text": "{g681}"
+      },
+      {
+        "bytes": "8206",
+        "text": "{g682}"
+      },
+      {
+        "bytes": "8306",
+        "text": "{g683}"
+      },
+      {
+        "bytes": "8406",
+        "text": "{g684}"
+      },
+      {
+        "bytes": "8506",
+        "text": "{g685}"
+      },
+      {
+        "bytes": "8606",
+        "text": "{g686}"
+      },
+      {
+        "bytes": "8706",
+        "text": "{g687}"
+      },
+      {
+        "bytes": "8806",
+        "text": "{g688}"
+      },
+      {
+        "bytes": "8906",
+        "text": "{g689}"
+      },
+      {
+        "bytes": "8a06",
+        "text": "{g68a}"
+      },
+      {
+        "bytes": "8b06",
+        "text": "{g68b}"
+      },
+      {
+        "bytes": "8c06",
+        "text": "{g68c}"
+      },
+      {
+        "bytes": "8d06",
+        "text": "{g68d}"
+      },
+      {
+        "bytes": "8e06",
+        "text": "{g68e}"
+      },
+      {
+        "bytes": "8f06",
+        "text": "{g68f}"
+      },
+      {
+        "bytes": "9006",
+        "text": "{g690}"
+      },
+      {
+        "bytes": "9106",
+        "text": "{g691}"
+      },
+      {
+        "bytes": "9206",
+        "text": "{g692}"
+      },
+      {
+        "bytes": "9306",
+        "text": "{g693}"
+      },
+      {
+        "bytes": "9406",
+        "text": "{g694}"
+      },
+      {
+        "bytes": "9506",
+        "text": "{g695}"
+      },
+      {
+        "bytes": "9606",
+        "text": "{g696}"
+      },
+      {
+        "bytes": "9706",
+        "text": "{g697}"
+      },
+      {
+        "bytes": "9806",
+        "text": "{g698}"
+      },
+      {
+        "bytes": "9906",
+        "text": "{g699}"
+      },
+      {
+        "bytes": "9a06",
+        "text": "{g69a}"
+      },
+      {
+        "bytes": "9b06",
+        "text": "{g69b}"
+      },
+      {
+        "bytes": "9c06",
+        "text": "{g69c}"
+      },
+      {
+        "bytes": "9d06",
+        "text": "{g69d}"
+      },
+      {
+        "bytes": "9e06",
+        "text": "{g69e}"
+      },
+      {
+        "bytes": "9f06",
+        "text": "{g69f}"
+      },
+      {
+        "bytes": "a006",
+        "text": "{g6a0}"
+      },
+      {
+        "bytes": "a106",
+        "text": "{g6a1}"
+      },
+      {
+        "bytes": "a206",
+        "text": "{g6a2}"
+      },
+      {
+        "bytes": "a306",
+        "text": "{g6a3}"
+      },
+      {
+        "bytes": "a406",
+        "text": "{g6a4}"
+      },
+      {
+        "bytes": "a506",
+        "text": "{g6a5}"
+      },
+      {
+        "bytes": "a606",
+        "text": "{g6a6}"
+      },
+      {
+        "bytes": "a706",
+        "text": "{g6a7}"
+      },
+      {
+        "bytes": "a806",
+        "text": "{g6a8}"
+      },
+      {
+        "bytes": "a906",
+        "text": "{g6a9}"
+      },
+      {
+        "bytes": "aa06",
+        "text": "{g6aa}"
+      },
+      {
+        "bytes": "ab06",
+        "text": "{g6ab}"
+      },
+      {
+        "bytes": "ac06",
+        "text": "{g6ac}"
+      },
+      {
+        "bytes": "ad06",
+        "text": "{g6ad}"
+      },
+      {
+        "bytes": "ae06",
+        "text": "{g6ae}"
+      },
+      {
+        "bytes": "af06",
+        "text": "{g6af}"
+      },
+      {
+        "bytes": "b006",
+        "text": "{g6b0}"
+      },
+      {
+        "bytes": "b106",
+        "text": "{g6b1}"
+      },
+      {
+        "bytes": "b206",
+        "text": "{g6b2}"
+      },
+      {
+        "bytes": "b306",
+        "text": "{g6b3}"
+      },
+      {
+        "bytes": "b406",
+        "text": "{g6b4}"
+      },
+      {
+        "bytes": "b506",
+        "text": "{g6b5}"
+      },
+      {
+        "bytes": "b606",
+        "text": "{g6b6}"
+      },
+      {
+        "bytes": "b706",
+        "text": "{g6b7}"
+      },
+      {
+        "bytes": "b806",
+        "text": "{g6b8}"
+      },
+      {
+        "bytes": "b906",
+        "text": "{g6b9}"
+      },
+      {
+        "bytes": "ba06",
+        "text": "{g6ba}"
+      },
+      {
+        "bytes": "bb06",
+        "text": "{g6bb}"
+      },
+      {
+        "bytes": "bc06",
+        "text": "{g6bc}"
+      },
+      {
+        "bytes": "bd06",
+        "text": "{g6bd}"
+      },
+      {
+        "bytes": "be06",
+        "text": "{g6be}"
+      },
+      {
+        "bytes": "bf06",
+        "text": "{g6bf}"
+      },
+      {
+        "bytes": "c006",
+        "text": "{g6c0}"
+      },
+      {
+        "bytes": "c106",
+        "text": "{g6c1}"
+      },
+      {
+        "bytes": "c206",
+        "text": "{g6c2}"
+      },
+      {
+        "bytes": "c306",
+        "text": "{g6c3}"
+      },
+      {
+        "bytes": "c406",
+        "text": "{g6c4}"
+      },
+      {
+        "bytes": "c506",
+        "text": "{g6c5}"
+      },
+      {
+        "bytes": "c606",
+        "text": "{g6c6}"
+      },
+      {
+        "bytes": "c706",
+        "text": "{g6c7}"
+      },
+      {
+        "bytes": "c806",
+        "text": "{g6c8}"
+      },
+      {
+        "bytes": "c906",
+        "text": "{g6c9}"
+      },
+      {
+        "bytes": "ca06",
+        "text": "{g6ca}"
+      },
+      {
+        "bytes": "cb06",
+        "text": "{g6cb}"
+      },
+      {
+        "bytes": "cc06",
+        "text": "{g6cc}"
+      },
+      {
+        "bytes": "cd06",
+        "text": "{g6cd}"
+      },
+      {
+        "bytes": "ce06",
+        "text": "{g6ce}"
+      },
+      {
+        "bytes": "cf06",
+        "text": "{g6cf}"
+      },
+      {
+        "bytes": "d006",
+        "text": "{g6d0}"
+      },
+      {
+        "bytes": "d106",
+        "text": "{g6d1}"
+      },
+      {
+        "bytes": "d206",
+        "text": "{g6d2}"
+      },
+      {
+        "bytes": "d306",
+        "text": "{g6d3}"
+      },
+      {
+        "bytes": "d406",
+        "text": "{g6d4}"
+      },
+      {
+        "bytes": "d506",
+        "text": "{g6d5}"
+      },
+      {
+        "bytes": "d606",
+        "text": "{g6d6}"
+      },
+      {
+        "bytes": "d706",
+        "text": "{g6d7}"
+      },
+      {
+        "bytes": "d806",
+        "text": "{g6d8}"
+      },
+      {
+        "bytes": "d906",
+        "text": "{g6d9}"
+      },
+      {
+        "bytes": "da06",
+        "text": "{g6da}"
+      },
+      {
+        "bytes": "db06",
+        "text": "{g6db}"
+      },
+      {
+        "bytes": "dc06",
+        "text": "{g6dc}"
+      },
+      {
+        "bytes": "dd06",
+        "text": "{g6dd}"
+      },
+      {
+        "bytes": "de06",
+        "text": "{g6de}"
+      },
+      {
+        "bytes": "df06",
+        "text": "{g6df}"
+      },
+      {
+        "bytes": "e006",
+        "text": "{g6e0}"
+      },
+      {
+        "bytes": "e106",
+        "text": "{g6e1}"
+      },
+      {
+        "bytes": "e206",
+        "text": "{g6e2}"
+      },
+      {
+        "bytes": "e306",
+        "text": "{g6e3}"
+      },
+      {
+        "bytes": "e406",
+        "text": "{g6e4}"
+      },
+      {
+        "bytes": "e506",
+        "text": "{g6e5}"
+      },
+      {
+        "bytes": "e606",
+        "text": "{g6e6}"
+      },
+      {
+        "bytes": "e706",
+        "text": "{g6e7}"
+      },
+      {
+        "bytes": "e806",
+        "text": "{g6e8}"
+      },
+      {
+        "bytes": "e906",
+        "text": "{g6e9}"
+      },
+      {
+        "bytes": "ea06",
+        "text": "{g6ea}"
+      },
+      {
+        "bytes": "eb06",
+        "text": "{g6eb}"
+      },
+      {
+        "bytes": "ec06",
+        "text": "{g6ec}"
+      },
+      {
+        "bytes": "ed06",
+        "text": "{g6ed}"
+      },
+      {
+        "bytes": "ee06",
+        "text": "{g6ee}"
+      },
+      {
+        "bytes": "ef06",
+        "text": "{g6ef}"
+      },
+      {
+        "bytes": "f006",
+        "text": "{g6f0}"
+      },
+      {
+        "bytes": "f106",
+        "text": "{g6f1}"
+      },
+      {
+        "bytes": "f206",
+        "text": "{g6f2}"
+      },
+      {
+        "bytes": "f306",
+        "text": "{g6f3}"
+      },
+      {
+        "bytes": "f406",
+        "text": "{g6f4}"
+      },
+      {
+        "bytes": "f506",
+        "text": "{g6f5}"
+      },
+      {
+        "bytes": "f606",
+        "text": "{g6f6}"
+      },
+      {
+        "bytes": "f706",
+        "text": "{g6f7}"
+      },
+      {
+        "bytes": "f806",
+        "text": "{g6f8}"
+      },
+      {
+        "bytes": "f906",
+        "text": "{g6f9}"
+      },
+      {
+        "bytes": "fa06",
+        "text": "{g6fa}"
+      },
+      {
+        "bytes": "fb06",
+        "text": "{g6fb}"
+      },
+      {
+        "bytes": "fc06",
+        "text": "{g6fc}"
+      },
+      {
+        "bytes": "fd06",
+        "text": "{g6fd}"
+      },
+      {
+        "bytes": "fe06",
+        "text": "{g6fe}"
+      },
+      {
+        "bytes": "ff06",
+        "text": "{g6ff}"
+      },
+      {
+        "bytes": "0007",
+        "text": "{g700}"
+      },
+      {
+        "bytes": "0107",
+        "text": "{g701}"
+      },
+      {
+        "bytes": "0207",
+        "text": "{g702}"
+      },
+      {
+        "bytes": "0307",
+        "text": "{g703}"
+      },
+      {
+        "bytes": "0407",
+        "text": "{g704}"
+      },
+      {
+        "bytes": "0507",
+        "text": "{g705}"
+      },
+      {
+        "bytes": "0607",
+        "text": "{g706}"
+      },
+      {
+        "bytes": "0707",
+        "text": "{g707}"
+      },
+      {
+        "bytes": "0807",
+        "text": "{g708}"
+      },
+      {
+        "bytes": "0907",
+        "text": "{g709}"
+      },
+      {
+        "bytes": "0a07",
+        "text": "{g70a}"
+      },
+      {
+        "bytes": "0b07",
+        "text": "{g70b}"
+      },
+      {
+        "bytes": "0c07",
+        "text": "{g70c}"
+      },
+      {
+        "bytes": "0d07",
+        "text": "{g70d}"
+      },
+      {
+        "bytes": "0e07",
+        "text": "{g70e}"
+      },
+      {
+        "bytes": "0f07",
+        "text": "{g70f}"
+      },
+      {
+        "bytes": "1007",
+        "text": "{g710}"
+      },
+      {
+        "bytes": "1107",
+        "text": "{g711}"
+      },
+      {
+        "bytes": "1207",
+        "text": "{g712}"
+      },
+      {
+        "bytes": "1307",
+        "text": "{g713}"
+      },
+      {
+        "bytes": "1407",
+        "text": "{g714}"
+      },
+      {
+        "bytes": "1507",
+        "text": "{g715}"
+      },
+      {
+        "bytes": "1607",
+        "text": "{g716}"
+      },
+      {
+        "bytes": "1707",
+        "text": "{g717}"
+      },
+      {
+        "bytes": "1807",
+        "text": "{g718}"
+      },
+      {
+        "bytes": "1907",
+        "text": "{g719}"
+      },
+      {
+        "bytes": "1a07",
+        "text": "{g71a}"
+      },
+      {
+        "bytes": "1b07",
+        "text": "{g71b}"
+      },
+      {
+        "bytes": "1c07",
+        "text": "{g71c}"
+      },
+      {
+        "bytes": "1d07",
+        "text": "{g71d}"
+      },
+      {
+        "bytes": "1e07",
+        "text": "{g71e}"
+      },
+      {
+        "bytes": "1f07",
+        "text": "{g71f}"
+      },
+      {
+        "bytes": "2007",
+        "text": "{g720}"
+      },
+      {
+        "bytes": "2107",
+        "text": "{g721}"
+      },
+      {
+        "bytes": "2207",
+        "text": "{g722}"
+      },
+      {
+        "bytes": "2307",
+        "text": "{g723}"
+      },
+      {
+        "bytes": "2407",
+        "text": "{g724}"
+      },
+      {
+        "bytes": "2507",
+        "text": "{g725}"
+      },
+      {
+        "bytes": "2607",
+        "text": "{g726}"
+      },
+      {
+        "bytes": "2707",
+        "text": "{g727}"
+      },
+      {
+        "bytes": "2807",
+        "text": "{g728}"
+      },
+      {
+        "bytes": "2907",
+        "text": "{g729}"
+      },
+      {
+        "bytes": "2a07",
+        "text": "{g72a}"
+      },
+      {
+        "bytes": "2b07",
+        "text": "{g72b}"
+      },
+      {
+        "bytes": "2c07",
+        "text": "{g72c}"
+      },
+      {
+        "bytes": "2d07",
+        "text": "{g72d}"
+      },
+      {
+        "bytes": "2e07",
+        "text": "{g72e}"
+      },
+      {
+        "bytes": "2f07",
+        "text": "{g72f}"
+      },
+      {
+        "bytes": "3007",
+        "text": "{g730}"
+      },
+      {
+        "bytes": "3107",
+        "text": "{g731}"
+      },
+      {
+        "bytes": "3207",
+        "text": "{g732}"
+      },
+      {
+        "bytes": "3307",
+        "text": "{g733}"
+      },
+      {
+        "bytes": "3407",
+        "text": "{g734}"
+      },
+      {
+        "bytes": "3507",
+        "text": "{g735}"
+      },
+      {
+        "bytes": "3607",
+        "text": "{g736}"
+      },
+      {
+        "bytes": "3707",
+        "text": "{g737}"
+      },
+      {
+        "bytes": "3807",
+        "text": "{g738}"
+      },
+      {
+        "bytes": "3907",
+        "text": "{g739}"
+      },
+      {
+        "bytes": "3a07",
+        "text": "{g73a}"
+      },
+      {
+        "bytes": "3b07",
+        "text": "{g73b}"
+      },
+      {
+        "bytes": "3c07",
+        "text": "{g73c}"
+      },
+      {
+        "bytes": "3d07",
+        "text": "{g73d}"
+      },
+      {
+        "bytes": "3e07",
+        "text": "{g73e}"
+      },
+      {
+        "bytes": "3f07",
+        "text": "{g73f}"
+      },
+      {
+        "bytes": "4007",
+        "text": "{g740}"
+      },
+      {
+        "bytes": "4107",
+        "text": "{g741}"
+      },
+      {
+        "bytes": "4207",
+        "text": "{g742}"
+      },
+      {
+        "bytes": "4307",
+        "text": "{g743}"
+      },
+      {
+        "bytes": "4407",
+        "text": "{g744}"
+      },
+      {
+        "bytes": "4507",
+        "text": "{g745}"
+      },
+      {
+        "bytes": "4607",
+        "text": "{g746}"
+      },
+      {
+        "bytes": "4707",
+        "text": "{g747}"
+      },
+      {
+        "bytes": "4807",
+        "text": "{g748}"
+      },
+      {
+        "bytes": "4907",
+        "text": "{g749}"
+      },
+      {
+        "bytes": "4a07",
+        "text": "{g74a}"
+      },
+      {
+        "bytes": "4b07",
+        "text": "{g74b}"
+      },
+      {
+        "bytes": "4c07",
+        "text": "{g74c}"
+      },
+      {
+        "bytes": "4d07",
+        "text": "{g74d}"
+      },
+      {
+        "bytes": "4e07",
+        "text": "{g74e}"
+      },
+      {
+        "bytes": "4f07",
+        "text": "{g74f}"
+      },
+      {
+        "bytes": "5007",
+        "text": "{g750}"
+      },
+      {
+        "bytes": "5107",
+        "text": "{g751}"
+      },
+      {
+        "bytes": "5207",
+        "text": "{g752}"
+      },
+      {
+        "bytes": "5307",
+        "text": "{g753}"
+      },
+      {
+        "bytes": "5407",
+        "text": "{g754}"
+      },
+      {
+        "bytes": "5507",
+        "text": "{g755}"
+      },
+      {
+        "bytes": "5607",
+        "text": "{g756}"
+      },
+      {
+        "bytes": "5707",
+        "text": "{g757}"
+      },
+      {
+        "bytes": "5807",
+        "text": "{g758}"
+      },
+      {
+        "bytes": "5907",
+        "text": "{g759}"
+      },
+      {
+        "bytes": "5a07",
+        "text": "{g75a}"
+      },
+      {
+        "bytes": "5b07",
+        "text": "{g75b}"
+      },
+      {
+        "bytes": "5c07",
+        "text": "{g75c}"
+      },
+      {
+        "bytes": "5d07",
+        "text": "{g75d}"
+      },
+      {
+        "bytes": "5e07",
+        "text": "{g75e}"
+      },
+      {
+        "bytes": "5f07",
+        "text": "{g75f}"
+      },
+      {
+        "bytes": "6007",
+        "text": "{g760}"
+      },
+      {
+        "bytes": "6107",
+        "text": "{g761}"
+      },
+      {
+        "bytes": "6207",
+        "text": "{g762}"
+      },
+      {
+        "bytes": "6307",
+        "text": "{g763}"
+      },
+      {
+        "bytes": "6407",
+        "text": "{g764}"
+      },
+      {
+        "bytes": "6507",
+        "text": "{g765}"
+      },
+      {
+        "bytes": "6607",
+        "text": "{g766}"
+      },
+      {
+        "bytes": "6707",
+        "text": "{g767}"
+      },
+      {
+        "bytes": "6807",
+        "text": "{g768}"
+      },
+      {
+        "bytes": "6907",
+        "text": "{g769}"
+      },
+      {
+        "bytes": "6a07",
+        "text": "{g76a}"
+      },
+      {
+        "bytes": "6b07",
+        "text": "{g76b}"
+      },
+      {
+        "bytes": "6c07",
+        "text": "{g76c}"
+      },
+      {
+        "bytes": "6d07",
+        "text": "{g76d}"
+      },
+      {
+        "bytes": "6e07",
+        "text": "{g76e}"
+      },
+      {
+        "bytes": "6f07",
+        "text": "{g76f}"
+      },
+      {
+        "bytes": "7007",
+        "text": "{g770}"
+      },
+      {
+        "bytes": "7107",
+        "text": "{g771}"
+      },
+      {
+        "bytes": "7207",
+        "text": "{g772}"
+      },
+      {
+        "bytes": "7307",
+        "text": "{g773}"
+      },
+      {
+        "bytes": "7407",
+        "text": "{g774}"
+      },
+      {
+        "bytes": "7507",
+        "text": "{g775}"
+      },
+      {
+        "bytes": "7607",
+        "text": "{g776}"
+      },
+      {
+        "bytes": "7707",
+        "text": "{g777}"
+      },
+      {
+        "bytes": "7807",
+        "text": "{g778}"
+      },
+      {
+        "bytes": "7907",
+        "text": "{g779}"
+      },
+      {
+        "bytes": "7a07",
+        "text": "{g77a}"
+      },
+      {
+        "bytes": "7b07",
+        "text": "{g77b}"
+      },
+      {
+        "bytes": "7c07",
+        "text": "{g77c}"
+      },
+      {
+        "bytes": "7d07",
+        "text": "{g77d}"
+      },
+      {
+        "bytes": "7e07",
+        "text": "{g77e}"
+      },
+      {
+        "bytes": "7f07",
+        "text": "{g77f}"
+      },
+      {
+        "bytes": "8007",
+        "text": "{g780}"
+      },
+      {
+        "bytes": "8107",
+        "text": "{g781}"
+      },
+      {
+        "bytes": "8207",
+        "text": "{g782}"
+      },
+      {
+        "bytes": "8307",
+        "text": "{g783}"
+      },
+      {
+        "bytes": "8407",
+        "text": "{g784}"
+      },
+      {
+        "bytes": "8507",
+        "text": "{g785}"
+      },
+      {
+        "bytes": "8607",
+        "text": "{g786}"
+      },
+      {
+        "bytes": "8707",
+        "text": "{g787}"
+      },
+      {
+        "bytes": "8807",
+        "text": "{g788}"
+      },
+      {
+        "bytes": "8907",
+        "text": "{g789}"
+      },
+      {
+        "bytes": "8a07",
+        "text": "{g78a}"
+      },
+      {
+        "bytes": "8b07",
+        "text": "{g78b}"
+      },
+      {
+        "bytes": "8c07",
+        "text": "{g78c}"
+      },
+      {
+        "bytes": "8d07",
+        "text": "{g78d}"
+      },
+      {
+        "bytes": "8e07",
+        "text": "{g78e}"
+      },
+      {
+        "bytes": "8f07",
+        "text": "{g78f}"
+      },
+      {
+        "bytes": "9007",
+        "text": "{g790}"
+      },
+      {
+        "bytes": "9107",
+        "text": "{g791}"
+      },
+      {
+        "bytes": "9207",
+        "text": "{g792}"
+      },
+      {
+        "bytes": "9307",
+        "text": "{g793}"
+      },
+      {
+        "bytes": "9407",
+        "text": "{g794}"
+      },
+      {
+        "bytes": "9507",
+        "text": "{g795}"
+      },
+      {
+        "bytes": "9607",
+        "text": "{g796}"
+      },
+      {
+        "bytes": "9707",
+        "text": "{g797}"
+      },
+      {
+        "bytes": "9807",
+        "text": "{g798}"
+      },
+      {
+        "bytes": "9907",
+        "text": "{g799}"
+      },
+      {
+        "bytes": "9a07",
+        "text": "{g79a}"
+      },
+      {
+        "bytes": "9b07",
+        "text": "{g79b}"
+      },
+      {
+        "bytes": "9c07",
+        "text": "{g79c}"
+      },
+      {
+        "bytes": "9d07",
+        "text": "{g79d}"
+      },
+      {
+        "bytes": "9e07",
+        "text": "{g79e}"
+      },
+      {
+        "bytes": "9f07",
+        "text": "{g79f}"
+      },
+      {
+        "bytes": "a007",
+        "text": "{g7a0}"
+      },
+      {
+        "bytes": "a107",
+        "text": "{g7a1}"
+      },
+      {
+        "bytes": "a207",
+        "text": "{g7a2}"
+      },
+      {
+        "bytes": "a307",
+        "text": "{g7a3}"
+      },
+      {
+        "bytes": "a407",
+        "text": "{g7a4}"
+      },
+      {
+        "bytes": "a507",
+        "text": "{g7a5}"
+      },
+      {
+        "bytes": "a607",
+        "text": "{g7a6}"
+      },
+      {
+        "bytes": "a707",
+        "text": "{g7a7}"
+      },
+      {
+        "bytes": "a807",
+        "text": "{g7a8}"
+      },
+      {
+        "bytes": "a907",
+        "text": "{g7a9}"
+      },
+      {
+        "bytes": "aa07",
+        "text": "{g7aa}"
+      },
+      {
+        "bytes": "ab07",
+        "text": "{g7ab}"
+      },
+      {
+        "bytes": "ac07",
+        "text": "{g7ac}"
+      },
+      {
+        "bytes": "ad07",
+        "text": "{g7ad}"
+      },
+      {
+        "bytes": "ae07",
+        "text": "{g7ae}"
+      },
+      {
+        "bytes": "af07",
+        "text": "{g7af}"
+      },
+      {
+        "bytes": "b007",
+        "text": "{g7b0}"
+      },
+      {
+        "bytes": "b107",
+        "text": "{g7b1}"
+      },
+      {
+        "bytes": "b207",
+        "text": "{g7b2}"
+      },
+      {
+        "bytes": "b307",
+        "text": "{g7b3}"
+      },
+      {
+        "bytes": "b407",
+        "text": "{g7b4}"
+      },
+      {
+        "bytes": "b507",
+        "text": "{g7b5}"
+      },
+      {
+        "bytes": "b607",
+        "text": "{g7b6}"
+      },
+      {
+        "bytes": "b707",
+        "text": "{g7b7}"
+      },
+      {
+        "bytes": "b807",
+        "text": "{g7b8}"
+      },
+      {
+        "bytes": "b907",
+        "text": "{g7b9}"
+      },
+      {
+        "bytes": "ba07",
+        "text": "{g7ba}"
+      },
+      {
+        "bytes": "bb07",
+        "text": "{g7bb}"
+      },
+      {
+        "bytes": "bc07",
+        "text": "{g7bc}"
+      },
+      {
+        "bytes": "bd07",
+        "text": "{g7bd}"
+      },
+      {
+        "bytes": "be07",
+        "text": "{g7be}"
+      },
+      {
+        "bytes": "bf07",
+        "text": "{g7bf}"
+      },
+      {
+        "bytes": "c007",
+        "text": "{g7c0}"
+      },
+      {
+        "bytes": "c107",
+        "text": "{g7c1}"
+      },
+      {
+        "bytes": "c207",
+        "text": "{g7c2}"
+      },
+      {
+        "bytes": "c307",
+        "text": "{g7c3}"
+      },
+      {
+        "bytes": "c407",
+        "text": "{g7c4}"
+      },
+      {
+        "bytes": "c507",
+        "text": "{g7c5}"
+      },
+      {
+        "bytes": "c607",
+        "text": "{g7c6}"
+      },
+      {
+        "bytes": "c707",
+        "text": "{g7c7}"
+      },
+      {
+        "bytes": "c807",
+        "text": "{g7c8}"
+      },
+      {
+        "bytes": "c907",
+        "text": "{g7c9}"
+      },
+      {
+        "bytes": "ca07",
+        "text": "{g7ca}"
+      },
+      {
+        "bytes": "cb07",
+        "text": "{g7cb}"
+      },
+      {
+        "bytes": "cc07",
+        "text": "{g7cc}"
+      },
+      {
+        "bytes": "cd07",
+        "text": "{g7cd}"
+      },
+      {
+        "bytes": "ce07",
+        "text": "{g7ce}"
+      },
+      {
+        "bytes": "cf07",
+        "text": "{g7cf}"
+      },
+      {
+        "bytes": "d007",
+        "text": "{g7d0}"
+      },
+      {
+        "bytes": "d107",
+        "text": "{g7d1}"
+      },
+      {
+        "bytes": "d207",
+        "text": "{g7d2}"
+      },
+      {
+        "bytes": "d307",
+        "text": "{g7d3}"
+      },
+      {
+        "bytes": "d407",
+        "text": "{g7d4}"
+      },
+      {
+        "bytes": "d507",
+        "text": "{g7d5}"
+      },
+      {
+        "bytes": "d607",
+        "text": "{g7d6}"
+      },
+      {
+        "bytes": "d707",
+        "text": "{g7d7}"
+      },
+      {
+        "bytes": "d807",
+        "text": "{g7d8}"
+      },
+      {
+        "bytes": "d907",
+        "text": "{g7d9}"
+      },
+      {
+        "bytes": "da07",
+        "text": "{g7da}"
+      },
+      {
+        "bytes": "db07",
+        "text": "{g7db}"
+      },
+      {
+        "bytes": "dc07",
+        "text": "{g7dc}"
+      },
+      {
+        "bytes": "dd07",
+        "text": "{g7dd}"
+      },
+      {
+        "bytes": "de07",
+        "text": "{g7de}"
+      },
+      {
+        "bytes": "df07",
+        "text": "{g7df}"
+      },
+      {
+        "bytes": "e007",
+        "text": "{g7e0}"
+      },
+      {
+        "bytes": "e107",
+        "text": "{g7e1}"
+      },
+      {
+        "bytes": "e207",
+        "text": "{g7e2}"
+      },
+      {
+        "bytes": "e307",
+        "text": "{g7e3}"
+      },
+      {
+        "bytes": "e407",
+        "text": "{g7e4}"
+      },
+      {
+        "bytes": "e507",
+        "text": "{g7e5}"
+      },
+      {
+        "bytes": "e607",
+        "text": "{g7e6}"
+      },
+      {
+        "bytes": "e707",
+        "text": "{g7e7}"
+      },
+      {
+        "bytes": "e807",
+        "text": "{g7e8}"
+      },
+      {
+        "bytes": "e907",
+        "text": "{g7e9}"
+      },
+      {
+        "bytes": "ea07",
+        "text": "{g7ea}"
+      },
+      {
+        "bytes": "eb07",
+        "text": "{g7eb}"
+      },
+      {
+        "bytes": "ec07",
+        "text": "{g7ec}"
+      },
+      {
+        "bytes": "ed07",
+        "text": "{g7ed}"
+      },
+      {
+        "bytes": "ee07",
+        "text": "{g7ee}"
+      },
+      {
+        "bytes": "ef07",
+        "text": "{g7ef}"
+      },
+      {
+        "bytes": "f007",
+        "text": "{g7f0}"
+      },
+      {
+        "bytes": "f107",
+        "text": "{g7f1}"
+      },
+      {
+        "bytes": "f207",
+        "text": "{g7f2}"
+      },
+      {
+        "bytes": "f307",
+        "text": "{g7f3}"
+      },
+      {
+        "bytes": "f407",
+        "text": "{g7f4}"
+      },
+      {
+        "bytes": "f507",
+        "text": "{g7f5}"
+      },
+      {
+        "bytes": "f607",
+        "text": "{g7f6}"
+      },
+      {
+        "bytes": "f707",
+        "text": "{g7f7}"
+      },
+      {
+        "bytes": "f807",
+        "text": "{g7f8}"
+      },
+      {
+        "bytes": "f907",
+        "text": "{g7f9}"
+      },
+      {
+        "bytes": "fa07",
+        "text": "{g7fa}"
+      },
+      {
+        "bytes": "fb07",
+        "text": "{g7fb}"
+      },
+      {
+        "bytes": "fc07",
+        "text": "{g7fc}"
+      },
+      {
+        "bytes": "fd07",
+        "text": "{g7fd}"
+      },
+      {
+        "bytes": "fe07",
+        "text": "{g7fe}"
+      },
+      {
+        "bytes": "ff07",
+        "text": "{g7ff}"
+      }
+    ],
+    "controls": [
+      {
+        "code": 33024,
+        "display": "{81:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": true,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 33280,
+        "display": "{82:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 33536,
+        "display": "\n",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 33792,
+        "display": "{p}\n",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 36608,
+        "display": "{8f:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 2
+      },
+      {
+        "code": 36864,
+        "display": "{90:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 37120,
+        "display": "{91:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 2
+      },
+      {
+        "code": 37376,
+        "display": "{92:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 37888,
+        "display": "{94:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 2
+      },
+      {
+        "code": 38656,
+        "display": "{97:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 39936,
+        "display": "{9c:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 40448,
+        "display": "{9e:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 40704,
+        "display": "{9f:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 40960,
+        "display": "{a0:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 2
+      },
+      {
+        "code": 41472,
+        "display": "{a2:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 2
+      },
+      {
+        "code": 42240,
+        "display": "{a5:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 42752,
+        "display": "{a7:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 44544,
+        "display": "{ae:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 2
+      },
+      {
+        "code": 49920,
+        "display": "{c3:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 2
+      },
+      {
+        "code": 39424,
+        "display": "{9a:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 42496,
+        "display": "{a6:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 34560,
+        "display": "{87:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": true,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 41216,
+        "display": "{a1:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 2
+      },
+      {
+        "code": 41728,
+        "display": "{a3:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_lengths": [
+          {
+            "low_min": 0,
+            "low_max": 0,
+            "bytes": 2
+          }
+        ]
+      },
+      {
+        "code": 50176,
+        "display": "{c4:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 2
+      },
+      {
+        "code": 50432,
+        "display": "{c5:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 2
+      },
+      {
+        "code": 50688,
+        "display": "{c6:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 2
+      },
+      {
+        "code": 51456,
+        "display": "{c9:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 2
+      },
+      {
+        "code": 51712,
+        "display": "{ca:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 4
+      },
+      {
+        "code": 51968,
+        "display": "{cb:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 4
+      },
+      {
+        "code": 53504,
+        "display": "{d1:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 4
+      },
+      {
+        "code": 53760,
+        "display": "{d2:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 2
+      },
+      {
+        "code": 54016,
+        "display": "{d3:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 2
+      },
+      {
+        "code": 44288,
+        "display": "{ad:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 2
+      },
+      {
+        "code": 44800,
+        "display": "{af:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 2
+      },
+      {
+        "code": 35840,
+        "display": "{8c:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 2
+      },
+      {
+        "code": 40192,
+        "display": "{9d:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 2
+      },
+      {
+        "code": 35584,
+        "display": "{8b:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 37632,
+        "display": "{93:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 38144,
+        "display": "{95:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 38912,
+        "display": "{98:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 39168,
+        "display": "{99:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 43008,
+        "display": "{a8:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 43264,
+        "display": "{a9:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      },
+      {
+        "code": 39680,
+        "display": "{9b:{lo:02x}{args}}",
+        "mask": 65280,
+        "ends": false,
+        "argument_unit": "word-le",
+        "argument_separator": ":",
+        "argument_bytes": 0
+      }
+    ],
+    "glyph_mask": {
+      "below": 32768,
+      "mask": 2047
+    },
+    "normalization": {
+      "contextual_dash": {
+        "placeholder": "",
+        "counters": "つ度人部日回番週生種定息緒瞬体枚匹個本杯階歩気応方切言層段斉時年月晩万千百"
+      }
+    }
+  },
+  "fonts": {
+    "main": {
+      "offset": 7733248,
+      "count": 2048,
+      "stride": 32,
+      "format": "bpp1",
+      "tiles_wide": 2,
+      "tiles_high": 2,
+      "order": "column"
+    }
+  },
+  "tables": {}
+}

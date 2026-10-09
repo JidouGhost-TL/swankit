@@ -1,0 +1,22 @@
+[package]
+name = "ws-text"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Data-defined WonderSwan character maps, text tables and font extraction"
+readme = "README.md"
+
+[dependencies]
+formatkit-core.workspace = true
+formatkit-layout.workspace = true
+formatkit-catalog.workspace = true
+ws-gfx = { path = "../ws-gfx" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+encoding_rs = "=0.8.35"
+unicode-normalization = "=0.1.24"
+
+[dev-dependencies]
+formatkit-corpus-test.workspace = true
