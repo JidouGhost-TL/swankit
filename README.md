@@ -40,3 +40,9 @@ hashes, consumed extents, evidence and slot-fit policy. Staging refuses to
 overwrite an existing codec namespace or pair set. It writes Formatkit codec
 pairs and frozen JSON digests outside Git. Run parity with the same explicit
 root and safe runner as cartridge validation; see the codec crate's README.
+
+[ws-save](crates/ws-save/README.md) provides save media, internal EEPROM owner
+profiles and parameterized checksums. [ws-saves](crates/ws-saves/README.md)
+interprets per-game JSON definitions for decoding, stored-field edits,
+verification and transactional repair. See the versioned
+[save definition format and read/write guide](docs/save-definitions.md).

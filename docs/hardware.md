@@ -61,3 +61,20 @@ This is an independent Rust reimplementation of the MIT/Apache-licensed header
 and cartridge rules in the extension and its facts generator, validated against
 the hardware documents above. Mesen, MiSTer, ares, StoicGoose and ARMV30MZ are
 behavior references only; their implementation code is not used.
+
+## Save media and internal EEPROM
+
+[WSdev EEPROM](https://ws.nesdev.org/wiki/EEPROM) documents cartridge capacities
+of 1/8/16 Kbit, internal capacities of 1/16 Kbit, and 16-bit word addressing.
+`ws-save` converts these to 128/1024/2048 byte cartridge images and 128/2048 byte
+internal images. SRAM geometry is explicit; the nominal ROM declaration does
+not determine a physical dump length.
+
+[WSdev Internal EEPROM](https://ws.nesdev.org/wiki/Internal_EEPROM) documents
+program data at bytes 00..5F, custom owner-name codes at 60..6F, BCD birthday
+at 70..73, gender/blood type at 74/75, previous cartridge metadata at 76..78,
+change counters at 7C/7D and startup counter at 7E..7F. Color configuration and
+name color are at 83/84. Raw unknown codes and invalid birthday bytes remain
+visible. Owner-profile edits preserve counters and unrelated data. Color-only
+fields are read only on the explicitly selected color image. No emulator
+implementation supplied these offsets or rules.

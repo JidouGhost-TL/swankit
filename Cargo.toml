@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/ws-rom", "crates/ws-compress"]
+members = ["crates/ws-rom", "crates/ws-compress", "crates/ws-save", "crates/ws-saves"]
 
 [workspace.package]
 version = "0.1.0"

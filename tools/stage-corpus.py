@@ -195,17 +195,69 @@ def stage_codecs(args):
     log(args.progress_log, "codec staging", f"{len(staged)} codec records, {len(unique)} unique pairs", "run safe corpus gate")
 
 
+
+def stage_saves(args):
+    """Enroll independent save parser trees in a new immutable namespace."""
+    root = Path(__file__).resolve().parents[1]
+    output = args.output.resolve()
+    if output == root or root in output.parents:
+        raise ValueError("corpus staging must be outside the repository")
+    manifest_path = args.save_manifest.resolve(strict=True)
+    manifest = json.loads(manifest_path.read_bytes())
+    namespace = args.save_namespace
+    if namespace not in ("ws-saves", "ws-saves-parity", "ws-saves-play"):
+        raise ValueError("unknown save namespace")
+    sample_dir = output / namespace
+    enrollment = output / (namespace + "-enrollment.json")
+    if sample_dir.exists() or enrollment.exists():
+        raise ValueError("save namespace exists; frozen expectations cannot be overwritten")
+    records = manifest["records"]
+    if not records:
+        raise ValueError("save manifest has no independent records")
+    samples = {}
+    selected = []
+    for index, record in enumerate(records):
+        path = Path(record["path"]).resolve(strict=True)
+        raw = path.read_bytes()
+        if hashlib.sha256(raw).hexdigest() != record["sha256"]:
+            raise ValueError("save bytes differ from independent oracle manifest")
+        name = f"sample-{index:06d}" + path.suffix
+        args_value = {"id": record["id"], "name": record["name"],
+                      "context": record.get("context", {})}
+        expect = {"decoded": record["decoded"], "sha256": record["sha256"]}
+        if "corrupt_offset" in record:
+            offset = record["corrupt_offset"]
+            if not isinstance(offset, int) or not 0 <= offset < len(raw):
+                raise ValueError("invalid save corruption offset")
+            args_value["corrupt_offset"] = offset
+            expect.update(repaired=record["repaired"], repaired_sha256=record["repaired_sha256"])
+        samples[name] = {"args": args_value, "expect": expect}
+        selected.append((name, path))
+    sample_dir.mkdir(parents=True)
+    for name, path in selected:
+        (sample_dir / name).symlink_to(path)
+    write_json(sample_dir / "spec.json", {"format": "ws-saves", "samples": samples})
+    write_json(enrollment, {"manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+                            "normalization": manifest["normalization"], "records": records,
+                            "source_excluded": manifest.get("notes", [])})
+    print(f"Staged {len(records)} save records, 1 frozen spec")
+    log(args.progress_log, "save staging", f"{len(records)} independent save trees and digests", "run serialized parity")
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     selection = parser.add_mutually_exclusive_group(required=True)
     selection.add_argument("--titles", type=Path)
     selection.add_argument("--codec-manifest", type=Path)
+    selection.add_argument("--save-manifest", type=Path)
+    parser.add_argument("--save-namespace", default="ws-saves")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--progress-log", default=os.environ.get("SWANKIT_PROGRESS_LOG"))
     args = parser.parse_args()
     log(args.progress_log, "corpus staging start", "0 ROMs enrolled", "validate existing ROMs and facts")
     try:
-        if args.codec_manifest:
+        if args.save_manifest:
+            stage_saves(args)
+        elif args.codec_manifest:
             stage_codecs(args)
         else:
             stage(args)

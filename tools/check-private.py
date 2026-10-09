@@ -20,7 +20,7 @@ MACHINE_PATH = re.compile(
 TOOL_NAME = re.compile(
     r"\b(?:" + "|".join(("co" + "dex", "clau" + "de", "chat" + "gpt",
                            "open" + "ai", "copi" + "lot", "gemi" + "ni",
-                           "cur" + "sor", "mu" + "se", "gpt" + r"[- ]?\d+")) + r")\b",
+                           "anthro" + "pic", "mu" + "se", "gpt" + r"[- ]?\d+")) + r")\b|\bcur" + r"sor(?:\.sh\b|\s+IDE\b)",
     re.I,
 )
 EMAIL = re.compile(r"[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}", re.I)
