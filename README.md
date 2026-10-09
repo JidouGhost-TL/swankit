@@ -88,3 +88,9 @@ patches, including RLE records and the optional EOF size extension. Overlap,
 growth and output bounds are explicit application policy. Enroll independent
 patch/base/target evidence with `--patch-manifest` in `tools/stage-corpus.py`;
 the new frozen `ws-patch` selection is checked by the same safe corpus runner.
+
+[ws-save](crates/ws-save/README.md) provides save media, internal EEPROM owner
+profiles and parameterized checksums. [ws-saves](crates/ws-saves/README.md)
+interprets per-game JSON definitions for decoding, stored-field edits,
+verification and transactional repair. See the versioned
+[save definition format and read/write guide](docs/save-definitions.md).

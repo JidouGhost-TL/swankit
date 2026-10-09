@@ -36,6 +36,19 @@ class Rules(unittest.TestCase):
     def test_symlinks_cannot_hide_external_content(self):
         self.assertIn("symlink in repository", module.violations("link", b"../sample", "120000", "sample-user"))
 
+    def test_ordinary_cursor_words_are_allowed(self):
+        for text in [b"option cursor", b"menu cursor", b"cursor X", b"battle save: cursor row"]:
+            self.assertEqual(module.violations("notes.md", text, "100644", "sample-user"), [])
+
+    def test_tool_names_and_specific_editor_references_are_rejected(self):
+        names = ["clau" + "de", "co" + "dex", "mu" + "se", "anthro" + "pic",
+                 "open" + "ai", "gemi" + "ni", "copi" + "lot",
+                 "cur" + "sor.sh", "Cur" + "sor IDE"]
+        for name in names:
+            with self.subTest(name=name):
+                self.assertIn("assistant product identifier",
+                              module.violations("notes.md", name.encode(), "100644", "sample-user"))
+
     def test_indexed_blob_is_checked_even_when_working_file_is_clean(self):
         with tempfile.TemporaryDirectory(prefix="swankit-privacy-") as temporary:
             root = Path(temporary)
