@@ -265,6 +265,8 @@ def main():
                         help="graphics directory to enroll, each may be created only once")
     selection.add_argument("--sound-manifest", type=Path,
                            help="enroll independent sound expectations in a NEW ws-sound spec directory")
+    selection.add_argument("--patch-manifest", type=Path,
+                           help="enroll independent IPS/base/target evidence in a NEW ws-patch selection")
     parser.add_argument("--sound-spec-dir", choices=("ws-sound", "ws-sound-extra", "ws-sound-captures"), default="ws-sound",
                         help="new sound selection; never updates an existing selection")
     parser.add_argument("--output", type=Path, required=True)
@@ -280,6 +282,10 @@ def main():
             from stage_sound import stage_sound
             count = stage_sound(args.sound_manifest, args.output, args.sound_spec_dir)
             log(args.progress_log, "sound corpus staging", f"{count} samples, 1 frozen spec; existing specs unchanged", "run safe corpus gate")
+        elif args.patch_manifest:
+            from stage_patch import stage_patch
+            count = stage_patch(args.patch_manifest, args.output)
+            log(args.progress_log, "patch corpus staging", f"{count} patches, 1 frozen spec; existing specs unchanged", "run safe corpus gate")
         else:
             stage(args)
     except (OSError, ValueError, KeyError, TypeError) as error:
