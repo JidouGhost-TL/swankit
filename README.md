@@ -112,3 +112,9 @@ external; existing selections cannot be overwritten. `--product-saves` adds
 a separate selection for natural-save detection, decoding and independently
 recorded repair bytes and trees.
 
+[Python bindings](docs/python.md) expose the Rust facts, detection, RGBA tiles
+and palettes, codecs and consumed extents, text definitions, sound previews,
+transactional saves and IPS operations as the private `swankit` package.
+`tools/python-container.sh` builds and tests its Python 3.11+ abi3 wheel inside
+a container, keeping wheel artifacts external. `--python-bindings` in the
+staging tool enrolls a new parity selection from existing frozen owner specs.

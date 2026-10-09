@@ -389,6 +389,8 @@ def main():
                         help="graphics directory to enroll, each may be created only once")
     selection.add_argument("--sound-manifest", type=Path,
                            help="enroll independent sound expectations in a NEW ws-sound spec directory")
+    selection.add_argument("--python-bindings", action="store_true",
+                           help="enroll Python parity from existing frozen product and codec selections")
     selection.add_argument("--product-saves", action="store_true",
                            help="enroll composed natural-save detection and repair from frozen owner specs")
     selection.add_argument("--product-detection", action="store_true",
@@ -404,6 +406,10 @@ def main():
     try:
         if args.save_manifest:
             stage_saves(args)
+        elif args.python_bindings:
+            from stage_python import stage_python
+            count = stage_python(args.output)
+            log(args.progress_log, "Python corpus staging", f"{count} samples, 1 new frozen spec", "run installed wheel parity through safe runner")
         elif args.product_saves:
             from stage_product_saves import stage_product_saves
             count = stage_product_saves(args.output)
