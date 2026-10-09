@@ -8,5 +8,6 @@ publish.workspace = true
 description = "Checked WonderSwan save media, owner profiles and checksum rules"
 
 [dependencies]
+formatkit-catalog.workspace = true
 formatkit-core.workspace = true
 formatkit-layout.workspace = true

@@ -8,6 +8,8 @@ publish.workspace = true
 description = "Generated game save layouts and checked semantic decoding"
 
 [dependencies]
+serde = { version = "1", features = ["derive"] }
+formatkit-catalog.workspace = true
 formatkit-core.workspace = true
 formatkit-layout.workspace = true
 ws-save = { path = "../ws-save" }

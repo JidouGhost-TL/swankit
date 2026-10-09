@@ -389,6 +389,10 @@ def main():
                         help="graphics directory to enroll, each may be created only once")
     selection.add_argument("--sound-manifest", type=Path,
                            help="enroll independent sound expectations in a NEW ws-sound spec directory")
+    selection.add_argument("--product-saves", action="store_true",
+                           help="enroll composed natural-save detection and repair from frozen owner specs")
+    selection.add_argument("--product-detection", action="store_true",
+                           help="enroll composed detection from existing frozen ROM and IPS selections")
     selection.add_argument("--patch-manifest", type=Path,
                            help="enroll independent IPS/base/target evidence in a NEW ws-patch selection")
     parser.add_argument("--sound-spec-dir", choices=("ws-sound", "ws-sound-extra", "ws-sound-captures"), default="ws-sound",
@@ -400,6 +404,15 @@ def main():
     try:
         if args.save_manifest:
             stage_saves(args)
+        elif args.product_saves:
+            from stage_product_saves import stage_product_saves
+            count = stage_product_saves(args.output)
+            log(args.progress_log, "product save staging", f"{count} samples, 1 new spec", "run save detection and CLI parity through safe runner")
+        elif args.product_detection:
+            from stage_product import stage_product
+            count = stage_product(args.output)
+            log(args.progress_log, "product detection staging", f"{count} samples, 1 new spec", "run composed detection through safe runner")
+
         elif args.codec_manifest:
             stage_codecs(args)
         elif args.gfx_manifest:

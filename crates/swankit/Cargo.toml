@@ -1,0 +1,35 @@
+[package]
+name = "swankit"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[features]
+default = ["saves"]
+saves = ["dep:ws-save", "dep:ws-saves"]
+
+[dependencies]
+formatkit-core.workspace = true
+formatkit-catalog.workspace = true
+formatkit-runtime.workspace = true
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ws-rom = { path = "../ws-rom" }
+ws-compress = { path = "../ws-compress" }
+ws-gfx = { path = "../ws-gfx" }
+ws-text = { path = "../ws-text" }
+ws-sound = { path = "../ws-sound" }
+ws-patch = { path = "../ws-patch" }
+
+[dev-dependencies]
+formatkit-corpus-test.workspace = true
+
+[dependencies.ws-save]
+path = "../ws-save"
+optional = true
+
+[dependencies.ws-saves]
+path = "../ws-saves"
+optional = true

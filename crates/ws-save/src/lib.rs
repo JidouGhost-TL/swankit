@@ -7,3 +7,5 @@ mod owner;
 
 pub use media::{EepromSize, Media, SaveImage};
 pub use owner::{Birthday, OwnerProfile};
+
+pub mod catalog;

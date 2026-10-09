@@ -94,3 +94,21 @@ profiles and parameterized checksums. [ws-saves](crates/ws-saves/README.md)
 interprets per-game JSON definitions for decoding, stored-field edits,
 verification and transactional repair. See the versioned
 [save definition format and read/write guide](docs/save-definitions.md).
+
+[swankit](crates/swankit/README.md) composes the owner declarations into a
+validated Formatkit runtime catalog and typed product APIs. The
+[command line](docs/cli.md) provides `info`, `detect`, PNG tiles and snapshots,
+definition-driven text/font/sound/codec extraction, save decode/set/fix and IPS
+create/apply:
+
+```sh
+cargo build -p swankit-cli --locked
+cargo run -p swankit-cli --locked -- info cartridge.wsc --json
+```
+
+Enroll product detection from the existing frozen ROM and IPS selections with
+`--product-detection` in the staging tool. Expectations and provenance remain
+external; existing selections cannot be overwritten. `--product-saves` adds
+a separate selection for natural-save detection, decoding and independently
+recorded repair bytes and trees.
+

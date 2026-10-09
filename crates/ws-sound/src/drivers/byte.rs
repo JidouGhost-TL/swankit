@@ -124,7 +124,7 @@ pub fn varlen(reader: &mut Reader<'_>) -> Result<u16> {
     Ok((u16::from(first & 127) << 7) | u16::from(reader.u8()? & 127))
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub struct PcmCommand {
     pub segment: u16,
     pub offset: u16,
@@ -154,7 +154,7 @@ impl PcmCommand {
 }
 
 /// An instruction preserves raw operand bytes and exact consumed extent.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub enum Instruction {
     Note {
         pitch: u16,

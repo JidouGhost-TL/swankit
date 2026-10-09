@@ -78,7 +78,7 @@ pub struct PcmDescriptor {
 }
 
 /// Timer state outside this descriptor determines the sample rate.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub enum Cell {
     Note { duration: u8, key: u8, divisor: u16 },
     Release { duration: u8, divisor: u16 },

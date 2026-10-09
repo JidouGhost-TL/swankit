@@ -160,6 +160,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "formatkit-runtime"
+version = "0.1.0"
+dependencies = [
+ "formatkit-catalog",
+ "formatkit-core",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -337,6 +345,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "swankit"
+version = "0.1.0"
+dependencies = [
+ "formatkit-catalog",
+ "formatkit-core",
+ "formatkit-corpus-test",
+ "formatkit-runtime",
+ "serde",
+ "serde_json",
+ "ws-compress",
+ "ws-gfx",
+ "ws-patch",
+ "ws-rom",
+ "ws-save",
+ "ws-saves",
+ "ws-sound",
+ "ws-text",
+]
+
+[[package]]
+name = "swankit-cli"
+version = "0.1.0"
+dependencies = [
+ "crc",
+ "formatkit-catalog",
+ "formatkit-core",
+ "formatkit-corpus-test",
+ "formatkit-runtime",
+ "miniz_oxide",
+ "serde",
+ "serde_json",
+ "swankit",
+]
+
+[[package]]
 name = "syn"
 version = "2.0.119"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -475,6 +518,7 @@ dependencies = [
 name = "ws-save"
 version = "0.1.0"
 dependencies = [
+ "formatkit-catalog",
  "formatkit-core",
  "formatkit-layout",
 ]
@@ -484,11 +528,13 @@ name = "ws-saves"
 version = "0.1.0"
 dependencies = [
  "encoding_rs",
+ "formatkit-catalog",
  "formatkit-core",
  "formatkit-corpus-test",
  "formatkit-layout",
  "num-bigint",
  "num-traits",
+ "serde",
  "serde_json",
  "sha1",
  "sha2",
@@ -504,6 +550,7 @@ dependencies = [
  "formatkit-core",
  "formatkit-corpus-test",
  "formatkit-layout",
+ "serde",
  "serde_json",
  "ws-rom",
 ]
@@ -531,8 +578,4 @@ checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
 
 [[patch.unused]]
 name = "formatkit"
-version = "0.1.0"
-
-[[patch.unused]]
-name = "formatkit-runtime"
 version = "0.1.0"

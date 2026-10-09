@@ -39,3 +39,79 @@ pub const FORMATS: &[FormatDescriptor] = &[
     descriptor(LZ_BITS_16_ID, "ws-lz-bits-16", Confidence::CorpusBacked),
     descriptor(OKUMURA_ID, "ws-okumura-lzss", Confidence::Structural),
 ];
+
+use formatkit_catalog::catalog::{ContextRequirement, EmbeddedFormatSupport};
+use formatkit_catalog::CorpusEvidence;
+
+/// Owner support rows for explicit selection; never global recognition probes.
+pub const EMBEDDED: &[EmbeddedFormatSupport] = &[
+    EmbeddedFormatSupport {
+        id: LZ_RLE_7F_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "lz-rle-7f",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: LZ_BITS_16_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "lz-bits-16",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: OKUMURA_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "okumura",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: false,
+            bindings: false,
+            confidence: Confidence::Structural,
+        },
+        corpus_evidence: None,
+    },
+];

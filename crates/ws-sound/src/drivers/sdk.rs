@@ -215,7 +215,7 @@ pub fn tracks(bytes: &[u8], count: usize) -> Result<Vec<TrackEntry>> {
     Ok(result)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub enum Cell {
     Note { class: u8, octave: u8, duration: u8 },
     Rest { duration: u8 },

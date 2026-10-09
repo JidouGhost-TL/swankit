@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/ws-rom", "crates/ws-compress", "crates/ws-gfx", "crates/ws-sound", "crates/ws-text", "crates/ws-patch", "crates/ws-save", "crates/ws-saves"]
+members = ["crates/ws-rom", "crates/ws-compress", "crates/ws-gfx", "crates/ws-sound", "crates/ws-text", "crates/ws-patch", "crates/ws-save", "crates/ws-saves", "crates/swankit", "crates/swankit-cli"]
 
 [workspace.package]
 version = "0.1.0"
