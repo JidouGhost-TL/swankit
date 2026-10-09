@@ -118,3 +118,45 @@ can differ from displayed frames for these reasons. Emulator screenshots are
 behavior evidence only and must have scaling, rotation and the icon area
 accounted for before comparing. Mesen's panel response is measured externally
 with synthetic swatches, never copied from its implementation.
+
+# Sound hardware rules
+
+Sound policy is sourced from [WSdev Sound](https://ws.nesdev.org/wiki/Sound),
+[WSdev Hyper Voice](https://ws.nesdev.org/wiki/Hyper_Voice), and
+[WSdev DMA](https://ws.nesdev.org/wiki/DMA). Frame-boundary preview spacing uses
+[WSdev Timing](https://ws.nesdev.org/wiki/Timing), which specifies 159 lines of
+256 clocks by default (318 output frames at 128 clocks each). The sound documents
+were checked against the owner's archived hardware documentation. Driver
+reconstruction notes supply format grammar, not hardware rules.
+
+Four 16-byte waves hold 32 unsigned 4-bit samples each, low nibble first. Port
+8F selects the 64-byte block with address bits 6..13. The 11-bit divider gives
+a sample period of `2048 - divisor` CPU cycles at 3.072 MHz. Left/right volume
+are the high/low nibble, multiplied by the unsigned sample. Channel 2 can instead
+hold an unsigned byte; voice-volume full bits (left 2, right 0) override the
+half bits (left 3, right 1). Voice bit 5 operates without channel-enable bit 1.
+
+Sweep adds a signed byte to channel 3's divider modulo 2048 after the selected
+number of 375 Hz ticks; an 8D write resets its step counter. Noise uses the
+inverted XOR of bit 7 with taps 14, 10, 13, 4, 8, 6, 9 or 11, shifts left and
+retains 15 bits. Reset clears the register. The channel-4 and LFSR enable bits
+clock it even while wave output is selected. The new low bit represents sample
+0 or 15. Noise state ports are read-only, and the reset bit is not retained.
+
+Headphone mixing scales the unsigned channel sums by 32 and wraps additions;
+the hardware documentation specifies unclamped adders. Color Hyper Voice has
+signed 16-bit outputs, documented extension/shift modes, eight rate divisors
+and routing/reset controls. Manual input alternates channels independently of
+the DMA layout setting. The ignored extension mode's upper bits are unspecified
+and are rejected. The speaker button's exact analog volume steps and sound test
+ports are outside the preview model.
+
+Three differences from owner-authored Java references are explicit. A four-byte
+driver wave exporter writes the high nibble first and includes a padded half
+cycle; ws-sound decodes the documented 32 low-first samples. The Java listening
+preview reverses the full/half voice-volume bits and clocks the noise register
+only while noise output is selected; ws-sound follows the documented gates.
+Reference parity excerpts avoid these differing states. The floating phase and
+DC filter in `render_coupled` are retained solely as listening-preview conventions;
+they do not specify hardware timing or analog filtering. Default rendering uses
+integer phase. The crate README documents further rendering limits.

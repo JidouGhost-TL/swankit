@@ -53,3 +53,15 @@ FORMATKIT_CORPUS_DIR="$STAGING_DIR" tools/ci.sh --corpus
 The manifest supplies independent Java expectations, source paths and oracle
 provenance. Existing expectations are preserved; a graphics spec cannot be
 overwritten. No corpus population counts or golden digests live in Rust tests.
+
+[ws-sound](crates/ws-sound/README.md) adds wave RAM decoding, sound register and
+noise policy, decoded driver records and bounded 24 kHz PCM previews. Independent
+sound expectations are enrolled from an external manifest:
+
+```sh
+python3 tools/stage-corpus.py --sound-manifest "$SOUND_MANIFEST" --output "$STAGING_DIR"
+```
+
+This creates a new `ws-sound` spec directory without changing existing specs.
+The additional `ws-sound-extra` and `ws-sound-captures` selections use
+`--sound-spec-dir`. All three remain external and are checked by the safe runner.

@@ -393,6 +393,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "ws-sound"
+version = "0.1.0"
+dependencies = [
+ "formatkit-catalog",
+ "formatkit-core",
+ "formatkit-corpus-test",
+ "formatkit-layout",
+ "serde_json",
+ "ws-rom",
+]
+
+[[package]]
 name = "zmij"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"

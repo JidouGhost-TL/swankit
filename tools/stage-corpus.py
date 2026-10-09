@@ -263,15 +263,23 @@ def main():
                            help="enroll independently rendered graphics snapshots/fixtures into a new spec directory")
     parser.add_argument("--gfx-format", choices=("ws-gfx", "ws-gfx-display"), default="ws-gfx",
                         help="graphics directory to enroll, each may be created only once")
+    selection.add_argument("--sound-manifest", type=Path,
+                           help="enroll independent sound expectations in a NEW ws-sound spec directory")
+    parser.add_argument("--sound-spec-dir", choices=("ws-sound", "ws-sound-extra", "ws-sound-captures"), default="ws-sound",
+                        help="new sound selection; never updates an existing selection")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--progress-log", default=os.environ.get("SWANKIT_PROGRESS_LOG"))
     args = parser.parse_args()
-    log(args.progress_log, "corpus staging start", "0 ROMs enrolled", "validate existing ROMs and facts")
+    log(args.progress_log, "corpus staging start", "0 samples enrolled", "validate independent inputs")
     try:
         if args.codec_manifest:
             stage_codecs(args)
         elif args.gfx_manifest:
             stage_graphics(args)
+        elif args.sound_manifest:
+            from stage_sound import stage_sound
+            count = stage_sound(args.sound_manifest, args.output, args.sound_spec_dir)
+            log(args.progress_log, "sound corpus staging", f"{count} samples, 1 frozen spec; existing specs unchanged", "run safe corpus gate")
         else:
             stage(args)
     except (OSError, ValueError, KeyError, TypeError) as error:
