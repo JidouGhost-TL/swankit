@@ -1,0 +1,32 @@
+[workspace]
+resolver = "2"
+members = ["crates/ws-rom"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.94.1"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[workspace.dependencies]
+formatkit-core = "=0.1.0"
+formatkit-layout = "=0.1.0"
+formatkit-catalog = "=0.1.0"
+formatkit-runtime = "=0.1.0"
+formatkit-pixel = "=0.1.0"
+formatkit-codec = "=0.1.0"
+formatkit-corpus = "=0.1.0"
+formatkit-corpus-test = "=0.1.0"
+
+# Sibling checkout overrides: remove this table to use the pinned registry release.
+[patch.crates-io]
+formatkit = { path = "../formatkit/crates/formatkit" }
+formatkit-core = { path = "../formatkit/crates/formatkit-core" }
+formatkit-layout = { path = "../formatkit/crates/formatkit-layout" }
+formatkit-catalog = { path = "../formatkit/crates/formatkit-catalog" }
+formatkit-runtime = { path = "../formatkit/crates/formatkit-runtime" }
+formatkit-pixel = { path = "../formatkit/crates/formatkit-pixel" }
+formatkit-codec = { path = "../formatkit/crates/formatkit-codec" }
+formatkit-corpus = { path = "../formatkit/crates/formatkit-corpus" }
+formatkit-corpus-test = { path = "../formatkit/crates/formatkit-corpus-test" }
