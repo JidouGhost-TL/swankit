@@ -8,6 +8,7 @@ from pathlib import Path
 import sys
 import subprocess
 import struct
+import fcntl
 
 
 FIELDS = (
@@ -195,11 +196,73 @@ def stage_codecs(args):
     log(args.progress_log, "codec staging", f"{len(staged)} codec records, {len(unique)} unique pairs", "run safe corpus gate")
 
 
+def stage_graphics(args):
+    """Add one new graphics directory; preserve every existing frozen expectation."""
+    root = Path(__file__).resolve().parents[1]
+    output = args.output.resolve()
+    if output == root or root in output.parents:
+        raise ValueError("corpus staging must be outside the repository")
+    manifest_bytes = args.gfx_manifest.read_bytes()
+    manifest = json.loads(manifest_bytes)
+    format_name = getattr(args, "gfx_format", "ws-gfx")
+    records = []
+    for record in manifest["samples"]:
+        name = record["name"]
+        if (Path(name).name != name or name.startswith(".")
+                or Path(name).suffix not in (".tiles", ".snapshot", ".display")):
+            raise ValueError("invalid graphics sample name")
+        source = Path(record["path"]).resolve(strict=True)
+        digest = hashlib.sha256(source.read_bytes()).hexdigest()
+        if record["expect"]["sha256"] != digest:
+            raise ValueError(f"{name}: source differs from independent expectation")
+        reference = record["reference_sha256"]
+        if len(reference) != 64 or any(c not in "0123456789abcdef" for c in reference):
+            raise ValueError(f"{name}: invalid reference provenance")
+        records.append((name, source, digest, record))
+    if not records or len({r[0] for r in records}) != len(records):
+        raise ValueError("graphics enrollment must contain unique samples")
+    output.mkdir(parents=True, exist_ok=True)
+    with (output / ".staging.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        sample_dir = output / format_name
+        if sample_dir.exists():
+            raise ValueError("graphics spec exists; frozen expectations must never be overwritten")
+        versions_path = output / "versions.json"
+        versions = json.loads(versions_path.read_text()) if versions_path.exists() else {}
+        additions = {}
+        for name, source, digest, record in records:
+            if digest in versions or digest in additions:
+                raise ValueError(f"{name}: duplicate input digest requires explicit enrollment policy")
+            additions[digest] = {"format": format_name, "size": source.stat().st_size,
+                                 "reference_sha256": record["reference_sha256"],
+                                 "provenance": record.get("provenance", {})}
+        sample_dir.mkdir()
+        samples = {}
+        for name, source, _, record in records:
+            (sample_dir / name).symlink_to(source)
+            samples[name] = {"args": record["args"], "expect": record["expect"]}
+        write_json(sample_dir / "spec.json", {
+            "format": format_name, "samples": samples,
+            "excluded": {"enrollment.json": "provenance sidecar, not a graphics byte stream"}})
+        versions.update(additions)
+        write_json(versions_path, versions)
+        write_json(sample_dir / "enrollment.json", {
+            "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
+            "samples": len(records), "provenance": manifest.get("provenance", {})})
+    print(f"Staged {len(records)} graphics symlinks and independent golden expectations")
+    log(args.progress_log, "graphics staging", f"{len(records)} samples, existing golden values preserved",
+        "run serialized required corpus gate")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     selection = parser.add_mutually_exclusive_group(required=True)
     selection.add_argument("--titles", type=Path)
     selection.add_argument("--codec-manifest", type=Path)
+    selection.add_argument("--gfx-manifest", type=Path,
+                           help="enroll independently rendered graphics snapshots/fixtures into a new spec directory")
+    parser.add_argument("--gfx-format", choices=("ws-gfx", "ws-gfx-display"), default="ws-gfx",
+                        help="graphics directory to enroll, each may be created only once")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--progress-log", default=os.environ.get("SWANKIT_PROGRESS_LOG"))
     args = parser.parse_args()
@@ -207,9 +270,11 @@ def main():
     try:
         if args.codec_manifest:
             stage_codecs(args)
+        elif args.gfx_manifest:
+            stage_graphics(args)
         else:
             stage(args)
-    except (OSError, ValueError, KeyError) as error:
+    except (OSError, ValueError, KeyError, TypeError) as error:
         log(args.progress_log, "corpus staging blocked", "0 specs accepted", str(error))
         print(f"error: {error}", file=sys.stderr)
         return 1

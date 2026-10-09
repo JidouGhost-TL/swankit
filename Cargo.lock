@@ -138,6 +138,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "formatkit-pixel"
+version = "0.1.0"
+dependencies = [
+ "formatkit-core",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -363,6 +370,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "ws-gfx"
+version = "0.1.0"
+dependencies = [
+ "formatkit-catalog",
+ "formatkit-core",
+ "formatkit-corpus-test",
+ "formatkit-layout",
+ "formatkit-pixel",
+ "serde_json",
+]
+
+[[package]]
 name = "ws-rom"
 version = "0.1.0"
 dependencies = [
@@ -381,10 +400,6 @@ checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
 
 [[patch.unused]]
 name = "formatkit"
-version = "0.1.0"
-
-[[patch.unused]]
-name = "formatkit-pixel"
 version = "0.1.0"
 
 [[patch.unused]]

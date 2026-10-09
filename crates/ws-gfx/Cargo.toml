@@ -1,0 +1,19 @@
+[package]
+name = "ws-gfx"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Checked WonderSwan tiles, palettes, maps and snapshot rendering"
+readme = "README.md"
+
+[dependencies]
+formatkit-core.workspace = true
+formatkit-catalog.workspace = true
+formatkit-layout.workspace = true
+formatkit-pixel.workspace = true
+
+[dev-dependencies]
+formatkit-corpus-test.workspace = true
+serde_json = "1"

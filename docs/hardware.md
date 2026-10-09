@@ -61,3 +61,60 @@ This is an independent Rust reimplementation of the MIT/Apache-licensed header
 and cartridge rules in the extension and its facts generator, validated against
 the hardware documents above. Mesen, MiSTer, ares, StoicGoose and ARMV30MZ are
 behavior references only; their implementation code is not used.
+
+## Display snapshot rules
+
+| Hardware document | Graphics rules used |
+| --- | --- |
+| [WSdev Display](https://ws.nesdev.org/wiki/Display) | 224x144 LCD, layer order, 32x32 screens, earlier sprite priority and 32 sprites per line |
+| [WSdev Tile Data](https://ws.nesdev.org/wiki/Display/Tile_Data) | Row-interleaved planes, MSB-first pixels, packed high nibble first and tile bank locations |
+| [WSdev Screen](https://ws.nesdev.org/wiki/Display/Screen) | Tile/palette/bank/flip attribute word |
+| [WSdev Sprites](https://ws.nesdev.org/wiki/Display/Sprites) | Four-byte attributes/Y/X records, palettes 8-15, bank 0, priority and window side |
+| [WSdev IO Ports](https://ws.nesdev.org/wiki/Display/IO_Ports) | Control, address masks, scroll, inclusive windows, shade pool and palette selectors |
+| [WSdev Palette, revision 514](https://ws.nesdev.org/w/index.php?title=Display/Palette&oldid=514) | RGB444, mono darkness, colour-zero transparency and model-dependent colour reproduction |
+| [WSdev Frame timing](https://ws.nesdev.org/wiki/Frame_timing) | Delayed sprite-table DMA and palette timing outside snapshot fidelity |
+
+Tiles are 8x8. 2bpp rows have two bytes, one per plane; 4bpp planar rows
+have four. Packed rows store two pixels per byte, left pixel in bits 7-4.
+Mono 2bpp tiles occupy 2000-3FFF; colour 2bpp bank 1 occupies 4000-5FFF.
+4bpp banks occupy 4000-7FFF and 8000-BFFF. Screen entries are little-endian:
+bits 0-8 tile, 9-12 palette, 13 colour bank, 14 H flip and 15 V flip.
+Sprite bit 12 instead selects the window side, and bit 13 selects priority.
+Sprite tile indices always select the first bank.
+
+A mono palette contains four three-bit indices into eight four-bit darkness
+levels. Preview grey is `255 - darkness * 17`. Colour palettes contain sixteen
+RGB444 entries, expanded by nibble replication. Reserved palette bits are
+ignored. Colour zero is opaque for 2bpp palettes 0-3/8-11 and transparent for
+4-7/12-15; it is always transparent in 4bpp. Background lookup is opaque.
+Neither expansion claims to reproduce a particular LCD panel.
+
+Screen maps start at the address nibble times 800; mono hardware ignores the
+high nibble bit. Sprite table addresses use units of 200, with five address
+bits on mono and six on colour hardware. Windows have inclusive edges;
+reversed edges enclose no pixels. Scroll and sprite coordinates wrap modulo
+256. The hardware compositor selects the earliest opaque sprite across both priority
+groups; its priority bit then controls screen 2 occlusion.
+The hardware profile first selects at most 32 sprites intersecting a scanline,
+including offscreen sprites, before priority or window filtering.
+
+### Reference disagreements and limits
+
+The extension's WSAssets 2bpp VRAM lookup masks the tile index to nine bits
+even in colour mode, aliasing bank 1 to bank 0. Its WSRender also retains mono
+map/table address high bits, selects sprites separately for each priority
+group and omits the 32-sprite limit. The explicit
+`JavaDiagnostic` profile preserves these behaviors for byte-identical parity;
+`Hardware` follows the documented rules. Synthetic tests separate the profiles.
+These are compatibility policies, not hardware claims derived from an emulator.
+
+Both profiles render from one RAM instant and optionally per-line port rows.
+They do not reconstruct the previous frame's copied sprite table, tile or
+palette writes during a line/frame, LCD control timing, segments, rotation,
+or panel colour response. The active sprite range is clamped at entry 127,
+matching the current diagnostic reference; wrapped or out-of-range hardware
+first/count combinations require additional hardware evidence. Static captures
+can differ from displayed frames for these reasons. Emulator screenshots are
+behavior evidence only and must have scaling, rotation and the icon area
+accounted for before comparing. Mesen's panel response is measured externally
+with synthetic swatches, never copied from its implementation.

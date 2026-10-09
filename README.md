@@ -3,7 +3,9 @@
 A private Rust workspace for WonderSwan formats, built on Formatkit mechanisms.
 `ws-rom` parses cartridge metadata, checks checksums and maps banked ROM
 addresses. [ws-compress](crates/ws-compress/README.md) provides bounded
-compression streams with deterministic encoders. See [hardware rules](docs/hardware.md) and
+compression streams with deterministic encoders. [ws-gfx](crates/ws-gfx/README.md)
+decodes tiles, palettes, maps and sprites and renders display snapshots to RGBA
+images. See [hardware rules](docs/hardware.md) and
 [contributor rules](CONTRIBUTING.md).
 
 Requires the existing Rust 1.94.1 toolchain with rustfmt and Clippy.
@@ -40,3 +42,14 @@ hashes, consumed extents, evidence and slot-fit policy. Staging refuses to
 overwrite an existing codec namespace or pair set. It writes Formatkit codec
 pairs and frozen JSON digests outside Git. Run parity with the same explicit
 root and safe runner as cartridge validation; see the codec crate's README.
+
+Graphics enrollment adds a new `ws-gfx` spec directory to an external root:
+
+```sh
+python3 tools/stage-corpus.py --gfx-manifest "$GFX_MANIFEST" --output "$STAGING_DIR"
+FORMATKIT_CORPUS_DIR="$STAGING_DIR" tools/ci.sh --corpus
+```
+
+The manifest supplies independent Java expectations, source paths and oracle
+provenance. Existing expectations are preserved; a graphics spec cannot be
+overwritten. No corpus population counts or golden digests live in Rust tests.
