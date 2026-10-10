@@ -129,3 +129,10 @@ an injected-network request/reply core, with streaming framing, upstream and
 revival profiles, bounded commands and a deterministic Scripted backend. See
 [protocol and compatibility policy](docs/wondergate.md). Live backends and the
 BPL responder are later milestones.
+
+[ws-wondergate-server](crates/ws-wondergate-server/README.md) provides bounded,
+byte-preserving HTTP and shared BPL/charge services, injected clock and entropy,
+empty memory histories, a durable JSON-lines journal and scoped ranking boards.
+`swankit wg-server --data DIR --wire DIR` starts threaded loopback TCP listeners
+and writes lossless Python-compatible wire logs. Service identities live in
+JSON data; title definitions and the in-process adapter are later milestones.

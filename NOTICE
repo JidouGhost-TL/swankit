@@ -38,3 +38,10 @@ as behaviour references. No code from them is included.
 
 Revival server responses, rankings and selections are newly authored. No
 original server code, server data or archived downloads are included.
+
+Files marked "SPDX-License-Identifier: MIT" in crates/ws-wondergate-server
+port the private WonderGate revival Python server's protocol.py, shared.py,
+store.py, runtime.py, plugins/wave2_history.py and shared/framing service tests.
+Copyright (C) 2026 jidoughost; distributed under the MIT License above.
+The BPL reply follows the client-code contract and field-preserving proxy
+described above, correcting the Python server's eight-byte reply.

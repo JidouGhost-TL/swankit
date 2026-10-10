@@ -4,6 +4,7 @@ mod io;
 mod png;
 #[cfg(feature = "saves")]
 mod save;
+mod wg_server;
 use args::Args;
 use serde_json::{json, Value};
 use std::{env, path::Path};
@@ -26,6 +27,8 @@ const HELP: &str = "swankit: WonderSwan format tools
   patch create BASE TARGET --output IPS
 Options: --json, --force (replace output); integers accept decimal or 0x hexadecimal.
 Experimental: interop --json [--server] (versioned JSON-lines requests on stdin).
+  wg-server --data DIR --wire DIR [--bind IP] [--http-port N] [--bpl-port N]
+            [--clock system|fixed:YYYYMMDDhhmmss] [--seed N]
 See docs/cli.md for definition schemas and bounds.";
 
 fn emit(
@@ -80,6 +83,12 @@ fn run(words: Vec<String>) -> Result<()> {
         .unwrap_or("")
         .to_owned();
     match command.as_str() {
+        "wg-server" => {
+            if json_mode {
+                return Err("wg-server does not accept --json".into());
+            }
+            wg_server::run(&mut a)
+        }
         "interop" => {
             let server = a.flag("--server");
             a.finish(1)?;

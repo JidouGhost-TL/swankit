@@ -117,3 +117,23 @@ state, while a second power-on when already on preserves it.
 INI, redirects, TCP, transcript replay and a built-in BPL responder are later
 milestones. Adapter corpus goldens are enrolled separately; M12's evidence is
 synthetic wire tests and client-code analysis.
+
+## Shared server core
+
+The server's BPL responder implements the 24-byte policy above. It bounds the
+LE32 total to 24..65536, waits for the entire declared message, copies bytes
+8..23, and writes the allow header at 0..7. Commands and URL records are opaque.
+Malformed lengths and partial EOF return errors; TCP closes the connection.
+Several valid messages can share one TCP connection, each with its own log.
+The legacy eight-byte Python response is deliberately corrected; there is no
+eight-byte success profile for the server. Adapter frame modes remain separate.
+
+The shared HTTP port preserves binary bodies, validates unique ASCII header
+names and exact Content-Length (no transfer encoding), accepts absolute or
+origin requests and a data-declared platform alias pair, and tolerates exactly
+one extra NUL only with zero declared body length. Limits cap headers at 16 KiB
+and bodies at 64 KiB before allocation. Responses have fixed header order.
+Charge policy is newly authored: zero cost, an open service window, stable
+locally issued session tokens and free billing that preserves an incoming
+printable 80-byte token. Service identities live in JSON, with no live DNS or
+outbound connections in the server. See [server API and storage policy](../crates/ws-wondergate-server/README.md).

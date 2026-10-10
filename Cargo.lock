@@ -481,6 +481,7 @@ dependencies = [
  "serde_json",
  "swankit",
  "swankit-ffi",
+ "ws-wondergate-server",
 ]
 
 [[package]]
@@ -715,6 +716,17 @@ name = "ws-wondergate"
 version = "0.1.0"
 dependencies = [
  "formatkit-core",
+]
+
+[[package]]
+name = "ws-wondergate-server"
+version = "0.1.0"
+dependencies = [
+ "formatkit-core",
+ "formatkit-corpus-test",
+ "serde",
+ "serde_json",
+ "sha2",
 ]
 
 [[package]]

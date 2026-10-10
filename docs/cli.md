@@ -235,3 +235,25 @@ FORMATKIT_CORPUS_DIR="$STAGING_DIR" tools/ci.sh --corpus
 Product and binary corpus handlers compare detections and ROM facts with those
 external expectations through Formatkit's serialized safe runner. Corpus data,
 population counts and golden hashes remain outside Git.
+
+## WonderGate shared server
+
+```sh
+swankit wg-server --data DATA_DIR --wire WIRE_DIR --bind 127.0.0.1 \
+  --http-port 8080 --bpl-port 5555
+swankit wg-server --data TEST_DATA --wire TEST_WIRE \
+  --clock fixed:20261005200403 --seed 123
+```
+
+`--data` and `--wire` are required; `--logs` is an alias for `--wire`.
+The numeric bind address defaults to loopback and ports default to 80/5555.
+Port zero requests an ephemeral port; startup prints both actual addresses.
+The clock defaults to system UTC; fixed-clock digits are UTC, with gettime
+converted to JST. Entropy defaults to the Unix OS source; an unsigned 64-bit
+decimal seed opts into deterministic test tokens. Records append to `DATA_DIR/journal.jsonl`, and
+lossless transactions append to `WIRE_DIR/wire.jsonl` with raw byte sidecars.
+Terminate the owned process with the normal operating-system signal. Each
+journal record is fsynced before service success. Completed wire entries are
+fsynced before the HTTP connection closes or the next BPL message is read.
+The command serves the shared platform services; title routing arrives with
+the definition engine. See [the server API](../crates/ws-wondergate-server/README.md).

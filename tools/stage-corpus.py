@@ -377,6 +377,8 @@ def main():
     selection = parser.add_mutually_exclusive_group(required=True)
     selection.add_argument("--titles", type=Path)
     selection.add_argument("--codec-manifest", type=Path)
+    selection.add_argument("--wondergate-server-manifest", type=Path,
+                           help="enroll independent shared-service HTTP/BPL bytes in a NEW ws-wondergate-services selection")
     selection.add_argument("--interop-manifest", type=Path,
                            help="enroll independent Java header/tile vectors in a NEW swankit-interop selection")
     selection.add_argument("--save-manifest", type=Path)
@@ -406,7 +408,11 @@ def main():
     args = parser.parse_args()
     log(args.progress_log, "corpus staging start", "0 samples enrolled", "validate independent inputs")
     try:
-        if args.interop_manifest:
+        if args.wondergate_server_manifest:
+            from stage_wondergate_server import stage_wondergate_server
+            count = stage_wondergate_server(args.wondergate_server_manifest, args.output)
+            log(args.progress_log, "shared service staging", f"{count} independent vectors, 1 frozen spec", "run serialized required corpus gate")
+        elif args.interop_manifest:
             from stage_interop import stage_interop
             count = stage_interop(args.interop_manifest, args.output)
             log(args.progress_log, "interop staging", f"{count} Java vectors, 1 new frozen spec", "run safe corpus gate")

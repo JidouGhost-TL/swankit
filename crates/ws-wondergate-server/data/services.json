@@ -1,0 +1,8 @@
+{
+  "schema": "swankit-wondergate-services/1",
+  "provenance": {"server": "new"},
+  "charge_hosts": ["wgb01.channel.or.jp", "wgg01.channel.or.jp", "nclassic.wgg.channel.or.jp"],
+  "bpl_hosts": ["bpl01.mopera.ne.jp", "bpl02.mopera.ne.jp"],
+  "http_aliases": [["wgb01.channel.or.jp", "wgg01.channel.or.jp"]],
+  "billing_url": "http://nclassic.wgg.channel.or.jp/cgi-bin/kakin.cgi"
+}
