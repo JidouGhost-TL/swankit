@@ -49,6 +49,7 @@ fn codec_roundtrips_at_both_mode_boundaries() {
                 Limits {
                     max_frame: mode.max_length(),
                     max_sockets: 255,
+                    ..Limits::default()
                 },
             );
             for byte in &bytes[..bytes.len() - 1] {
@@ -73,6 +74,7 @@ fn decoder_drains_over_limit_and_recovers_without_interpreting_payload() {
         Limits {
             max_frame: 3,
             max_sockets: 255,
+            ..Limits::default()
         },
     );
     for b in [0x11, 0] {
@@ -107,6 +109,7 @@ fn zero_length_and_incomplete_streams_report_errors() {
         Limits {
             max_frame: 2,
             max_sockets: 255,
+            ..Limits::default()
         },
     );
     for b in [1, 0] {
@@ -175,7 +178,11 @@ fn phase0_bpl_24_byte_allow_is_delivered_opaquely_and_in_full() {
             Recv::Eof,
         ],
     ));
-    let mut a = Adapter::new(Config::default(), net);
+    let cfg = Config {
+        builtin_bpl: false,
+        ..Config::default()
+    };
+    let mut a = Adapter::new(cfg.clone(), net);
     call(&mut a, 0x11, 1, &[0]);
     let mut addr = address(0);
     addr[3..5].copy_from_slice(&5555u16.to_le_bytes());
@@ -202,7 +209,7 @@ fn phase0_bpl_24_byte_allow_is_delivered_opaquely_and_in_full() {
         5555,
         [Recv::Data(vec![1, 8, 16, 0, 8, 0, 0, 0]), Recv::Eof],
     ));
-    let mut a = Adapter::new(Config::default(), net);
+    let mut a = Adapter::new(cfg, net);
     call(&mut a, 0x11, 1, &[0]);
     call(&mut a, 0x11, 3, &addr);
     let first = call(&mut a, 0x11, 0xf, &[0, 24, 0]);

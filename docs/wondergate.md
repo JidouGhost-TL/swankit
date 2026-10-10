@@ -29,7 +29,8 @@ eight-byte revival-server reply is incompatible with this exact read.
 The declared BPL policy copies the 24-byte request header, writes
 `01 18 10 00 18 00 00 00` at offsets 0..7 and preserves 8..23. Preservation
 is conservative policy; that allow branch does not compare the metadata.
-M12 transports these bytes opaquely; the responder belongs to M13.
+The built-in responder implements this policy; external backends still move
+BPL bytes opaquely when `builtin_bpl` is disabled.
 
 | Profile field | UPSTREAM | REVIVAL (default) |
 | --- | --- | --- |
@@ -114,9 +115,143 @@ memory zeroization. PDC reception comes from config on power-on; the initial
 off state has PDC 03 and reception 15. Power-on resets PPP/DNS/phone/socket
 state, while a second power-on when already on preserves it.
 
-INI, redirects, TCP, transcript replay and a built-in BPL responder are later
-milestones. Adapter corpus goldens are enrolled separately; M12's evidence is
-synthetic wire tests and client-code analysis.
+`backend::Tcp` uses IPv4 system sockets. Its default resolver accepts numeric
+dotted IPv4 addresses and explicitly mapped names. Unlisted names are denied;
+System DNS requires `TcpOptions::allow_system_dns = true` or an exact
+hostname redirect that explicitly authorizes resolution of its target.
+Resolution order is exact map, numeric address, `resolve_all`, then authorized
+system DNS. Zero IPv4 is denied. Names match exact bytes; the system resolver
+may apply its own normalization only after opt-in. That resolver's OS wait
+policy is separate from the connect timeout.
+
+Connect, receive and send timeouts default to five seconds. Each receive owns
+one socket wait; readline uses successive one-byte receives through LF.
+Timeout/errors yield `Recv::Error` and the core's `00 FF` read failure.
+`max_receive` caps even direct oversized trait calls at 64 KiB. Zero-size
+receives consume nothing. Writes may be partial. Close/drop shuts down and
+releases the stream. A failed connect returns immediately without the C
+adapter's extra five-second sleep.
+
+Hostname redirects use the first exact match, with no chaining, wildcard,
+case conversion or suffix matching. DNS replies echo the redirected name;
+the `Network` trait carries IPv4 only, so arbitrary OS canonical-name rewriting
+is not exposed. `Network::resolve_redirect` grants live DNS permission only
+for the selected target of an explicit rule, without enabling later unlisted
+lookups; its default implementation uses ordinary resolution for injected
+backends. Socket redirects use the first matching IP and source port;
+source port zero matches any port. A nonzero requested port is preserved by
+an IP-only rule, even if the target has a port. On exact port equality the
+target port replaces it, including target zero. These rules come from the
+pinned `wongate_hack.c`; bounds checks replace its unchecked text parsing.
+
+Built-in BPL recognizes the infrastructure names listed in the crate's
+`data/bpl-hosts.txt` and resolves them locally before hostname redirects.
+Connections to `127.0.0.1:5555` are intercepted before socket redirects or
+backend I/O, matching C. Disabling `builtin_bpl` delegates both operations to
+the configured redirects/backend. There is no BPL network listener or URL
+fetcher. Request bodies are opaque and discarded as their declared lengths
+arrive. Only the 24-byte header and a bounded FIFO of replies are retained.
+
+Each complete BPL message produces one 24-byte field-preserving allow reply.
+Fragmented headers/bodies and consecutive messages work. An incomplete request
+produces no data; a positive read returns the profile's zero/FF convention
+without latching transport EOF, so later writes can complete another message.
+Zero-size reads preserve queued replies. C silently drops a consecutive
+reply if the previous one is unread; this implementation queues all replies
+within `max_bpl_pending`. Version/header-size mismatch, total below 24, total
+above `max_bpl_message`, or queue overflow fails that connection. These strict
+malformed-input and queue rules intentionally replace C's total coercion,
+unbounded body count and dropped responses. Both BPL limits default to 64 KiB;
+`BplAllow::finish` diagnoses an incomplete message.
+
+`Config::from_ini` accepts `[pdc] reception`, `[ppp] user/pass`,
+`[bpl_proxy] enabled`, `[hostname_hack] source = target`, and
+`[socket_hack] IPv4[:port] = IPv4[:port]`. Empty/missing PPP is safe.
+Names/sections are case-sensitive. Whitespace, CRLF, a leading UTF-8 BOM,
+full-line `;`/`#` comments and whitespace-prefixed inline comments work.
+Values are unquoted; embedded punctuation is preserved. Ordinary duplicate
+keys use the last value; redirect entries retain source order. Continuation
+lines and colon-only key separators are unsupported. Unknown sections/keys,
+NUL, incomplete tokens and out-of-range values are errors, with line numbers
+and no echoed input values. Text is bounded to 1 MiB, lines to 8192 bytes and
+credentials to 255 bytes. Reception is checked in 0..15.
+
+Numeric values accept decimal, `0x`, `$`, `0b` and `0o` prefixes. Complete
+tokens and checked arithmetic replace C's suffix truncation and overflow.
+IPv4 uses dotted four-octet notation. Boolean fields accept `true`, `false`
+or numeric zero/nonzero. `[swankit]` provides the following settings:
+
+| Key | Default / valid values |
+| --- | --- |
+| `profile` | `revival`; also `upstream` |
+| `header` | profile default; `len16be` or `zero-then-len8`, independent of key order |
+| `backend` | `tcp`; also `transcript` (selection metadata for the caller) |
+| `transcript_file` | optional external path, loaded by the caller |
+| `max_frame` | 4096; 1..65535, then capped by header mode |
+| `max_sockets` | 255; 0..255 |
+| `max_bpl_message`, `max_bpl_pending` | 65536 each; 24..65536 |
+| `max_receive` | 65536; 1..65536 |
+| `connect_timeout_ms`, `recv_timeout_ms`, `send_timeout_ms` | 5000 each; 1..600000 |
+| `allow_system_dns` | false; explicit opt-in only |
+| `resolve_all` | absent; explicit dotted IPv4 catch-all |
+| `resolve.NAME` | absent; explicit dotted IPv4 for that exact name |
+
+```ini
+[hostname_hack]
+service.invalid = 127.0.0.1
+[socket_hack]
+192.0.2.1:80 = 127.0.0.1:8080
+[swankit]
+profile = revival
+backend = tcp
+allow_system_dns = false
+recv_timeout_ms = 5000
+```
+
+`transcript::Tap` writes `T <ms> > <hex>` for console-to-adapter bytes and
+`T <ms> < <hex>` for replies, flushing each record. `write_at` takes an explicit
+timestamp for deterministic output; `record` uses elapsed milliseconds.
+`parse`/`read` join each direction and retain timestamps/ranges without copying
+the payload into each record. Wrapper start/end `T <ms> # ...` metadata is
+ignored. Malformed hex/records are errors; configurable limits cap input text,
+joined streams and record counts. `frames` uses the core Decoder, both header
+modes and optional padding, returning wire offsets or a checked framing error.
+Tap records literal bytes; opt-in raw logs may contain PPP input, unlike
+redacted `Event`/Debug output. Logs belong outside the repository.
+
+`backend::Transcript` queues `TranscriptPeer` request/response pairs with
+exact endpoints, from bounded external files, vectors or TCP-level tap streams.
+It never opens host sockets. Fragmented sends must match the expected request
+prefix exactly; wrong/extra bytes or reading before the complete request fails
+the connection. Responses can be read in arbitrary fragments and then give
+EOF. Each connection has separate positions. `TranscriptLog::verify`, called
+after close/drop, rejects mismatches, short requests and unused peers; unread
+response tails are allowed for clients that deliberately stop early.
+The replay budget covers at most 16 MiB of request/response bytes and 4096
+connections per run. TCP-level pair streams differ from console serial taps;
+adapter golden enrollment and its wire manifest belong to M15.
+
+`tools/wg-differential.sh upstream|revival` takes `WG_C_ADAPTER`, an independent
+compiled C binary. Upstream uses the pinned unpatched source; revival needs
+the original small-ID harness patch and patches 01–07. It does not build or
+modify C. A small Rust example exposes the core over stdin/stdout solely for
+this optional external gate; the production CLI is M14. `WG_RUST_ADAPTER` can
+select that prebuilt example. `WG_STREAMS` defaults to 10000 and `WG_SEED` to
+`0x13c0ffee`. Each stream compares stdout bytes and peer request bytes, with
+random valid control commands, DNS/redirects, TCP fragments, line/block reads,
+EOF, zero-size reads, close and BPL messages. Unknown commands are flushed by
+a known marker rather than a timing-based absence check. Peer readiness
+precedes reads to avoid TCP delivery segmentation deciding the comparison.
+
+The differential excludes malformed C inputs, negative upstream receives and
+length/count overflow because they trigger undefined behavior rather than an
+oracle result. PPP config is explicit to avoid C's `strdup(NULL)` defect.
+Zero-size TCP comparison reads occur after data/FIN readiness: C's zero-length
+`recv` can block before then, while Rust always consumes nothing. Unpatched C's
+stdin EOF spin is handled by stopping only the owned child after all bytes
+are compared. Run both profiles externally for milestone sign-off; CI keeps
+this gate optional. Synthetic malformed/limit tests remain independent of C.
+The library adds no public service, publishing or hardware-fidelity claim.
 
 ## Shared server core
 
