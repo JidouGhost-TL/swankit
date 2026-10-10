@@ -123,3 +123,9 @@ staging tool enrolls a new parity selection from existing frozen owner specs.
 boundary for cartridge facts and 4bpp RGBA decoding. It exposes a versioned
 C ABI and bounded CLI JSON-lines requests; format logic stays in the owner
 crates. Independent Java vectors are enrolled with `--interop-manifest`.
+
+[ws-wondergate](crates/ws-wondergate/README.md) models the WonderGate adapter as
+an injected-network request/reply core, with streaming framing, upstream and
+revival profiles, bounded commands and a deterministic Scripted backend. See
+[protocol and compatibility policy](docs/wondergate.md). Live backends and the
+BPL responder are later milestones.
