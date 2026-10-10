@@ -131,6 +131,10 @@ Scripted and checked transcript replay, a local 24-byte BPL responder, redirects
 and INI configuration. See [protocol and configuration](docs/wondergate.md).
 The adapter CLI and recorded corpus enrollment follow in later milestones.
 
+[ws-link](crates/ws-link/README.md) and `swankit link` join serial byte streams
+through TCP, stdio, shell helpers, raw devices or the existing WonderGate core.
+See [link recipes and interoperability limits](docs/link.md).
+
 [ws-wondergate-server](crates/ws-wondergate-server/README.md) provides bounded,
 byte-preserving HTTP and shared BPL/charge services, injected clock and entropy,
 empty memory histories, a durable JSON-lines journal and scoped ranking boards.

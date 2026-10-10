@@ -6,6 +6,9 @@ Hardware interpretation comes from the owner crates and
 [hardware sources](hardware.md); extraction definitions supply offsets and
 formats, never game detection from a filename.
 
+`swankit link` relays binary serial streams; see [link endpoints and recipes](link.md).
+Its stdout is raw bytes when using `stdio`, and its TSV log requires a new file.
+
 `--json` prints machine results on stdout. Errors are one JSON object with an
 `error` string on stderr and exit status 1; plain mode prints readable errors.
 Detection of unknown or ambiguous bytes is a successful inspection, represented

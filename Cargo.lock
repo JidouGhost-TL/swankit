@@ -481,6 +481,7 @@ dependencies = [
  "serde_json",
  "swankit",
  "swankit-ffi",
+ "ws-link",
  "ws-wondergate-server",
 ]
 
@@ -632,6 +633,17 @@ dependencies = [
  "formatkit-layout",
  "formatkit-pixel",
  "serde_json",
+]
+
+[[package]]
+name = "ws-link"
+version = "0.1.0"
+dependencies = [
+ "formatkit-core",
+ "formatkit-corpus-test",
+ "libc",
+ "serde_json",
+ "ws-wondergate",
 ]
 
 [[package]]

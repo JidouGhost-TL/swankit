@@ -381,6 +381,8 @@ def main():
                            help="enroll shared HTTP/BPL vectors or title HTTP captures in a NEW frozen server selection")
     selection.add_argument("--interop-manifest", type=Path,
                            help="enroll independent Java header/tile vectors in a NEW swankit-interop selection")
+    selection.add_argument("--link-manifest", type=Path,
+                           help="enroll recorded relay payloads and independent byte oracles in a NEW ws-link selection")
     selection.add_argument("--save-manifest", type=Path)
     parser.add_argument("--save-namespace", default="ws-saves")
     selection.add_argument("--gfx-manifest", type=Path,
@@ -408,7 +410,11 @@ def main():
     args = parser.parse_args()
     log(args.progress_log, "corpus staging start", "0 samples enrolled", "validate independent inputs")
     try:
-        if args.wondergate_server_manifest:
+        if args.link_manifest:
+            from stage_link import stage_link
+            count = stage_link(args.link_manifest, args.output)
+            log(args.progress_log, "link corpus staging", f"{count} byte vectors, 1 frozen spec", "run serialized required corpus gate")
+        elif args.wondergate_server_manifest:
             from stage_wondergate_server import stage_wondergate_server
             count = stage_wondergate_server(args.wondergate_server_manifest, args.output)
             log(args.progress_log, "shared service staging", f"{count} independent vectors, 1 frozen spec", "run serialized required corpus gate")

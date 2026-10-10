@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 mod args;
 mod io;
+mod link;
 mod png;
 #[cfg(feature = "saves")]
 mod save;
@@ -30,6 +31,11 @@ Experimental: interop --json [--server] (versioned JSON-lines requests on stdin)
   wg-server --data DIR --wire DIR [--bind IP] [--http-port N] [--bpl-port N]
             [--clock system|fixed:YYYYMMDDhhmmss] [--seed N]
 The server loads bundled shared services and validated title definitions.
+  link ENDPOINT_A ENDPOINT_B [--log FILE.tsv] [--latency-ms N] [--jitter-ms N --seed S] [--baud B]
+Endpoints: tcp:HOST:PORT, listen:[HOST:]PORT (default 127.0.0.1), stdio,
+           exec:COMMAND, device:PATH, wondergate[:CONFIG.ini].
+Raw data bytes only; no speed or timing. --baud applies only to devices.
+See swankit link --help and docs/link.md for details.
 See docs/cli.md for definition schemas and bounds.";
 
 fn emit(
@@ -71,6 +77,13 @@ fn text_definition(id: &str) -> Result<text::TextDefinition> {
     }
 }
 fn run(words: Vec<String>) -> Result<()> {
+    if words.first().is_some_and(|s| s == "link")
+        && words.len() == 2
+        && matches!(words[1].as_str(), "--help" | "-h")
+    {
+        println!("{}", link::HELP);
+        return Ok(());
+    }
     if words.is_empty() || words == ["--help"] || words == ["help"] || words == ["-h"] {
         println!("{HELP}");
         return Ok(());
@@ -84,6 +97,12 @@ fn run(words: Vec<String>) -> Result<()> {
         .unwrap_or("")
         .to_owned();
     match command.as_str() {
+        "link" => {
+            if json_mode {
+                return Err("link does not accept --json".into());
+            }
+            link::run(&mut a)
+        }
         "wg-server" => {
             if json_mode {
                 return Err("wg-server does not accept --json".into());
