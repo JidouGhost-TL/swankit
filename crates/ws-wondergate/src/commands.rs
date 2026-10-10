@@ -5,9 +5,11 @@
 // Modifications Copyright (C) 2026 jidoughost, MIT.
 
 use crate::{
+    bpl::{self, BplAllow},
     device::Slot,
     frame::Frame,
     profile::{CloseReply, Eof, Readline},
+    redirect::{self, Endpoint},
     Adapter, Network, Ppp, Recv,
 };
 use formatkit_core::{Error, Reader, Result};
@@ -128,6 +130,7 @@ impl<N: Network> Adapter<N> {
                     self.sockets[id] = Some(Slot {
                         connection: None,
                         terminal: None,
+                        builtin_bpl: false,
                     });
                 }
                 vec![id.map_or(255, |id| id as u8)]
@@ -152,10 +155,31 @@ impl<N: Network> Adapter<N> {
                     if slot.connection.is_some() {
                         0
                     } else {
-                        match self.net.connect(ip, port) {
+                        // Match C's interception order: internal BPL first,
+                        // then one socket redirect, then backend networking.
+                        let builtin = self.config.builtin_bpl && ip == bpl::IP && port == bpl::PORT;
+                        let connection: std::result::Result<
+                            Box<dyn crate::Connection>,
+                            crate::NetError,
+                        > = if builtin {
+                            BplAllow::new(
+                                self.config.limits.max_bpl_message,
+                                self.config.limits.max_bpl_pending,
+                            )
+                            .map(|bpl| Box::new(bpl) as Box<dyn crate::Connection>)
+                            .map_err(|_| crate::NetError::Contract)
+                        } else {
+                            let address = redirect::socket(
+                                Endpoint { ip, port },
+                                &self.config.socket_redirects,
+                            );
+                            self.net.connect(address.ip, address.port)
+                        };
+                        match connection {
                             Ok(connection) => {
                                 slot.connection = Some(connection);
                                 slot.terminal = None;
+                                slot.builtin_bpl = builtin;
                                 1
                             }
                             Err(_) => 0,
@@ -202,8 +226,24 @@ impl<N: Network> Adapter<N> {
                     .iter()
                     .position(|&byte| byte == 0)
                     .ok_or_else(|| malformed("unterminated hostname"))?;
-                // Bound the entire success reply before resolver I/O or allocation.
-                let reply_length = name_len.saturating_add(7);
+                let name = Reader::new(&frame.params).bytes(name_len)?;
+                let builtin = self.config.builtin_bpl && bpl::is_hostname(name);
+                let redirected = !builtin
+                    && self
+                        .config
+                        .host_redirects
+                        .iter()
+                        .any(|rule| rule.source == name);
+                let name = if builtin {
+                    name
+                } else {
+                    redirect::hostname(name, &self.config.host_redirects)
+                };
+                if name.is_empty() || name.contains(&0) {
+                    return Err(malformed("empty or NUL-containing hostname"));
+                }
+                // Bound the actual redirected reply before resolver I/O.
+                let reply_length = name.len().saturating_add(7);
                 if reply_length > self.config.limits.max_frame {
                     return Err(Error::ResourceLimit {
                         resource: "WonderGate DNS reply length",
@@ -211,8 +251,14 @@ impl<N: Network> Adapter<N> {
                         limit: self.config.limits.max_frame as u64,
                     });
                 }
-                let name = Reader::new(&frame.params).bytes(name_len)?;
-                match self.net.resolve(name).filter(|ip| *ip != [0; 4]) {
+                let address = if builtin {
+                    Some(bpl::IP)
+                } else if redirected {
+                    self.net.resolve_redirect(name)
+                } else {
+                    self.net.resolve(name)
+                };
+                match address.filter(|ip| *ip != [0; 4]) {
                     Some(ip) => {
                         let mut data = vec![1];
                         data.extend_from_slice(name);
@@ -289,7 +335,9 @@ impl<N: Network> Adapter<N> {
                         }
                     }
                     Recv::Eof => {
-                        slot.terminal = Some(true);
+                        if !slot.builtin_bpl {
+                            slot.terminal = Some(true);
+                        }
                         break;
                     }
                     _ => {

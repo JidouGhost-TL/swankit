@@ -126,6 +126,7 @@ crates. Independent Java vectors are enrolled with `--interop-manifest`.
 
 [ws-wondergate](crates/ws-wondergate/README.md) models the WonderGate adapter as
 an injected-network request/reply core, with streaming framing, upstream and
-revival profiles, bounded commands and a deterministic Scripted backend. See
-[protocol and compatibility policy](docs/wondergate.md). Live backends and the
-BPL responder are later milestones.
+revival profiles, bounded commands, TCP with explicit DNS policy and timeouts,
+Scripted and checked transcript replay, a local 24-byte BPL responder, redirects
+and INI configuration. See [protocol and configuration](docs/wondergate.md).
+The adapter CLI and recorded corpus enrollment follow in later milestones.

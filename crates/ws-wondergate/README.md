@@ -8,7 +8,17 @@ fragments, EOF, errors and partial writes without opening host sockets.
 replies. `try_handle` returns checked errors for malformed known commands;
 `handle` supplies the documented wire failure shapes. `finish` reports a
 truncated frame on input EOF. Snapshots and events omit PPP credential bytes.
-`Config` holds typed settings; INI, redirects and live backends come later.
+`Config::from_ini` reads the legacy sections and `[swankit]` settings. The
+`backend::Tcp` resolver denies unlisted names by default; exact mappings,
+explicit hostname redirects, a catch-all mapping or system-DNS opt-in
+control resolution. Connect, receive and send waits have timeouts.
+
+The built-in BPL responder is enabled by default and handles fragmented and
+consecutive bounded messages entirely in memory, preserving header bytes 8..23
+in its 24-byte allow reply. Ordered hostname/socket redirects follow the C
+matching rules. `backend::Transcript` checks every request byte against
+external per-connection recordings and supplies bounded response reads.
+`transcript::{parse, read, frames, Tap}` reads and writes serial tap logs.
 
 ```rust
 use ws_wondergate::{Adapter, Config, backend::Scripted};
@@ -23,3 +33,15 @@ command shapes and the distinction between client evidence and hardware truth.
 Ported sources carry MIT notices; other files use the workspace license.
 Publication is disabled. Tests use synthetic bytes. Recorded transcripts and
 independent expectations stay external for the later adapter corpus milestone.
+
+The optional external differential gate accepts an independently compiled
+WonderFence binary through `WG_C_ADAPTER`:
+
+```sh
+WG_C_ADAPTER="$UNPATCHED_ADAPTER" tools/wg-differential.sh upstream
+WG_C_ADAPTER="$PATCHED_ADAPTER" tools/wg-differential.sh revival
+```
+
+Each invocation compares 10,000 seeded streams over owned loopback peers. The
+second C binary needs the original harness patch plus corrections 01–07.
+Details, safe-input exclusions and the INI reference are in the protocol doc.
