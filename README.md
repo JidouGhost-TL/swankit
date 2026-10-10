@@ -118,3 +118,8 @@ transactional saves and IPS operations as the private `swankit` package.
 `tools/python-container.sh` builds and tests its Python 3.11+ abi3 wheel inside
 a container, keeping wheel artifacts external. `--python-bindings` in the
 staging tool enrolls a new parity selection from existing frozen owner specs.
+
+[swankit-ffi](crates/swankit-ffi/README.md) is the experimental Java interop
+boundary for cartridge facts and 4bpp RGBA decoding. It exposes a versioned
+C ABI and bounded CLI JSON-lines requests; format logic stays in the owner
+crates. Independent Java vectors are enrolled with `--interop-manifest`.

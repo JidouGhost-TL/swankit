@@ -25,6 +25,7 @@ const HELP: &str = "swankit: WonderSwan format tools
   patch apply PATCH BASE --output FILE [--overlap reject|last-write-wins] [--growth reject|zero-fill]
   patch create BASE TARGET --output IPS
 Options: --json, --force (replace output); integers accept decimal or 0x hexadecimal.
+Experimental: interop --json [--server] (versioned JSON-lines requests on stdin).
 See docs/cli.md for definition schemas and bounds.";
 
 fn emit(
@@ -79,6 +80,19 @@ fn run(words: Vec<String>) -> Result<()> {
         .unwrap_or("")
         .to_owned();
     match command.as_str() {
+        "interop" => {
+            let server = a.flag("--server");
+            a.finish(1)?;
+            if !json_mode {
+                return Err("interop requires --json".into());
+            }
+            swankit_ffi::protocol::serve(
+                std::io::stdin().lock(),
+                std::io::stdout().lock(),
+                !server,
+            )?;
+            Ok(())
+        }
         "info" => {
             a.finish(2)?;
             let info = Toolkit::new()?.info(&io::read(&a.positional[1], MAX_FILE)?)?;

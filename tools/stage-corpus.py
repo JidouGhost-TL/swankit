@@ -377,6 +377,8 @@ def main():
     selection = parser.add_mutually_exclusive_group(required=True)
     selection.add_argument("--titles", type=Path)
     selection.add_argument("--codec-manifest", type=Path)
+    selection.add_argument("--interop-manifest", type=Path,
+                           help="enroll independent Java header/tile vectors in a NEW swankit-interop selection")
     selection.add_argument("--save-manifest", type=Path)
     parser.add_argument("--save-namespace", default="ws-saves")
     selection.add_argument("--gfx-manifest", type=Path,
@@ -404,7 +406,11 @@ def main():
     args = parser.parse_args()
     log(args.progress_log, "corpus staging start", "0 samples enrolled", "validate independent inputs")
     try:
-        if args.save_manifest:
+        if args.interop_manifest:
+            from stage_interop import stage_interop
+            count = stage_interop(args.interop_manifest, args.output)
+            log(args.progress_log, "interop staging", f"{count} Java vectors, 1 new frozen spec", "run safe corpus gate")
+        elif args.save_manifest:
             stage_saves(args)
         elif args.python_bindings:
             from stage_python import stage_python

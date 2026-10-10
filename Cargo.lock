@@ -480,6 +480,19 @@ dependencies = [
  "serde",
  "serde_json",
  "swankit",
+ "swankit-ffi",
+]
+
+[[package]]
+name = "swankit-ffi"
+version = "0.1.0"
+dependencies = [
+ "formatkit-core",
+ "formatkit-corpus-test",
+ "serde",
+ "serde_json",
+ "ws-gfx",
+ "ws-rom",
 ]
 
 [[package]]

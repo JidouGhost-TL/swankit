@@ -56,6 +56,40 @@ fn ok(args: &[&str]) -> Output {
 fn value(args: &[&str]) -> Value {
     serde_json::from_slice(&ok(args).stdout).unwrap()
 }
+
+#[test]
+fn interop_server_keeps_running_after_a_bad_request() {
+    use std::io::Write;
+    use std::process::Stdio;
+    let fixture = Fixture::new();
+    let tiles = fixture.put("tiles.payload", &[0; 544]);
+    let mut child = Command::new(env!("CARGO_BIN_EXE_swankit"))
+        .args(["interop", "--json", "--server"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut input = child.stdin.take().unwrap();
+    writeln!(input, "invalid JSON").unwrap();
+    writeln!(input, "{}", json!({"version":1,"operation":2,"path":tiles})).unwrap();
+    drop(input);
+    let result = child.wait_with_output().unwrap();
+    assert!(result.status.success(), "{:?}", result.stderr);
+    let replies: Vec<Value> = String::from_utf8(result.stdout)
+        .unwrap()
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    assert_eq!(replies.len(), 2);
+    assert!(replies[0]["error"].is_string());
+    assert_eq!(replies[1]["version"], 1);
+    let output = replies[1]["output"].as_array().unwrap();
+    assert_eq!(output.len(), 256);
+    for pixel in output.chunks_exact(4) {
+        assert_eq!(pixel, &[json!(0), json!(0), json!(0), json!(255)]);
+    }
+}
 fn png(path: &str, w: u32, h: u32) -> Vec<u8> {
     let bytes = fs::read(path).unwrap();
     let mut r = formatkit_core::Reader::new(&bytes);

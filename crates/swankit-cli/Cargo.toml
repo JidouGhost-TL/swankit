@@ -11,6 +11,7 @@ default = ["saves"]
 saves = ["swankit/saves"]
 
 [dependencies]
+swankit-ffi = { path = "../swankit-ffi" }
 formatkit-core.workspace = true
 formatkit-catalog.workspace = true
 formatkit-runtime.workspace = true

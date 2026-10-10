@@ -18,6 +18,12 @@ accept decimal or `0x` hexadecimal. JSON numbers are decimal.
 
 ## Cartridge facts and detection
 
+The experimental `interop --json [--server]` command is a separate versioned
+JSON-lines protocol for Java evaluation. Request errors appear in replies on
+stdout, and a recoverable request error does not fail the process. See the
+[interop contract](../crates/swankit-ffi/README.md) for framing, operations,
+buffer limits and child lifecycle requirements.
+
 ```sh
 swankit info cartridge.wsc
 swankit info cartridge.wsc --json

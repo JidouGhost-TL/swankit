@@ -21,7 +21,7 @@ impl Args {
             }
             if matches!(
                 word.as_str(),
-                "--json" | "--force" | "--snapshot" | "--color"
+                "--json" | "--force" | "--snapshot" | "--color" | "--server"
             ) {
                 if !out.flags.insert(word.clone()) {
                     return Err(format!("duplicate option: {word}").into());

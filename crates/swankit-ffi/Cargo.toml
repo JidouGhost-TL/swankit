@@ -1,0 +1,20 @@
+[package]
+name = "swankit-ffi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+formatkit-core.workspace = true
+ws-rom = { path = "../ws-rom" }
+ws-gfx = { path = "../ws-gfx" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+formatkit-corpus-test.workspace = true
