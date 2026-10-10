@@ -41,7 +41,10 @@ original server code, server data or archived downloads are included.
 
 Files marked "SPDX-License-Identifier: MIT" in crates/ws-wondergate-server
 port the private WonderGate revival Python server's protocol.py, shared.py,
-store.py, runtime.py, plugins/wave2_history.py and shared/framing service tests.
+store.py, runtime.py, plugins/wave2_history.py, title-handler response semantics,
+query/form validation and the complete service tests. The bounded JSON
+interpreter and schema infrastructure are newly authored. Title-specific
+response policy lives in data files, with provenance marked new.
 Copyright (C) 2026 jidoughost; distributed under the MIT License above.
 The BPL reply follows the client-code contract and field-preserving proxy
 described above, correcting the Python server's eight-byte reply.

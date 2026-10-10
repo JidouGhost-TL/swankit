@@ -1,4 +1,4 @@
-"""Enroll independent shared HTTP/BPL bytes once; keep every golden external."""
+"""Enroll shared vectors or title HTTP captures once; keep every golden external."""
 import fcntl
 import hashlib
 import json
@@ -10,6 +10,8 @@ def sha(data):
 
 
 def checked_bytes(path, expected, maximum):
+    if not isinstance(path, str) or not path or not isinstance(expected, str):
+        raise ValueError("service oracle path and digest must be strings")
     source = Path(path).resolve(strict=True)
     if source.stat().st_size > maximum:
         raise ValueError("service oracle file exceeds bound")
@@ -24,22 +26,33 @@ def stage_wondergate_server(manifest_path, output):
     output = output.resolve()
     if output == repository or repository in output.parents:
         raise ValueError("service corpus must be outside the repository")
-    manifest_bytes = manifest_path.read_bytes()
-    if len(manifest_bytes) > 8 * 1024 * 1024:
+    if manifest_path.stat().st_size > 8 * 1024 * 1024:
         raise ValueError("oversized service oracle manifest")
+    manifest_bytes = manifest_path.read_bytes()
     manifest = json.loads(manifest_bytes)
-    if manifest.get("schema") != "swankit-wondergate-services-manifest/1":
+    if not isinstance(manifest, dict):
+        raise ValueError("service oracle manifest must be an object")
+    schema = manifest.get("schema")
+    if schema not in ("swankit-wondergate-services-manifest/1", "swankit-wondergate-server-manifest/1"):
         raise ValueError("unknown service oracle schema")
+    title_flows = schema == "swankit-wondergate-server-manifest/1"
+    namespace = "ws-wondergate-server" if title_flows else "ws-wondergate-services"
     records = manifest.get("samples")
-    if not isinstance(records, list) or not records:
+    if not isinstance(records, list) or not records or len(records) > 4096:
         raise ValueError("service oracle samples required")
     selected = []
     for record in records:
+        required = {"protocol", "clock", "seed", "error", "oracle", "input_path",
+                    "response_path", "input_sha256", "response_sha256", "response_length"}
+        if not isinstance(record, dict) or not required <= record.keys():
+            raise ValueError("incomplete service oracle record")
         protocol = record["protocol"]
         clock = record["clock"]
         seed = record["seed"]
         if protocol not in ("HTTP", "BPL") or not isinstance(clock, str) or len(clock) != 14 or not clock.isascii() or not clock.isdigit():
             raise ValueError("invalid service protocol or fixed clock")
+        if title_flows and (protocol != "HTTP" or record.get("store") != []):
+            raise ValueError("title captures require HTTP and an explicit empty starting store")
         from datetime import datetime, timezone
         # The Rust clock also reserves enough calendar space for JST.
         stamp = datetime.strptime(clock, "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
@@ -55,15 +68,18 @@ def stage_wondergate_server(manifest_path, output):
             raise ValueError("service oracle response length mismatch")
         if protocol == "BPL" and len(response) != (0 if record["error"] else 24):
             raise ValueError("BPL oracle must use the PHASE0 24-byte reply")
+        args = {"protocol": protocol, "clock": clock, "seed": seed}
+        if title_flows:
+            args["store"] = record["store"]
         selected.append((source, {
-            "args": {"protocol": protocol, "clock": clock, "seed": seed},
+            "args": args,
             "expect": {"sha256": sha(request), "response_sha256": sha(response),
                        "response_length": len(response), "error": record["error"]},
         }))
     output.mkdir(parents=True, exist_ok=True)
     with (output / ".staging.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        directory = output / "ws-wondergate-services"
+        directory = output / namespace
         if directory.exists():
             raise ValueError("service selection exists; frozen expectations can never be overwritten")
         directory.mkdir()
@@ -73,7 +89,7 @@ def stage_wondergate_server(manifest_path, output):
             (directory / name).symlink_to(source)
             samples[name] = sample
         (directory / "spec.json").write_text(json.dumps({
-            "format": "ws-wondergate-services", "samples": samples,
+            "format": namespace, "samples": samples,
             "excluded": {"enrollment.json": "independent oracle provenance sidecar"},
         }, indent=2, sort_keys=True) + "\n")
         (directory / "enrollment.json").write_text(json.dumps({

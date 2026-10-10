@@ -29,6 +29,7 @@ Options: --json, --force (replace output); integers accept decimal or 0x hexadec
 Experimental: interop --json [--server] (versioned JSON-lines requests on stdin).
   wg-server --data DIR --wire DIR [--bind IP] [--http-port N] [--bpl-port N]
             [--clock system|fixed:YYYYMMDDhhmmss] [--seed N]
+The server loads bundled shared services and validated title definitions.
 See docs/cli.md for definition schemas and bounds.";
 
 fn emit(

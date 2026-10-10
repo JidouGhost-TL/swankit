@@ -272,3 +272,12 @@ Charge policy is newly authored: zero cost, an open service window, stable
 locally issued session tokens and free billing that preserves an incoming
 printable 80-byte token. Service identities live in JSON, with no live DNS or
 outbound connections in the server. See [server API and storage policy](../crates/ws-wondergate-server/README.md).
+
+## Data-defined title services
+
+The definition engine composes bundled JSON with shared services. Bounded
+segments, phase values, percent/form fields, scoped ranking actions and checksum
+envelopes preserve each client lineage's wire contract. Histories and static
+selections carry new provenance. The [definition read/write guide](wondergate-title-definitions.md)
+explains load-time validation, client response limits and the empty plugin ledger.
+Golden native HTTP bytes remain external; ordinary tests use synthetic requests.

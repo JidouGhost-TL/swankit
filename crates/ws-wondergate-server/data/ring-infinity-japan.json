@@ -1,0 +1,43 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "ring-infinity-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "Ring Infinity: newly authored empty check-in acknowledgment; original server response is unavailable."
+  },
+  "hosts": [
+    "wgg02.channel.or.jp"
+  ],
+  "boards": {},
+  "values": {},
+  "records": {},
+  "routes": [
+    {
+      "id": "check-in",
+      "method": "GET",
+      "match": {
+        "path": "/ring/cgi-bin/accsess.cgi",
+        "query_exact": "RING=666"
+      },
+      "errors": {
+        "invalid": 400,
+        "method": 405,
+        "method_first": true
+      },
+      "respond": {
+        "status": 200,
+        "headers": [
+          [
+            "X-WG-Revival",
+            "new-check-in"
+          ]
+        ],
+        "body": []
+      }
+    }
+  ],
+  "limits": {
+    "max_body": 0,
+    "max_response": 85
+  }
+}

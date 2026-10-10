@@ -136,4 +136,8 @@ byte-preserving HTTP and shared BPL/charge services, injected clock and entropy,
 empty memory histories, a durable JSON-lines journal and scoped ranking boards.
 `swankit wg-server --data DIR --wire DIR` starts threaded loopback TCP listeners
 and writes lossless Python-compatible wire logs. Service identities live in
-JSON data; title definitions and the in-process adapter are later milestones.
+JSON data. The bounded definition engine serves bundled phase, check-in, ranking,
+stock and conservative content-refusal routes. See the [definition read/write
+guide and plugin ledger](docs/wondergate-title-definitions.md). Captured title
+HTTP flows enroll separately in `ws-wondergate-server`; the in-process adapter
+remains a later milestone.

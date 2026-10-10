@@ -1,0 +1,93 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "terrors-2-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "Terrors 2: newly authored fixed revival phase. Client 4000:E47F reads adapter-frame bytes 8/9/10 (ROM file offset 0x34E47F); mirror body bytes 2/3/4 at 8/9/10. This is not a recovered original world clock."
+  },
+  "hosts": [
+    "terrors2.wgg.channel.or.jp"
+  ],
+  "boards": {},
+  "values": {
+    "phase": {
+      "primitive": "cyclic-phase",
+      "period_s": 720,
+      "phases": [
+        1,
+        2
+      ],
+      "policy": "fixed",
+      "fixed": {
+        "phase": 1,
+        "elapsed_s": 0
+      }
+    }
+  },
+  "records": {},
+  "routes": [
+    {
+      "id": "time-sync",
+      "method": "GET",
+      "match": {
+        "path": "/cgi-bin/accsess.cgi",
+        "query_exact": "T2=www.sign-eight.co.jp"
+      },
+      "errors": {
+        "invalid": 404,
+        "method": 405
+      },
+      "respond": {
+        "status": 200,
+        "content_type": "application/octet-stream",
+        "headers": [
+          [
+            "Cache-Control",
+            "no-store"
+          ],
+          [
+            "X-WG-Revival",
+            "phase1"
+          ]
+        ],
+        "expect_lines": 7,
+        "body": [
+          {
+            "zero": 2
+          },
+          {
+            "value": "phase.mode",
+            "as": "u8"
+          },
+          {
+            "value": "phase.minute",
+            "as": "u8"
+          },
+          {
+            "value": "phase.second",
+            "as": "u8"
+          },
+          {
+            "zero": 3
+          },
+          {
+            "value": "phase.mode",
+            "as": "u8"
+          },
+          {
+            "value": "phase.minute",
+            "as": "u8"
+          },
+          {
+            "value": "phase.second",
+            "as": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "limits": {
+    "max_body": 11,
+    "max_response": 156
+  }
+}

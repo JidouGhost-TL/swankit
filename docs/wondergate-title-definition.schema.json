@@ -1,0 +1,821 @@
+{
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "swankit-wondergate-title/1"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "server": {
+          "const": "new"
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      },
+      "required": [
+        "server",
+        "notes"
+      ],
+      "additionalProperties": false
+    },
+    "hosts": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 253
+      },
+      "minItems": 1,
+      "maxItems": 128,
+      "uniqueItems": true
+    },
+    "boards": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/board"
+      },
+      "maxProperties": 128
+    },
+    "values": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/phase"
+      },
+      "maxProperties": 128
+    },
+    "records": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/segments"
+      },
+      "maxProperties": 128
+    },
+    "routes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/route"
+      },
+      "minItems": 1,
+      "maxItems": 128
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "max_body": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65536
+        },
+        "max_response": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 81924
+        }
+      },
+      "required": [
+        "max_body",
+        "max_response"
+      ],
+      "additionalProperties": false
+    },
+    "errors": {
+      "$ref": "#/$defs/errors"
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "provenance",
+    "hosts",
+    "routes",
+    "limits"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "errors": {
+      "type": "object",
+      "properties": {
+        "host_other_path": {
+          "type": "integer",
+          "enum": [
+            400,
+            404,
+            405
+          ]
+        },
+        "method": {
+          "type": "integer",
+          "enum": [
+            400,
+            404,
+            405
+          ]
+        },
+        "invalid": {
+          "type": "integer",
+          "enum": [
+            400,
+            404,
+            405
+          ]
+        },
+        "method_first": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "board": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "order": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        },
+        "ties": {
+          "type": "string",
+          "enum": [
+            "first-submission",
+            "first-best-submission"
+          ]
+        },
+        "course": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "identity",
+        "order",
+        "ties",
+        "course"
+      ],
+      "additionalProperties": false
+    },
+    "phase": {
+      "type": "object",
+      "properties": {
+        "primitive": {
+          "const": "cyclic-phase"
+        },
+        "period_s": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 15360
+        },
+        "phases": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "minItems": 1,
+          "maxItems": 256,
+          "uniqueItems": true
+        },
+        "policy": {
+          "type": "string",
+          "enum": [
+            "fixed",
+            "clock"
+          ]
+        },
+        "fixed": {
+          "type": "object",
+          "properties": {
+            "phase": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "elapsed_s": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 15359
+            }
+          },
+          "required": [
+            "phase",
+            "elapsed_s"
+          ],
+          "additionalProperties": false
+        },
+        "epoch_s": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        }
+      },
+      "required": [
+        "primitive",
+        "period_s",
+        "phases",
+        "policy"
+      ],
+      "additionalProperties": false
+    },
+    "field": {
+      "type": "object",
+      "properties": {
+        "decode": {
+          "type": "string",
+          "enum": [
+            "raw",
+            "percent-plus"
+          ]
+        },
+        "bytes": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 512
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "deny": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "minItems": 0,
+          "maxItems": 256,
+          "uniqueItems": true
+        },
+        "min_byte": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "charset": {
+          "type": "string",
+          "enum": [
+            "raw",
+            "ascii",
+            "shift-jis"
+          ]
+        },
+        "regex": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "as": {
+          "type": "string",
+          "enum": [
+            "u32",
+            "u64"
+          ]
+        },
+        "repeats": {
+          "type": "string",
+          "enum": [
+            "one",
+            "first",
+            "last"
+          ]
+        },
+        "equals": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "maxItems": 512
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "action-record": {
+      "type": "object",
+      "properties": {
+        "board": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "identity": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "score": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "board",
+        "identity",
+        "name",
+        "score"
+      ],
+      "additionalProperties": false
+    },
+    "action": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "record": {
+              "$ref": "#/$defs/action-record"
+            }
+          },
+          "required": [
+            "record"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "increment": {
+              "$ref": "#/$defs/action-record"
+            }
+          },
+          "required": [
+            "increment"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "format": {
+      "type": "string",
+      "enum": [
+        "u8",
+        "dec",
+        "hex-lower",
+        "hex-upper",
+        "raw",
+        "html-shift-jis"
+      ]
+    },
+    "leaders": {
+      "type": "object",
+      "properties": {
+        "board": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        "pad_to": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        }
+      },
+      "required": [
+        "board",
+        "limit",
+        "pad_to"
+      ],
+      "additionalProperties": false
+    },
+    "row": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "submitter": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "submitter"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "place": {
+              "type": "object",
+              "properties": {
+                "board": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "n": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 4096
+                }
+              },
+              "required": [
+                "board",
+                "n"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "place"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "segment": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 65536
+            }
+          },
+          "required": [
+            "text"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "bytes": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "minItems": 0,
+              "maxItems": 65536
+            }
+          },
+          "required": [
+            "bytes"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "zero": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65536
+            }
+          },
+          "required": [
+            "zero"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "as": {
+              "$ref": "#/$defs/format"
+            }
+          },
+          "required": [
+            "value",
+            "as"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "field": {
+              "type": "string",
+              "enum": [
+                "rank",
+                "name",
+                "identity",
+                "score",
+                "extra"
+              ]
+            },
+            "fmt": {
+              "$ref": "#/$defs/format"
+            },
+            "width": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 512
+            },
+            "min": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 18446744073709551615
+            },
+            "max": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 18446744073709551615
+            },
+            "empty": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 18446744073709551615
+            },
+            "zero_pad": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "field",
+            "fmt"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "each": {
+              "type": "object",
+              "properties": {
+                "leaders": {
+                  "$ref": "#/$defs/leaders"
+                }
+              },
+              "required": [
+                "leaders"
+              ],
+              "additionalProperties": false
+            },
+            "record": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "each",
+            "record"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "row": {
+              "$ref": "#/$defs/row"
+            },
+            "record": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "row",
+            "record"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "segments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/segment"
+      },
+      "minItems": 0,
+      "maxItems": 1024
+    },
+    "body": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/segments"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "envelope": {
+              "type": "object",
+              "properties": {
+                "primitive": {
+                  "const": "sum16-hex-envelope"
+                },
+                "marker": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "case": {
+                  "type": "string",
+                  "enum": [
+                    "lower",
+                    "upper"
+                  ]
+                },
+                "terminator": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  },
+                  "minItems": 0,
+                  "maxItems": 32
+                }
+              },
+              "required": [
+                "primitive",
+                "marker",
+                "case",
+                "terminator"
+              ],
+              "additionalProperties": false
+            },
+            "segments": {
+              "$ref": "#/$defs/segments"
+            }
+          },
+          "required": [
+            "envelope",
+            "segments"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "respond": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "integer",
+          "enum": [
+            200,
+            400,
+            404,
+            405,
+            500,
+            501
+          ]
+        },
+        "content_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "headers": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "minItems": 0,
+          "maxItems": 128
+        },
+        "expect_lines": {
+          "type": "integer",
+          "minimum": 4,
+          "maximum": 133
+        },
+        "body": {
+          "$ref": "#/$defs/body"
+        }
+      },
+      "required": [
+        "status",
+        "body"
+      ],
+      "additionalProperties": false
+    },
+    "match": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "query_exact": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 4096
+        },
+        "query_keys": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "minItems": 0,
+          "maxItems": 128,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false
+    },
+    "route": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "method": {
+          "type": "string",
+          "enum": [
+            "GET",
+            "POST"
+          ]
+        },
+        "match": {
+          "$ref": "#/$defs/match"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "query",
+            "form"
+          ]
+        },
+        "request": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/field"
+          },
+          "maxProperties": 128
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/action"
+          },
+          "minItems": 0,
+          "maxItems": 1
+        },
+        "errors": {
+          "$ref": "#/$defs/errors"
+        },
+        "respond": {
+          "$ref": "#/$defs/respond"
+        }
+      },
+      "required": [
+        "id",
+        "method",
+        "match",
+        "respond"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "title": "WonderGate title definition v1",
+  "description": "Closed bounded templates and newly authored server policy. Semantic validation is also required."
+}

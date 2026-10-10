@@ -1,19 +1,23 @@
 # ws-wondergate-server
 
-Private, newly authored WonderGate shared services. The core performs no I/O
+Private, newly authored WonderGate services and bounded title definitions. The core performs no I/O
 or outbound networking. HTTP parsing retains the raw request and binary body;
 text fields map each Latin-1 byte to the same Unicode code point. Response
 serialization fixes Content-Length, Connection, Content-Type and extra-field
 order, without automatic Date or Server fields.
 
 `Server::bundled` takes a `Store`, `Clock` and `Rng`. `dispatch_http` handles the
-four charge endpoints and free billing; unrecognized routes return 404.
+four charge endpoints, free billing and bundled data-defined routes;
+unrecognized routes return 404.
 `session(80)` and `session(5555)` provide bounded sans-I/O HTTP and BPL sessions.
 HTTP closes after one transaction. Consecutive BPL messages each receive a
 24-byte field-preserving allow reply. A feed batch is capped at 64 KiB.
 Service identities and the allowed absolute-URL alias pair live exclusively in
 [services.json](data/services.json), validated when loaded. Title routing,
-templates and plugins are the next definition-engine milestone.
+templates, checked fields, phase values, checksum envelopes and ranking actions
+are interpreted from embedded JSON. See the [read/write guide and plugin
+ledger](../../docs/wondergate-title-definitions.md). `Server::from_definitions`
+composes validated custom programs; unknown plugins fail to load.
 
 ```rust
 use ws_wondergate_server::{FixedClock, SeededRng, Server, Timestamp};
@@ -61,7 +65,7 @@ exclusive-created, and JSON entries use the Python `wire.jsonl` field names,
 lengths, SHA-256, UTC time, peer array and optional error. Restart never replaces
 existing request or response bytes.
 
-The ported shared/framing service cases and additional synthetic parser,
+The complete ported service suite and additional synthetic schema, field, template, parser,
 journal, ranking and loopback tests run in ordinary CI. Independent Python
 HTTP responses and PHASE0-corrected BPL expectations remain external:
 
@@ -72,7 +76,10 @@ FORMATKIT_CORPUS_DIR="$STAGING_DIR" tools/ci.sh --corpus
 ```
 
 Enrollment validates both independent request/reply digests and freezes a new
-`ws-wondergate-services` selection. Existing selections cannot be overwritten.
+`ws-wondergate-services` selection for shared vectors, or a separate
+`ws-wondergate-server` selection for native HTTP capture manifests with explicit
+empty starting stores. The latter compares full reply bytes and frozen hashes.
+Existing selections cannot be overwritten.
 Protocol evidence and BPL client addresses are in
 [WonderGate policy](../../docs/wondergate.md). Ported files are MIT-marked;
 new infrastructure inherits the workspace license. See [NOTICE](../../NOTICE).
