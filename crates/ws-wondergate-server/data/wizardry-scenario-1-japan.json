@@ -1,0 +1,312 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "wizardry-scenario-1-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "Wizardry: newly submitted rankings only, with empty starting history. Stock items are a new revival selection, not a recovered original stock list. Maze content remains unimplemented (501)."
+  },
+  "hosts": [
+    "www2.sting.co.jp"
+  ],
+  "boards": {
+    "main": {
+      "identity": "nm",
+      "order": "desc",
+      "ties": "first-submission",
+      "course": "default"
+    }
+  },
+  "values": {},
+  "records": {
+    "ranking": [
+      {
+        "field": "rank",
+        "fmt": "dec",
+        "max": 255,
+        "empty": 0
+      },
+      {
+        "text": "#"
+      },
+      {
+        "field": "name",
+        "fmt": "raw"
+      },
+      {
+        "text": "_"
+      },
+      {
+        "field": "score",
+        "fmt": "dec"
+      },
+      {
+        "text": "#"
+      }
+    ],
+    "html-row": [
+      {
+        "text": "<tr><td>"
+      },
+      {
+        "field": "rank",
+        "fmt": "dec"
+      },
+      {
+        "text": "</td><td>"
+      },
+      {
+        "field": "name",
+        "fmt": "html-shift-jis"
+      },
+      {
+        "text": "</td><td>"
+      },
+      {
+        "field": "score",
+        "fmt": "dec"
+      },
+      {
+        "text": "</td></tr>"
+      }
+    ]
+  },
+  "routes": [
+    {
+      "id": "ranking-submit",
+      "method": "GET",
+      "match": {
+        "path": "/cgi-bin/wg/wiz.cgi",
+        "query_keys": [
+          "nm",
+          "sc"
+        ]
+      },
+      "request": {
+        "nm": {
+          "decode": "percent-plus",
+          "bytes": [
+            1,
+            5
+          ],
+          "deny": [
+            0,
+            35,
+            95,
+            127
+          ],
+          "min_byte": 32
+        },
+        "sc": {
+          "decode": "percent-plus",
+          "regex": "^[0-9]{1,8}$",
+          "as": "u32"
+        }
+      },
+      "actions": [
+        {
+          "record": {
+            "board": "main",
+            "identity": "nm",
+            "name": "nm",
+            "score": "sc"
+          }
+        }
+      ],
+      "respond": {
+        "status": 200,
+        "body": {
+          "envelope": {
+            "primitive": "sum16-hex-envelope",
+            "marker": "#SUM",
+            "case": "lower",
+            "terminator": [
+              0
+            ]
+          },
+          "segments": [
+            {
+              "text": "#WIZ^RNK"
+            },
+            {
+              "each": {
+                "leaders": {
+                  "board": "main",
+                  "limit": 3,
+                  "pad_to": 3
+                }
+              },
+              "record": "ranking"
+            },
+            {
+              "row": {
+                "submitter": "main"
+              },
+              "record": "ranking"
+            },
+            {
+              "row": {
+                "place": {
+                  "board": "main",
+                  "n": 4
+                }
+              },
+              "record": "ranking"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "stock",
+      "method": "GET",
+      "match": {
+        "path": "/cgi-bin/wg/wiz.cgi",
+        "query_keys": [
+          "it"
+        ]
+      },
+      "respond": {
+        "status": 200,
+        "body": {
+          "envelope": {
+            "primitive": "sum16-hex-envelope",
+            "marker": "#SUM",
+            "case": "lower",
+            "terminator": [
+              0
+            ]
+          },
+          "segments": [
+            {
+              "text": "#WIZ^SHP2#3##"
+            }
+          ]
+        }
+      },
+      "request": {
+        "it": {
+          "decode": "percent-plus",
+          "bytes": [
+            4,
+            4
+          ],
+          "equals": [
+            107,
+            117,
+            114,
+            101
+          ]
+        }
+      }
+    },
+    {
+      "id": "maze",
+      "method": "GET",
+      "match": {
+        "path": "/cgi-bin/wg/wiz.cgi",
+        "query_keys": [
+          "mp"
+        ]
+      },
+      "respond": {
+        "status": 501,
+        "body": {
+          "envelope": {
+            "primitive": "sum16-hex-envelope",
+            "marker": "#SUM",
+            "case": "lower",
+            "terminator": [
+              0
+            ]
+          },
+          "segments": [
+            {
+              "text": "#WIZ^ERR"
+            }
+          ]
+        }
+      },
+      "request": {
+        "mp": {
+          "decode": "percent-plus",
+          "bytes": [
+            4,
+            4
+          ],
+          "equals": [
+            107,
+            117,
+            114,
+            101
+          ]
+        }
+      }
+    },
+    {
+      "id": "ranking-page-0",
+      "method": "GET",
+      "match": {
+        "path": "/wg/"
+      },
+      "respond": {
+        "status": 200,
+        "content_type": "text/html; charset=utf-8",
+        "body": [
+          {
+            "text": "<!doctype html><meta charset=utf-8><title>Wizardry revival rankings</title><h1>Wizardry revival rankings</h1><p>New submissions only. History restarted at zero.</p><table><tr><th>Rank</th><th>Name</th><th>Score</th></tr>"
+          },
+          {
+            "each": {
+              "leaders": {
+                "board": "main",
+                "limit": 4096,
+                "pad_to": 0
+              }
+            },
+            "record": "html-row"
+          },
+          {
+            "text": "</table>"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ranking-page-1",
+      "method": "GET",
+      "match": {
+        "path": "/wg/rankings"
+      },
+      "respond": {
+        "status": 200,
+        "content_type": "text/html; charset=utf-8",
+        "body": [
+          {
+            "text": "<!doctype html><meta charset=utf-8><title>Wizardry revival rankings</title><h1>Wizardry revival rankings</h1><p>New submissions only. History restarted at zero.</p><table><tr><th>Rank</th><th>Name</th><th>Score</th></tr>"
+          },
+          {
+            "each": {
+              "leaders": {
+                "board": "main",
+                "limit": 4096,
+                "pad_to": 0
+              }
+            },
+            "record": "html-row"
+          },
+          {
+            "text": "</table>"
+          }
+        ]
+      }
+    }
+  ],
+  "limits": {
+    "max_body": 65536,
+    "max_response": 81924
+  },
+  "errors": {
+    "method": 405,
+    "method_first": true
+  }
+}
