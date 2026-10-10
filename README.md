@@ -118,3 +118,9 @@ transactional saves and IPS operations as the private `swankit` package.
 `tools/python-container.sh` builds and tests its Python 3.11+ abi3 wheel inside
 a container, keeping wheel artifacts external. `--python-bindings` in the
 staging tool enrolls a new parity selection from existing frozen owner specs.
+
+[ws-wondergate](crates/ws-wondergate/README.md) models the WonderGate adapter as
+an injected-network request/reply core, with streaming framing, upstream and
+revival profiles, bounded commands and a deterministic Scripted backend. See
+[protocol and compatibility policy](docs/wondergate.md). Live backends and the
+BPL responder are later milestones.

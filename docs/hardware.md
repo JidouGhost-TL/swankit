@@ -196,3 +196,13 @@ name color are at 83/84. Raw unknown codes and invalid birthday bytes remain
 visible. Owner-profile edits preserve counters and unrelated data. Color-only
 fields are read only on the explicitly selected color image. No emulator
 implementation supplied these offsets or rules.
+
+## WonderGate protocol
+
+[WSdev WonderGate](https://ws.nesdev.org/wiki/WonderGate) documents command
+framing and socket grammar; its [BPL subpage](https://ws.nesdev.org/wiki/WonderGate/bplXX.mopera.ne.jp)
+describes application packet fields. [WSdev UART](https://ws.nesdev.org/wiki/UART)
+documents serial data/control ports and the physical byte buffers. The adapter
+core implements protocol behavior only: it does not claim UART timing or
+physical hardware fidelity. Client-derived profiles and their evidence are
+listed in [wondergate.md](wondergate.md).
