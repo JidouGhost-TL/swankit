@@ -38,6 +38,15 @@ plus independently computed SHA-256 digests and an explicit correction ledger.
 It refuses to overwrite existing staging. Source ROMs and facts are read-only.
 See [ws-rom](crates/ws-rom/README.md) for the API and later crate composition.
 
+Enroll independent adapter serial captures and ordered TCP peers with
+`tools/stage-corpus.py --wondergate-manifest "$ORACLE_MANIFEST" --output "$STAGING_DIR"`.
+The new `ws-wondergate-adapter` selection verifies full response bytes at three
+input chunk sizes, exact peer requests and connection closure. Old and failed
+captures carry explicit exclusion reasons. See the
+[adapter manifest guide](docs/wondergate-adapter-manifest.md) for its schema,
+limits and frozen provenance. `tools/ci.sh --corpus` runs required corpus
+checks in release mode through the serialized safe runner.
+
 Add a new codec namespace from an independently produced manifest with
 `tools/stage-corpus.py --codec-manifest "$ORACLE_MANIFEST" --output "$STAGING_DIR"`.
 The manifest supplies raw/stored/reference-encoded paths, independently checked

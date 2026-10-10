@@ -45,6 +45,6 @@ if ((corpus)); then
     fi
     formatkit_dir=${FORMATKIT_DIR:-"$root/../formatkit"}
     export FORMATKIT_CORPUS_DIR="$corpus_dir" FORMATKIT_CORPUS_REQUIRED=1
-    gate corpus "$formatkit_dir/tools/run-corpus-safe.sh" --workspace --all-features --locked --test corpus
+    gate corpus "$formatkit_dir/tools/run-corpus-safe.sh" --workspace --all-features --locked --release --test corpus
 fi
 log_phase ci 'all requested gates passed' 'review and commit explicit paths'

@@ -1,5 +1,11 @@
 # ws-wondergate
 
+Independent captured adapter streams are enrolled externally with
+`tools/stage-corpus.py --wondergate-manifest`. The dev-only corpus Digest uses
+the existing transcript reader, frame codec and recorded TCP backend to compare
+every response byte, request byte and connection closure, including BPL.
+See the [manifest guide](../../docs/wondergate-adapter-manifest.md).
+
 A bounded, sans-IO WonderGate device core. Network operations use injected
 `Network`/`Connection` traits; `backend::Scripted` supplies deterministic peers,
 fragments, EOF, errors and partial writes without opening host sockets.

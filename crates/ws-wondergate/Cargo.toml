@@ -8,3 +8,7 @@ publish.workspace = true
 
 [dependencies]
 formatkit-core.workspace = true
+
+[dev-dependencies]
+formatkit-corpus-test.workspace = true
+serde_json = "1"
