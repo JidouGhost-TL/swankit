@@ -17,7 +17,7 @@ pub enum Eof {
     Zero,
     Ff,
 }
-/// Phase-0 contract for the later BPL responder. M12 moves BPL bytes opaquely.
+/// Client-code-supported BPL response policy.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BplReply {
     FieldPreserving24,

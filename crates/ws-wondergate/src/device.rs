@@ -7,43 +7,9 @@
 use crate::{
     dispatch,
     frame::{Decoder, Frame, FrameError},
-    Connection, Limits, Network, Profile,
+    Config, Connection, Network, Ppp,
 };
 use formatkit_core::Error;
-
-#[derive(Clone, Default, PartialEq, Eq)]
-pub struct Ppp {
-    pub user: Vec<u8>,
-    pub password: Vec<u8>,
-}
-impl std::fmt::Debug for Ppp {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Ppp")
-            .field(
-                "credentials_configured",
-                &(!self.user.is_empty() || !self.password.is_empty()),
-            )
-            .finish()
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct Config {
-    pub pdc_reception: u8,
-    pub ppp: Ppp,
-    pub profile: Profile,
-    pub limits: Limits,
-}
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            pdc_reception: 15,
-            ppp: Ppp::default(),
-            profile: Profile::REVIVAL,
-            limits: Limits::default(),
-        }
-    }
-}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SocketState {
@@ -82,6 +48,7 @@ pub enum NetEvent {
 pub(crate) struct Slot {
     pub connection: Option<Box<dyn Connection>>,
     pub terminal: Option<bool>, // true = EOF, false = error
+    pub builtin_bpl: bool,
 }
 impl Drop for Slot {
     fn drop(&mut self) {

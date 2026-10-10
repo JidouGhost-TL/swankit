@@ -3,25 +3,34 @@
 #![forbid(unsafe_code)]
 
 pub mod backend;
+pub mod bpl;
 mod commands;
+pub mod config;
 mod device;
 mod dispatch;
 pub mod frame;
 pub mod profile;
-pub use device::{Adapter, AdapterState, Config, Event, NetEvent, Ppp, SocketState};
+pub mod redirect;
+pub mod transcript;
+pub use config::{Config, ConfigError, Ppp};
+pub use device::{Adapter, AdapterState, Event, NetEvent, SocketState};
 pub use profile::Profile;
 
-/// Bounds on declared command-plus-parameter length and socket allocations.
+/// Bounds on command-plus-parameter length, socket allocation and BPL retention.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Limits {
     pub max_frame: usize,
     pub max_sockets: usize,
+    pub max_bpl_message: usize,
+    pub max_bpl_pending: usize,
 }
 impl Default for Limits {
     fn default() -> Self {
         Self {
             max_frame: 4096,
             max_sockets: 255,
+            max_bpl_message: 65536,
+            max_bpl_pending: 65536,
         }
     }
 }
@@ -41,6 +50,12 @@ pub enum Recv {
 
 pub trait Network {
     fn resolve(&mut self, name: &[u8]) -> Option<[u8; 4]>;
+    /// Resolve the target of an explicit, exact hostname redirect. Live
+    /// backends may treat that target as a narrowly scoped DNS authorization.
+    /// In-memory backends retain their ordinary exact-map policy by default.
+    fn resolve_redirect(&mut self, name: &[u8]) -> Option<[u8; 4]> {
+        self.resolve(name)
+    }
     fn connect(&mut self, ip: [u8; 4], port: u16) -> Result<Box<dyn Connection>, NetError>;
 }
 /// A backend owns blocking/wait policy. `send` may write partially; `recv`
