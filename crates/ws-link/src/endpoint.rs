@@ -1,7 +1,7 @@
 use crate::{os, Endpoint};
 use std::{
     fs::OpenOptions,
-    io::{self, Read, Write},
+    io,
     net::{SocketAddr, TcpListener, TcpStream, ToSocketAddrs},
     os::{
         fd::{AsRawFd, OwnedFd, RawFd},
@@ -143,42 +143,25 @@ impl End {
             }
             Endpoint::Wondergate(path) => {
                 let config = if let Some(path) = path {
-                    let mut bytes = Vec::new();
-                    std::fs::File::open(path)?
-                        .take(1024 * 1024 + 1)
-                        .read_to_end(&mut bytes)?;
-                    let text = std::str::from_utf8(&bytes)
-                        .map_err(|_| io::Error::other("INI must be UTF-8"))?;
-                    ws_wondergate::Config::from_ini(text).map_err(io::Error::other)?
+                    ws_wondergate::raw::load_config(&path)?
                 } else {
                     ws_wondergate::Config::default()
                 };
-                if config.backend != ws_wondergate::config::Backend::Tcp {
-                    return Err(io::Error::new(
-                        io::ErrorKind::InvalidInput,
-                        "wondergate endpoint requires TCP backend",
-                    ));
-                }
-                let net = ws_wondergate::backend::Tcp::new(config.tcp.clone())
-                    .map_err(|_| io::Error::other("invalid adapter TCP options"))?;
-                let (relay, mut peer) = UnixStream::pair()?;
+                let net = ws_wondergate::raw::tcp_network(&config)?;
+                let (relay, peer) = UnixStream::pair()?;
+                let reader = peer.try_clone()?;
                 // Existing adapter core owns protocol parsing; only bytes cross
                 // this socket. Its blocking network waits cannot stall the relay.
                 std::thread::Builder::new()
                     .name("serial-adapter".into())
                     .spawn(move || {
-                        let mut adapter = ws_wondergate::Adapter::new(config, net);
-                        let mut input = [0; 4096];
-                        while let Ok(n) = peer.read(&mut input) {
-                            if n == 0 {
-                                break;
-                            }
-                            let mut reply = Vec::new();
-                            adapter.push(&input[..n], &mut reply, &mut |_| {});
-                            if peer.write_all(&reply).is_err() {
-                                break;
-                            }
-                        }
+                        let adapter = ws_wondergate::Adapter::new(config, net);
+                        let _ = ws_wondergate::raw::serve(
+                            adapter,
+                            reader,
+                            peer,
+                            ws_wondergate::transcript::Tap::new(io::sink()),
+                        );
                     })?;
                 out.io = Some(Duplex::socket(relay)?);
             }

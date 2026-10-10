@@ -53,7 +53,12 @@ impl<N: Network> Adapter<N> {
                 }
             }
             (2, 1) => {
-                if !self.config.profile.status_params.contains(&reader.u8()?) {
+                let accepted = if frame.params.is_empty() {
+                    self.config.profile.status_without_parameter
+                } else {
+                    self.config.profile.status_params.contains(&reader.u8()?)
+                };
+                if !accepted {
                     return Err(malformed("status parameter"));
                 }
                 return Ok(reply(frame, 2, vec![self.state.status]));

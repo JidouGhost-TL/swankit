@@ -10,6 +10,7 @@ mod device;
 mod dispatch;
 pub mod frame;
 pub mod profile;
+pub mod raw;
 pub mod redirect;
 pub mod transcript;
 pub use config::{Config, ConfigError, Ppp};

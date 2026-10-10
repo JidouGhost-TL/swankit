@@ -482,6 +482,7 @@ dependencies = [
  "swankit",
  "swankit-ffi",
  "ws-link",
+ "ws-wondergate",
  "ws-wondergate-server",
 ]
 

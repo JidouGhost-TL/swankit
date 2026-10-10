@@ -129,7 +129,10 @@ an injected-network request/reply core, with streaming framing, upstream and
 revival profiles, bounded commands, TCP with explicit DNS policy and timeouts,
 Scripted and checked transcript replay, a local 24-byte BPL responder, redirects
 and INI configuration. See [protocol and configuration](docs/wondergate.md).
-The adapter CLI and recorded corpus enrollment follow in later milestones.
+`wg-adapter` is the raw Mednafen excomm executable (including its `ASDF`
+argument, environment configuration, EOF exit and optional lossless tap).
+`wg-decode` lists recorded frames; both also run as `swankit` subcommands.
+Recorded adapter corpus enrollment follows in the next milestone.
 
 [ws-link](crates/ws-link/README.md) and `swankit link` join serial byte streams
 through TCP, stdio, shell helpers, raw devices or the existing WonderGate core.

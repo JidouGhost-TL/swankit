@@ -10,6 +10,7 @@ use args::Args;
 use serde_json::{json, Value};
 use std::{env, path::Path};
 use swankit::{extract, gfx, patch, text, Toolkit};
+use swankit_cli::wg;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 const MAX_FILE: usize = 64 * 1024 * 1024;
 const HELP: &str = "swankit: WonderSwan format tools
@@ -31,6 +32,9 @@ Experimental: interop --json [--server] (versioned JSON-lines requests on stdin)
   wg-server --data DIR --wire DIR [--bind IP] [--http-port N] [--bpl-port N]
             [--clock system|fixed:YYYYMMDDhhmmss] [--seed N]
 The server loads bundled shared services and validated title definitions.
+  wg-adapter [CONFIG.ini | ASDF] [--config CONFIG.ini] [--tap FILE] [--net tcp]
+  wg-decode SERIAL.log [--header len16be|zero-then-len8]
+The same commands are available as stand-alone wg-adapter and wg-decode binaries.
   link ENDPOINT_A ENDPOINT_B [--log FILE.tsv] [--latency-ms N] [--jitter-ms N --seed S] [--baud B]
 Endpoints: tcp:HOST:PORT, listen:[HOST:]PORT (default 127.0.0.1), stdio,
            exec:COMMAND, device:PATH, wondergate[:CONFIG.ini].
@@ -77,6 +81,12 @@ fn text_definition(id: &str) -> Result<text::TextDefinition> {
     }
 }
 fn run(words: Vec<String>) -> Result<()> {
+    if words.first().is_some_and(|s| s == "wg-adapter") {
+        return wg::adapter(words.into_iter().skip(1).collect());
+    }
+    if words.first().is_some_and(|s| s == "wg-decode") {
+        return wg::decode(words.into_iter().skip(1).collect());
+    }
     if words.first().is_some_and(|s| s == "link")
         && words.len() == 2
         && matches!(words[1].as_str(), "--help" | "-h")

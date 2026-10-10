@@ -3,7 +3,20 @@ use formatkit_core::Result;
 use formatkit_corpus_test::{hash_bytes, run_dir, Args, Digest, Spec};
 use serde_json::{json, Value};
 struct SaveDigest {
-    origins: std::collections::HashMap<(String, String, String), String>,
+    origins: std::collections::HashMap<(String, String, String), Origin>,
+}
+struct Origin {
+    name: String,
+    path: std::path::PathBuf,
+}
+impl Origin {
+    fn from_record(record: &Value) -> Self {
+        let path = record["path"].as_str().unwrap();
+        Self {
+            name: record["origin_name"].as_str().unwrap_or(path).into(),
+            path: path.into(),
+        }
+    }
 }
 impl SaveDigest {
     fn load(root: &std::path::Path, namespace: &str) -> Self {
@@ -18,7 +31,7 @@ impl SaveDigest {
                         r["sha256"].as_str().unwrap().into(),
                         r["name"].as_str().unwrap().into(),
                     ),
-                    r["path"].as_str().unwrap().into(),
+                    Origin::from_record(r),
                 );
             }
         }
@@ -31,17 +44,16 @@ impl Digest for SaveDigest {
             .get("id")
             .and_then(Value::as_str)
             .ok_or_else(|| formatkit_core::Error::Malformed("missing save identity".into()))?;
-        let name = self
-            .origins
-            .get(&(
-                id.into(),
-                hash_bytes(bytes),
-                args.get("name")
-                    .and_then(Value::as_str)
-                    .unwrap_or("")
-                    .into(),
-            ))
-            .map(String::as_str)
+        let origin = self.origins.get(&(
+            id.into(),
+            hash_bytes(bytes),
+            args.get("name")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .into(),
+        ));
+        let name = origin
+            .map(|origin| origin.name.as_str())
             .or_else(|| args.get("name").and_then(Value::as_str))
             .ok_or_else(|| formatkit_core::Error::Malformed("missing save medium name".into()))?;
         let format = ws_saves::format(id)?;
@@ -62,10 +74,17 @@ impl Digest for SaveDigest {
             }
         }
         let companion = std::path::Path::new(name).with_extension("ieep");
-        if companion.is_file() {
+        // A frozen oracle can retain its original file label after relocation.
+        // Read the companion from the current physical path while giving the
+        // parser the original logical name; no expectations are regenerated.
+        let companion_path = origin.map_or_else(
+            || companion.clone(),
+            |origin| origin.path.with_extension("ieep"),
+        );
+        if companion_path.is_file() {
             context.images.insert(
                 companion.to_string_lossy().into_owned(),
-                std::fs::read(&companion)
+                std::fs::read(&companion_path)
                     .map_err(|e| formatkit_core::Error::Malformed(e.to_string()))?,
             );
         }
@@ -152,8 +171,9 @@ fn corpus_rejected_primary_media() {
             continue;
         }
         let id = note["id"].as_str().unwrap();
-        let name = note["path"].as_str().unwrap();
-        let bytes = std::fs::read(name).unwrap();
+        let origin = Origin::from_record(note);
+        let name = origin.name.as_str();
+        let bytes = std::fs::read(&origin.path).unwrap();
         assert_eq!(hash_bytes(&bytes), note["sha256"].as_str().unwrap());
         let (kind, error) = match ws_saves::format(id).unwrap().decode(&bytes, name) {
             Err(error) => ("result-error", error.to_string()),

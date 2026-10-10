@@ -1,5 +1,11 @@
 # Command line
 
+`wg-adapter` and `wg-decode` also build as stand-alone binaries for emulator
+excomm use and tap inspection. The matching `swankit wg-adapter` and
+`swankit wg-decode` commands share their implementations. See
+[WonderGate raw mode](wondergate.md#raw-executables) for arguments, environment
+configuration, EOF behavior and the lossless byte log.
+
 Build the private binary with `cargo build -p swankit-cli --locked`. The
 examples assume the resulting `swankit` is on PATH. Use `--help` for syntax.
 Hardware interpretation comes from the owner crates and

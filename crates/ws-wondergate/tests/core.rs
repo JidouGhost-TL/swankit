@@ -342,6 +342,10 @@ fn malformed_prefixes_return_errors_without_side_effects() {
                 // Legacy poll never inspects parameters.
                 continue;
             }
+            if (*kind, *cmd) == (2, 1) && profile.status_without_parameter {
+                // Parameterless status is a valid client form in this profile.
+                continue;
+            }
             for n in 0..valid.len() {
                 let mut a = Adapter::new(config(profile), Scripted::default());
                 let before = a.snapshot();
@@ -642,5 +646,26 @@ fn upstream_poll_does_not_require_parameters_and_profiles_switch_independently()
     profile.poll_reports_allocation = false;
     profile.dial_modes = &[3];
     profile.status_params = &[3];
+    profile.status_without_parameter = false;
     assert_eq!(profile, Profile::UPSTREAM);
+}
+
+#[test]
+fn parameterless_status_is_an_independent_client_policy() {
+    let mut a = Adapter::new(config(Profile::REVIVAL), Scripted::default());
+    call(&mut a, 1, 2, &[]);
+    let reply = call(&mut a, 2, 1, &[]);
+    assert_eq!(reply.cmd, 2);
+    assert_eq!(reply.params, [2]);
+    let mut profile = Profile::REVIVAL;
+    profile.status_without_parameter = false;
+    let mut strict = Adapter::new(config(profile), Scripted::default());
+    assert!(strict
+        .try_handle(&Frame {
+            kind: 2,
+            cmd: 1,
+            params: vec![]
+        })
+        .is_err());
+    assert_eq!(call(&mut strict, 2, 1, &[0]).params, [0]);
 }

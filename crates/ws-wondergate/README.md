@@ -19,6 +19,9 @@ in its 24-byte allow reply. Ordered hostname/socket redirects follow the C
 matching rules. `backend::Transcript` checks every request byte against
 external per-connection recordings and supplies bounded response reads.
 `transcript::{parse, read, frames, Tap}` reads and writes serial tap logs.
+`raw::{load_config, serve, serve_tcp}` shares bounded configuration loading,
+EOF validation, immediate reply flushing and the byte pump between the raw
+CLI and `ws-link`'s WonderGate endpoint.
 
 ```rust
 use ws_wondergate::{Adapter, Config, backend::Scripted};

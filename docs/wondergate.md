@@ -1,5 +1,43 @@
 # WonderGate adapter core
 
+## Raw executables
+
+`cargo build -p swankit-cli --locked --bins` builds `swankit`, `wg-adapter`
+and `wg-decode`. `swankit wg-adapter` and `swankit wg-decode` share the same
+command entrypoints as the stand-alone executables.
+
+```sh
+wg-adapter --config adapter.ini --tap serial.log
+wg-decode serial.log
+```
+
+Set Mednafen's `wswan.excomm.path` to `wg-adapter`. Mednafen supplies the
+executable as argv0 and the literal `ASDF` as its first argument. The executable
+ignores that sentinel and reads configuration from `WG_INI`. Outside Mednafen,
+`--config` or a positional INI path takes precedence over the environment.
+Missing explicit configuration is an error; without a path the revival
+defaults apply. Stdout contains only reply bytes, flushed immediately. Stdin
+EOF closes the device and exits; an incomplete final frame returns an error.
+
+`--tap FILE` creates a new lossless byte log; it refuses to overwrite a file.
+`WG_SERIAL_LOG` instead appends to the harness's precreated log. The format is
+`T <milliseconds> > <hex>` for input and `<` for replies. Tap files contain
+the original wire bytes, including credentials. Diagnostics stay on stderr.
+The raw byte pump and bounded INI loading are shared with `swankit link`'s
+WonderGate endpoint. Raw mode currently accepts `--net tcp` only.
+
+The TCP resolver remains denied by default. Use exact mappings or redirects
+for local testing; `resolve_all=127.0.0.1` in `[swankit]` directs all names to
+loopback inside an isolated harness container. The harness uses
+`--network=none` and the existing Python revival server.
+
+`wg-decode` reuses the checked transcript reader and core frame decoder,
+preserving directional byte counts, offsets, command names, hexadecimal
+parameters and printable ASCII columns. Its default is `--header len16be`;
+`--header zero-then-len8` selects the upstream grammar. Zero padding is skipped
+at frame boundaries. Invalid records and incomplete frames fail without
+emitting a partial listing. Physical UART timing is owned by the emulator.
+
 `ws-wondergate` implements a request/reply device with injected networking.
 There is no unsolicited output, host DNS, socket listener, timer or UART in
 this core. The traits own their backend wait/timeout policy. Scripted peers
@@ -45,6 +83,7 @@ BPL bytes opaquely when `builtin_bpl` is disabled.
 | poll_reports_allocation | false | true |
 | dial_modes | 03 | 01, 03 |
 | status_params | 03 | 00, 03 |
+| status_without_parameter | false | true (parameterless client form) |
 | bpl_reply | FieldPreserving24 | FieldPreserving24 |
 
 Each field is individually selectable. Profiles reproduce the pinned MIT
@@ -62,7 +101,7 @@ The following table lists **reply parameters**, following `[type][BE length]
 | --- | --- | --- |
 | 01:02 | power on; reset only on off-to-on transition | 02, ASCII `10` |
 | 01:00 | check PDC | 00, `[pdc][reception]` |
-| 02:01 | status selector from profile | **02**, `[status]` (off 00, on 02, PPP 03) |
+| 02:01 | status selector from profile, or none when enabled | **02**, `[status]` (off 00, on 02, PPP 03) |
 | 01:01/03/04 | enabled metadata policy | same command, `[00]` |
 | 01:08 | `00 01 mode n phone[n]` | **0B**, result 00 or FF |
 | 01:09 | enabled answer policy | **0B**, result 00 |

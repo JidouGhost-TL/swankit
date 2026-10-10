@@ -36,6 +36,8 @@ pub struct Profile {
     pub poll_reports_allocation: bool,
     pub dial_modes: &'static [u8],
     pub status_params: &'static [u8],
+    /// A client lineage sends the status command with no parameter bytes.
+    pub status_without_parameter: bool,
     pub bpl_reply: BplReply,
 }
 
@@ -52,6 +54,7 @@ impl Profile {
         poll_reports_allocation: false,
         dial_modes: &[3],
         status_params: &[3],
+        status_without_parameter: false,
         bpl_reply: BplReply::FieldPreserving24,
     };
     pub const REVIVAL: Self = Self {
@@ -66,6 +69,7 @@ impl Profile {
         poll_reports_allocation: true,
         dial_modes: &[1, 3],
         status_params: &[0, 3],
+        status_without_parameter: true,
         bpl_reply: BplReply::FieldPreserving24,
     };
 }

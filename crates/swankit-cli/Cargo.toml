@@ -1,5 +1,6 @@
 [package]
 name = "swankit-cli"
+default-run = "swankit"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -11,6 +12,7 @@ default = ["saves"]
 saves = ["swankit/saves"]
 
 [dependencies]
+ws-wondergate = { path = "../ws-wondergate" }
 ws-link = { path = "../ws-link" }
 ws-wondergate-server = { path = "../ws-wondergate-server", features = ["net"] }
 swankit-ffi = { path = "../swankit-ffi" }
@@ -29,3 +31,11 @@ crc = "3"
 [[bin]]
 name = "swankit"
 path = "src/main.rs"
+
+[[bin]]
+name = "wg-adapter"
+path = "src/bin/wg-adapter.rs"
+
+[[bin]]
+name = "wg-decode"
+path = "src/bin/wg-decode.rs"
