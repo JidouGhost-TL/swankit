@@ -1,15 +1,20 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 #![forbid(unsafe_code)]
-//! Byte-preserving, self-hosted WonderGate shared services. No outbound network.
+//! Byte-preserving WonderGate services and bounded definitions. No outbound network.
 
 pub mod board;
+pub mod definition;
+pub mod engine;
+pub mod form;
 pub mod http;
 #[cfg(feature = "net")]
 pub mod net;
+pub mod schema;
 pub mod services;
 pub mod store;
 mod time;
 
+pub use definition::{definitions, Definition};
 use formatkit_core::{Error, Result};
 use std::sync::{Arc, Mutex};
 use store::Store;
@@ -49,6 +54,7 @@ pub(crate) fn malformed(message: &str) -> Error {
 
 struct Inner {
     services: services::Services,
+    definitions: Vec<Definition>,
     store: Box<dyn Store>,
     clock: Box<dyn Clock>,
     rng: Mutex<Box<dyn Rng>>,
@@ -65,7 +71,8 @@ impl Server {
         clock: Box<dyn Clock>,
         rng: Box<dyn Rng>,
     ) -> Result<Self> {
-        Self::new(
+        Self::with_definitions(
+            Definition::bundled()?,
             services::Services::bundled()?,
             store,
             clock,
@@ -80,10 +87,54 @@ impl Server {
         rng: Box<dyn Rng>,
         limits: Limits,
     ) -> Result<Self> {
+        Self::with_definitions(vec![], services, store, clock, rng, limits)
+    }
+    pub fn from_definitions(
+        definitions: Vec<Definition>,
+        store: Box<dyn Store>,
+        clock: Box<dyn Clock>,
+        rng: Box<dyn Rng>,
+    ) -> Result<Self> {
+        Self::with_definitions(
+            definitions,
+            services::Services::bundled()?,
+            store,
+            clock,
+            rng,
+            Limits::default(),
+        )
+    }
+    pub fn with_definitions(
+        definitions: Vec<Definition>,
+        services: services::Services,
+        store: Box<dyn Store>,
+        clock: Box<dyn Clock>,
+        rng: Box<dyn Rng>,
+        limits: Limits,
+    ) -> Result<Self> {
         services.validate()?;
+        if definitions.len() > 128 {
+            return Err(malformed("too many definitions"));
+        }
+        let mut ids = std::collections::BTreeSet::new();
+        let mut hosts: std::collections::BTreeSet<_> =
+            services.hosts().map(str::to_owned).collect();
+        for definition in &definitions {
+            if !ids.insert(definition.id())
+                || definition
+                    .hosts()
+                    .iter()
+                    .any(|host| !hosts.insert(host.clone()))
+            {
+                return Err(malformed(
+                    "duplicate definition identity or conflicting host ownership",
+                ));
+            }
+        }
         Ok(Self {
             inner: Arc::new(Inner {
                 services,
+                definitions,
                 store,
                 clock,
                 rng: Mutex::new(rng),
@@ -101,8 +152,17 @@ impl Server {
         self.inner.clock.as_ref()
     }
     pub fn resolves(&self, name: &str) -> bool {
-        http::normalize_host(name)
-            .is_ok_and(|host| self.services().hosts().any(|known| known == host))
+        http::normalize_host(name).is_ok_and(|host| {
+            self.services().hosts().any(|known| known == host)
+                || self
+                    .inner
+                    .definitions
+                    .iter()
+                    .any(|d| d.hosts().contains(&host))
+        })
+    }
+    pub fn title_definitions(&self) -> &[Definition] {
+        &self.inner.definitions
     }
     pub fn try_dispatch_http(&self, raw: &[u8]) -> Result<Vec<u8>> {
         let request = http::parse_with_aliases(raw, &self.limits(), &self.services().http_aliases)?;
@@ -111,14 +171,26 @@ impl Server {
             .rng
             .lock()
             .map_err(|_| malformed("RNG lock poisoned"))?;
-        Ok(services::charge::handle(
+        if let Some(reply) = services::charge::handle(
             &request,
             self.services(),
             self.inner.store.as_ref(),
             self.clock(),
             rng.as_mut(),
-        )?
-        .unwrap_or_else(|| http::empty_response(404)))
+        )? {
+            return Ok(reply);
+        }
+        for definition in &self.inner.definitions {
+            if let Some(reply) = engine::handle(
+                definition,
+                &request,
+                self.inner.store.as_ref(),
+                self.clock(),
+            )? {
+                return Ok(reply);
+            }
+        }
+        Ok(http::empty_response(404))
     }
     pub fn dispatch_http(&self, raw: &[u8]) -> Vec<u8> {
         match self.try_dispatch_http(raw) {

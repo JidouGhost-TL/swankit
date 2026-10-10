@@ -61,3 +61,60 @@ class ServicesEnrollment(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     stage_wondergate_server(self.manifest, self.root)
                 self.assertEqual(self.frozen(), before)
+
+    def title_manifest(self, records=None):
+        record = dict(self.record, protocol="HTTP", store=[])
+        self.manifest.write_text(json.dumps({"schema": "swankit-wondergate-server-manifest/1",
+                                             "samples": records if records is not None else [record]}))
+
+    def test_title_flows_get_separate_frozen_namespace(self):
+        self.save()
+        stage_wondergate_server(self.manifest, self.root)
+        before = self.frozen()
+        self.title_manifest()
+        self.assertEqual(stage_wondergate_server(self.manifest, self.root), 1)
+        for path, data in before.items():
+            self.assertEqual(self.frozen()[path], data)
+        directory = self.root / "ws-wondergate-server"
+        spec = json.loads((directory / "spec.json").read_text())
+        self.assertEqual(spec["format"], "ws-wondergate-server")
+        sample = spec["samples"]["sample-000000.request"]
+        self.assertEqual(sample["args"]["store"], [])
+        self.assertEqual(sample["expect"]["response_sha256"], self.record["response_sha256"])
+        self.assertEqual((directory / "sample-000000.request").resolve(), self.request)
+        frozen = self.frozen()
+        with self.assertRaisesRegex(ValueError, "never be overwritten"):
+            stage_wondergate_server(self.manifest, self.root)
+        self.assertEqual(self.frozen(), frozen)
+
+    def test_title_flows_reject_unproven_state_and_partial_enrollment(self):
+        before = self.frozen()
+        valid = dict(self.record, protocol="HTTP", store=[])
+        for invalid in (dict(valid, store=[{}]), dict(valid, protocol="BPL"),
+                        dict(valid, response_sha256="0" * 64),
+                        {k: v for k, v in valid.items() if k != "store"}):
+            self.title_manifest([valid, invalid])
+            with self.assertRaises(ValueError):
+                stage_wondergate_server(self.manifest, self.root)
+            self.assertEqual(self.frozen(), before)
+
+    def test_invalid_manifest_shapes_and_oversized_files_do_not_stage(self):
+        before = self.frozen()
+        for manifest in ([], {}, {"schema": "unknown", "samples": []},
+                         {"schema": "swankit-wondergate-server-manifest/1", "samples": [None]},
+                         {"schema": "swankit-wondergate-server-manifest/1", "samples": [{}]}):
+            self.manifest.write_text(json.dumps(manifest))
+            with self.assertRaises(ValueError):
+                stage_wondergate_server(self.manifest, self.root)
+            self.assertEqual(self.frozen(), before)
+        with self.manifest.open("wb") as file:
+            file.truncate(8 * 1024 * 1024 + 1)
+        with self.assertRaisesRegex(ValueError, "oversized"):
+            stage_wondergate_server(self.manifest, self.root)
+        self.assertEqual(self.frozen(), before)
+
+    def test_title_flow_destination_must_be_external(self):
+        self.title_manifest()
+        repository = Path(__file__).resolve().parents[2]
+        with self.assertRaisesRegex(ValueError, "outside the repository"):
+            stage_wondergate_server(self.manifest, repository / "synthetic-staging")

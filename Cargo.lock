@@ -722,6 +722,7 @@ dependencies = [
 name = "ws-wondergate-server"
 version = "0.1.0"
 dependencies = [
+ "encoding_rs",
  "formatkit-core",
  "formatkit-corpus-test",
  "serde",

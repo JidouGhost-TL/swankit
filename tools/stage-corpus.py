@@ -378,7 +378,7 @@ def main():
     selection.add_argument("--titles", type=Path)
     selection.add_argument("--codec-manifest", type=Path)
     selection.add_argument("--wondergate-server-manifest", type=Path,
-                           help="enroll independent shared-service HTTP/BPL bytes in a NEW ws-wondergate-services selection")
+                           help="enroll shared HTTP/BPL vectors or title HTTP captures in a NEW frozen server selection")
     selection.add_argument("--interop-manifest", type=Path,
                            help="enroll independent Java header/tile vectors in a NEW swankit-interop selection")
     selection.add_argument("--save-manifest", type=Path)

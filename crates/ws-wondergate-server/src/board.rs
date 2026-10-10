@@ -88,6 +88,12 @@ impl<'a> Board<'a> {
             .position(|row| row.submission.identity == identity)
             .map_or(0, |i| i + 1))
     }
+    pub fn best(&self, identity: &[u8]) -> io::Result<Option<StoredSubmission>> {
+        Ok(self
+            .rows()?
+            .into_iter()
+            .find(|row| row.submission.identity == identity))
+    }
     pub fn slots(&self, count: usize) -> io::Result<Vec<Option<StoredSubmission>>> {
         let mut rows: Vec<_> = self.leaders(count)?.into_iter().map(Some).collect();
         rows.resize_with(count, || None);

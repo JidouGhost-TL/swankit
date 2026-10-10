@@ -13,7 +13,7 @@ use std::{
 use ws_wondergate_server::{
     net::{Config, TcpServer, WireLog},
     services::bpl,
-    Limits,
+    Definition, Limits,
 };
 
 fn start(temp: &Temp) -> (TcpServer, Arc<WireLog>) {
@@ -91,7 +91,23 @@ fn verify(wire: &WireLog, entries: &[serde_json::Value]) {
 fn socket_fragmentation_close_and_full_wire_logs() {
     let temp = Temp::new();
     let (mut tcp, wire) = start(&temp);
-    let http = [post("nph-gettime", 0, false, &[]), vec![0]].concat();
+    let definition = Definition::bundled()
+        .unwrap()
+        .into_iter()
+        .find(|d| d.json()["values"].get("phase").is_some())
+        .unwrap();
+    let route = &definition.json()["routes"][0]["match"];
+    let http = [
+        format!(
+            "GET {}?{} HTTP/1.1\r\nHost: {}\r\nUser-Agent: SWAN/1.0\r\n\r\n",
+            route["path"].as_str().unwrap(),
+            route["query_exact"].as_str().unwrap(),
+            definition.hosts()[0]
+        )
+        .into_bytes(),
+        vec![0],
+    ]
+    .concat();
     let packet = packet();
     assert_eq!(
         exchange(tcp.http_addr(), &http, true),

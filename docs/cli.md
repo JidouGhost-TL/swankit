@@ -236,7 +236,7 @@ Product and binary corpus handlers compare detections and ROM facts with those
 external expectations through Formatkit's serialized safe runner. Corpus data,
 population counts and golden hashes remain outside Git.
 
-## WonderGate shared server
+## WonderGate server
 
 ```sh
 swankit wg-server --data DATA_DIR --wire WIRE_DIR --bind 127.0.0.1 \
@@ -255,5 +255,10 @@ lossless transactions append to `WIRE_DIR/wire.jsonl` with raw byte sidecars.
 Terminate the owned process with the normal operating-system signal. Each
 journal record is fsynced before service success. Completed wire entries are
 fsynced before the HTTP connection closes or the next BPL message is read.
-The command serves the shared platform services; title routing arrives with
-the definition engine. See [the server API](../crates/ws-wondergate-server/README.md).
+The command loads bundled shared services and validated title definitions.
+Phase synchronization, empty check-in acknowledgments, newly submitted rankings,
+static stock and explicit 501 content refusals are data-driven. `--data` stores
+the journal; it does not select definition files. Edit shipped JSON and rebuild
+to change CLI policy, or use `Server::from_definitions` in an embedding application.
+See [the definition read/write guide](wondergate-title-definitions.md) and
+[the server API](../crates/ws-wondergate-server/README.md).
