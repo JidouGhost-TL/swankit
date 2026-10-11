@@ -14,14 +14,15 @@ or device controls its own serial pacing and receive behavior.
 | `device:PATH` | Linux raw serial device, 8N1 with no flow control |
 | `wondergate[:CONFIG.ini]` | Existing adapter core with the configured TCP backend |
 
-The relay starts reading only when both ends are connected. At startup and
-after disconnect, early data remains in OS socket/pipe buffers. Its pending
-queues hold at most 65,536 bytes per direction and apply backpressure when full.
-A disconnect drops only bytes already read into those queues, recording each
-drop; the surviving end's unread bytes wait for reconnect. Fixed endpoints
-(stdio, exec, device and adapter) cannot reopen. When two fixed ends cannot
-resume, the relay exits with an error. A TCP/listen pair keeps waiting for
-returning peers; use Ctrl-C to end it.
+Early data waits in bounded queues until the partner connects, including data
+followed by EOF. Each direction holds at most 65,536 bytes and applies
+backpressure when full. EOF drains queued bytes before closing the end;
+a disconnect records every queued byte it drops. Stdio, exec and device ends
+cannot reopen: once any permanent end finishes, the relay closes its partner
+and owned children and exits nonzero. A TCP/listen pair waits for returning
+peers. The WonderGate adapter starts a fresh protocol session after each peer
+disconnect. SIGINT, SIGTERM, SIGHUP and SIGQUIT close owned child groups and
+restore shared stdio flags, including during endpoint setup.
 
 ## Two emulators over TCP
 

@@ -223,6 +223,7 @@ impl Relay {
     }
     fn disconnect(&mut self, end: usize, reason: &str) -> io::Result<()> {
         self.ends[end].disconnect();
+        self.ends[1 - end].reset_adapter()?;
         self.event(end, reason)?;
         for dir in 0..2 {
             while let Some(p) = self.queues[dir].pop_front() {
@@ -237,7 +238,7 @@ impl Relay {
     fn receive(&mut self, end: usize) -> io::Result<()> {
         // Recheck after every poll event: an earlier event may have removed
         // the partner. Unread bytes stay in the OS buffer until both return.
-        if !self.paired() || self.queues[end].len() == MAX_PENDING {
+        if self.ends[end].read_eof || self.queues[end].len() == MAX_PENDING {
             return Ok(());
         }
         let Some(duplex) = &self.ends[end].io else {
@@ -246,7 +247,14 @@ impl Relay {
         let mut bytes = [0; 4096];
         let capacity = bytes.len().min(MAX_PENDING - self.queues[end].len());
         match os::read(duplex.read.as_raw_fd(), &mut bytes[..capacity]) {
-            Ok(0) => self.disconnect(end, "disconnected: EOF"),
+            Ok(0) => {
+                if self.queues[end].is_empty() {
+                    self.disconnect(end, "disconnected: EOF")
+                } else {
+                    self.ends[end].read_eof = true;
+                    Ok(())
+                }
+            }
             Ok(n) => {
                 let arrival = self.now();
                 for &value in &bytes[..n] {
@@ -314,10 +322,14 @@ impl Relay {
             for i in 0..2 {
                 self.ends[i].connect_due(Instant::now());
                 self.forward(i)?;
+                if self.ends[i].read_eof && self.queues[i].is_empty() {
+                    self.disconnect(i, "disconnected: EOF after draining")?;
+                }
             }
-            // A pair of permanent ends cannot ever resume after either EOF.
+            // A permanent end cannot ever resume after EOF, regardless of
+            // whether its partner can reconnect.
             // Closing the other end also closes owned child pipes/processes.
-            if self.ends.iter().all(|e| !e.can_return()) && !self.paired() {
+            if self.ends.iter().any(|e| !e.can_return() && e.io.is_none()) {
                 for i in 0..2 {
                     if self.ends[i].io.is_some() {
                         self.disconnect(i, "disconnected: permanent partner ended")?;
@@ -325,7 +337,7 @@ impl Relay {
                 }
                 return Err(io::Error::new(
                     io::ErrorKind::BrokenPipe,
-                    "both endpoints ended and cannot reconnect",
+                    "a permanent endpoint ended and cannot reconnect",
                 ));
             }
             let now = self.now();
@@ -349,15 +361,10 @@ impl Relay {
                     // A full queue already supplies backpressure. Omit its
                     // input fd until space returns, including HUP, which would
                     // otherwise spin while delayed bytes await their deadline.
-                    if !self.paired() || self.queues[i].len() < MAX_PENDING {
+                    if !self.ends[i].read_eof && self.queues[i].len() < MAX_PENDING {
                         fds.push(libc::pollfd {
                             fd: io.read.as_raw_fd(),
-                            events: if self.paired() {
-                                libc::POLLIN
-                            } else {
-                                // HUP/ERR need no read; RDHUP detects paused FIN.
-                                os::READ_CLOSED
-                            },
+                            events: libc::POLLIN,
                             revents: 0,
                         });
                         roles.push((i, false));
@@ -389,12 +396,6 @@ impl Relay {
                     {
                         self.disconnect(end, "disconnected: output closed")?;
                     }
-                } else if !self.paired()
-                    && fd.revents
-                        & (libc::POLLHUP | libc::POLLERR | libc::POLLNVAL | os::READ_CLOSED)
-                        != 0
-                {
-                    self.disconnect(end, "disconnected: input closed while waiting")?;
                 } else {
                     self.receive(end)?;
                 }
@@ -407,6 +408,15 @@ impl Relay {
         }
         self.log.flush()?;
         Ok(self.stats)
+    }
+    /// Installs handlers before opening endpoints or spawning owned children.
+    pub fn start_with_signals(
+        endpoints: [Endpoint; 2],
+        options: Options,
+        log: Box<dyn Write + Send>,
+    ) -> io::Result<Stats> {
+        let _signals = os::Signals::install()?;
+        Self::new(endpoints, options, log)?.run(&os::INTERRUPTED)
     }
     /// Installs process signal handlers for a single CLI relay. Do not run
     /// multiple signal-enabled relays concurrently in one process.

@@ -24,7 +24,8 @@ fn stdio_exec_forwards_binary_without_stdout_diagnostics() {
     drop(stdin);
     let output = child.wait_with_output().unwrap();
     assert!(!output.status.success());
-    assert!(String::from_utf8_lossy(&output.stderr).contains("both endpoints ended"));
+    assert!(String::from_utf8_lossy(&output.stderr)
+        .contains("a permanent endpoint ended and cannot reconnect"));
 }
 
 #[test]

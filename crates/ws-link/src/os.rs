@@ -7,6 +7,15 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
+pub fn flags(fd: RawFd) -> io::Result<i32> {
+    // SAFETY: fcntl reads flags from a live descriptor.
+    let flags = unsafe { libc::fcntl(fd, libc::F_GETFL) };
+    if flags < 0 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(flags)
+}
+
 pub fn nonblocking(fd: RawFd) -> io::Result<i32> {
     // SAFETY: fcntl accepts a live descriptor and integer flag arguments.
     let flags = unsafe { libc::fcntl(fd, libc::F_GETFL) };
@@ -182,7 +191,13 @@ impl Signals {
     pub fn install() -> io::Result<Self> {
         let mut guard = Self(Vec::new());
         INTERRUPTED.store(false, Ordering::Relaxed);
-        for signal in [libc::SIGINT, libc::SIGTERM, libc::SIGPIPE] {
+        for signal in [
+            libc::SIGINT,
+            libc::SIGTERM,
+            libc::SIGHUP,
+            libc::SIGQUIT,
+            libc::SIGPIPE,
+        ] {
             // SAFETY: initialized sigaction records, valid signal numbers.
             let mut action: libc::sigaction = unsafe { std::mem::zeroed() };
             let mut old: libc::sigaction = unsafe { std::mem::zeroed() };
@@ -216,8 +231,3 @@ impl Drop for Signals {
 pub fn fd<T: AsRawFd>(value: &T) -> RawFd {
     value.as_raw_fd()
 }
-
-#[cfg(target_os = "linux")]
-pub const READ_CLOSED: libc::c_short = libc::POLLRDHUP;
-#[cfg(not(target_os = "linux"))]
-pub const READ_CLOSED: libc::c_short = 0;

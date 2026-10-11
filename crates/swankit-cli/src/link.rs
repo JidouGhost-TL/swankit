@@ -45,6 +45,6 @@ pub fn run(a: &mut Args) -> Result<()> {
         Some(p) => Box::new(OpenOptions::new().write(true).create_new(true).open(p)?),
         None => Box::new(std::io::sink()),
     };
-    Relay::new(endpoints, options, log)?.run_with_signals()?;
+    Relay::start_with_signals(endpoints, options, log)?;
     Ok(())
 }

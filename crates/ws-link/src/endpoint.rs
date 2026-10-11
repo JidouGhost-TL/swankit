@@ -18,9 +18,13 @@ pub(crate) struct Duplex {
 }
 impl Duplex {
     fn new(read: OwnedFd, write: OwnedFd, restore: bool) -> io::Result<Self> {
-        let r = os::nonblocking(read.as_raw_fd())?;
-        let w = match os::nonblocking(write.as_raw_fd()) {
-            Ok(w) => w,
+        // Snapshot both descriptions before changing either: duped tty/socket
+        // descriptors can share the same file status flags.
+        let r = os::flags(read.as_raw_fd())?;
+        let w = os::flags(write.as_raw_fd())?;
+        os::nonblocking(read.as_raw_fd())?;
+        match os::nonblocking(write.as_raw_fd()) {
+            Ok(_) => {}
             Err(e) => {
                 os::restore_flags(read.as_raw_fd(), r);
                 return Err(e);
@@ -61,6 +65,8 @@ pub(crate) struct End {
     pub kind: Kind,
     pub io: Option<Duplex>,
     child: Option<ChildGroup>,
+    adapter_config: Option<Option<std::path::PathBuf>>,
+    pub read_eof: bool,
 }
 
 struct ChildGroup(Child);
@@ -84,6 +90,8 @@ impl End {
             kind: Kind::Fixed,
             io: None,
             child: None,
+            adapter_config: None,
+            read_eof: false,
         };
         match endpoint {
             Endpoint::Tcp(address) => {
@@ -142,6 +150,7 @@ impl End {
                 out.io = Some(Duplex::socket(file)?);
             }
             Endpoint::Wondergate(path) => {
+                out.adapter_config = Some(path.clone());
                 let config = if let Some(path) = path {
                     ws_wondergate::raw::load_config(&path)?
                 } else {
@@ -168,12 +177,20 @@ impl End {
         }
         Ok(out)
     }
+    pub fn reset_adapter(&mut self) -> io::Result<()> {
+        if let Some(path) = self.adapter_config.clone() {
+            self.io = None; // EOF stops the old pump; old replies cannot reach the new socket.
+            *self = Self::new(Endpoint::Wondergate(path), 9600)?;
+        }
+        Ok(())
+    }
     pub fn can_return(&self) -> bool {
         !matches!(self.kind, Kind::Fixed)
     }
     pub fn disconnect(&mut self) {
         self.io = None;
         self.child = None;
+        self.read_eof = false;
         if let Kind::Tcp { retry, pending, .. } = &mut self.kind {
             *pending = None;
             *retry = Instant::now() + Duration::from_secs(1);
@@ -232,6 +249,7 @@ impl End {
         };
         stream.set_nodelay(true)?;
         self.io = Some(Duplex::socket(stream)?);
+        self.read_eof = false;
         Ok(true)
     }
 }
