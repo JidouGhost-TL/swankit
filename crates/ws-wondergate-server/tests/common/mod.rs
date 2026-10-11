@@ -51,7 +51,10 @@ pub fn split_response(raw: &[u8]) -> (String, std::collections::BTreeMap<String,
         fields["Content-Length"].parse::<usize>().unwrap(),
         body.len()
     );
-    assert_eq!(fields["Connection"], "close");
+    assert!(matches!(
+        fields["Connection"].as_str(),
+        "close" | "keep-alive"
+    ));
     (head, fields, body)
 }
 pub fn packet() -> Vec<u8> {

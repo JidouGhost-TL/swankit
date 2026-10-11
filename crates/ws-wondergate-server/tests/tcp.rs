@@ -31,6 +31,64 @@ fn start(temp: &Temp) -> (TcpServer, Arc<WireLog>) {
     .unwrap();
     (tcp, wire)
 }
+#[test]
+fn three_fragmented_submissions_reuse_one_socket_and_client_close_finishes() {
+    let temp = Temp::new();
+    let (mut tcp, wire) = start(&temp);
+    let definition = Definition::bundled()
+        .unwrap()
+        .into_iter()
+        .find(|d| d.json()["routes"][0]["id"] == "class-ranking")
+        .unwrap();
+    let path = definition.json()["routes"][0]["match"]["path"]
+        .as_str()
+        .unwrap();
+    let mut stream = TcpStream::connect(tcp.http_addr()).unwrap();
+    stream
+        .set_read_timeout(Some(Duration::from_secs(3)))
+        .unwrap();
+    for course in 1..=3 {
+        let body = format!("*=ABCDEF&owner=ALPHA&score={course}|001000|02");
+        let connection = if course == 3 {
+            "Connection: close\r\n"
+        } else {
+            ""
+        };
+        let request = format!("POST {path} HTTP/1.1\r\nHost: {}\r\n{connection}Content-Type: application/x-www-form-urlencoded\r\nContent-Length: {}\r\n\r\n{body}", definition.hosts()[0], body.len());
+        for chunk in request.as_bytes().chunks(17) {
+            stream.write_all(chunk).unwrap();
+        }
+        let mut reply = Vec::new();
+        while !reply.ends_with(b"\r\n\r\n") {
+            let mut byte = [0];
+            stream.read_exact(&mut byte).unwrap();
+            reply.push(byte[0]);
+            assert!(reply.len() < 2048);
+        }
+        let header = std::str::from_utf8(&reply).unwrap();
+        assert!(header.starts_with("HTTP/1.1 200"));
+        assert!(header.contains(if course == 3 {
+            "Connection: close"
+        } else {
+            "Connection: keep-alive"
+        }));
+        let length: usize = header
+            .split("\r\n")
+            .find_map(|s| s.strip_prefix("Content-Length: "))
+            .unwrap()
+            .parse()
+            .unwrap();
+        let mut body = vec![0; length];
+        stream.read_exact(&mut body).unwrap();
+        assert!(body.ends_with(b"1|001000|ALPHA|02\r\n"));
+    }
+    assert_eq!(stream.read(&mut [0]).unwrap(), 0);
+    tcp.shutdown().unwrap();
+    let entries = entries(&wire);
+    assert_eq!(entries.len(), 3);
+    assert!(entries.iter().all(|e| e["error"].is_null()));
+    verify(&wire, &entries);
+}
 fn exchange(address: std::net::SocketAddr, packet: &[u8], fragment: bool) -> Vec<u8> {
     let mut stream = TcpStream::connect(address).unwrap();
     stream

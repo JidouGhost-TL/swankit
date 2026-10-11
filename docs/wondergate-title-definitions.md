@@ -40,6 +40,12 @@ route accepts any query. A field selector uses query bytes by default;
 `source: "form"` selects the body and requires POST plus a content type of
 `application/x-www-form-urlencoded` (parameters are accepted).
 
+Origin paths retain repeated slashes, including an initial `//`; the Host
+header supplies their authority. An explicit `http:` URI supplies a separate
+authority and remains subject to the configured host-alias check. This follows
+[RFC 9110 section 4.1](https://www.rfc-editor.org/rfc/rfc9110.html#section-4.1)
+and [RFC 9112 section 3.2.1](https://www.rfc-editor.org/rfc/rfc9112.html#section-3.2.1).
+
 `request` declares every selected field. Missing or additional keys fail.
 Field names are literal ASCII identifiers and are never percent decoded.
 Duplicates fail by default (`repeats: "one"`). Explicit `"first"`/`"last"`
@@ -102,6 +108,10 @@ This preserves the original handlers' different error precedence.
 
 `respond` has `status` (200/400/404/405/500/501), `body`, optional
 `content_type`, ordered `headers` as `[name,value]` pairs, and `expect_lines`.
+Optional `keep_alive: true` permits sequential HTTP requests on one socket.
+The default emits `Connection: close`. An explicit client `Connection: close`
+overrides the definition. TCP reuse is bounded to 128 transactions, each with
+the configured deadline and input limits; pipelined requests are rejected.
 The serializer emits status, Content-Length, Connection, optional Content-Type,
 then extra headers and the blank separator. It adds no Date or Server header.
 Header names must be unique, including Content-Type; Content-Length and
@@ -109,6 +119,12 @@ Connection are reserved. CR/LF injection and non-ASCII headers fail to load.
 `expect_lines` counts every CRLF, including the blank separator. The VT-lineage
 phase definition uses seven lines and mirrors its three state bytes in its
 11-byte body, keeping the complete response inside its client buffer.
+
+An authored local browser page uses a literal `text` body with
+`content_type: "text/html"` and explicit body and complete-response byte limits.
+Its definition records the observed home route and labels the page as new
+revival content. Browser rendering requires a native display check in addition
+to HTTP status and byte tests.
 
 `body` is a segment array, or an object with `envelope` and `segments`.
 
@@ -125,6 +141,7 @@ phase definition uses seven lines and mirrors its three state bytes in its
 | `{"date":14}` | Injected UTC timestamp as 14 decimal digits; `8` emits just the UTC date. |
 | `{"board":"main","metric":"position","identity":"owner","fmt":"dec"}` | Board `count`, request identity's `position`, or selected `length`. Length uses bounded `limit`/`pad_to`; `max` clamps, or `overflow_zero` emits zero beyond it. |
 | `{"when":{"equals":{"mode":[49]},"absent":["list"]},"segments":[...]}` | Render only when every declared byte equality and absence condition holds. Conditions refer to validated request fields, including defaults. |
+| `{"when":{"submitted":["main"]},"segments":[...]}` | Render only when the current request submitted to every named board. Prior journal entries do not satisfy this condition. Board references are validated at load time. |
 
 Numeric formats are `u8` (one checked byte), `dec`, `hex-lower` and `hex-upper`.
 Row numeric options `width` and `zero_pad` control minimum text width/padding;

@@ -387,25 +387,39 @@ fn serve(
     stream.set_read_timeout(Some(timeout))?;
     stream.set_write_timeout(Some(timeout))?;
     if protocol == "HTTP" {
-        let mut raw = Vec::new();
-        let (reply, mut error) = match read_http(&mut stream, &mut raw, server, timeout) {
-            Ok(()) => match server.try_dispatch_http(&raw) {
-                Ok(reply) => (reply, None),
-                Err(e) => (http::empty_response(500), Some(e.to_string())),
-            },
-            Err(e) => (http::empty_response(400), Some(e.to_string())),
-        };
-        if let Err(e) = stream.write_all(&reply) {
-            error = Some(e.to_string());
+        // Sequential reuse is opt-in per response; pipelining remains rejected.
+        for transaction in 0..128 {
+            if control.stopped.load(Ordering::Acquire) {
+                break;
+            }
+            let mut raw = Vec::new();
+            let (reply, mut error) = match read_http(&mut stream, &mut raw, server, timeout) {
+                Ok(()) => match server.try_dispatch_http(&raw) {
+                    Ok(reply) => (reply, None),
+                    Err(e) => (http::empty_response(500), Some(e.to_string())),
+                },
+                Err(_) if transaction > 0 && raw.is_empty() => break,
+                Err(e) => (http::empty_response(400), Some(e.to_string())),
+            };
+            if let Err(e) = stream.write_all(&reply) {
+                error = Some(e.to_string());
+            }
+            wire.record(
+                protocol,
+                peer,
+                &raw,
+                &reply,
+                error.as_deref(),
+                server.clock().now_utc(),
+            )?;
+            let persistent = reply
+                .split(|b| *b == b'\n')
+                .take_while(|line| *line != b"\r")
+                .any(|line| line == b"Connection: keep-alive\r");
+            if error.is_some() || !persistent {
+                break;
+            }
         }
-        wire.record(
-            protocol,
-            peer,
-            &raw,
-            &reply,
-            error.as_deref(),
-            server.clock().now_utc(),
-        )?;
     } else {
         while !control.stopped.load(Ordering::Acquire) {
             let mut raw = Vec::new();

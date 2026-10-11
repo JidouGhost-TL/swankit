@@ -94,6 +94,24 @@ parameters and checked lengths intentionally replace upstream unsafe reads.
 In legacy mode byte 1 is ignored on input, matching C; output writes zero.
 The internal C no-reply marker never becomes a length flag.
 
+Select framing independently of the command profile in the adapter INI:
+
+```ini
+[swankit]
+profile = revival
+header = zero-then-len8
+```
+
+This keeps revival socket, EOF and padding behavior while using the client
+grammar `[type][ignored byte][length8][command][parameters]`. The length
+counts the command and parameters. Use this explicit setting only when the
+client sender establishes the eight-bit grammar. A zero-length header returns
+an error and resets framing; subsequent interframe zero padding is skipped.
+For example, a malformed startup prefix `01 8f 00 01 02` then zero padding
+can recover at a later valid request in this mode. BE16 instead interprets
+`8f 00` as a declared length and drains that oversized body. No startup byte
+is silently deleted and BE16 bounds/draining remain unchanged.
+
 The following table lists **reply parameters**, following `[type][BE length]
 `[command]`. Results/IDs/counts are byte-sized; IPv4 order is network order.
 

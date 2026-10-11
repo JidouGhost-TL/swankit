@@ -55,6 +55,42 @@ fn dispatch(app: &Server, query: &str) -> Vec<u8> {
     ))
 }
 #[test]
+fn submitted_condition_uses_only_the_current_request() {
+    let mut value = program();
+    value["boards"]["other"] = value["boards"]["main"].clone();
+    value["routes"][0]["respond"]["body"] = json!([
+        {"when":{"submitted":["main"]},"segments":[{"text":"current"}]},
+        {"when":{"submitted":["other"]},"segments":[{"text":"wrong"}]}
+    ]);
+    let server = app(&value, Box::new(MemoryStore::new()));
+    assert_eq!(
+        split_response(&dispatch(&server, "nm=A&sc=4")).2,
+        b"current"
+    );
+    value["routes"][0]["actions"] = json!([]);
+    let server = app(&value, Box::new(MemoryStore::new()));
+    assert!(split_response(&dispatch(&server, "nm=A&sc=4")).2.is_empty());
+    value["routes"][0]["respond"]["body"][0]["when"]["submitted"] = json!(["missing"]);
+    assert!(Definition::from_json(&value.to_string()).is_err());
+}
+#[test]
+fn explicit_keep_alive_policy_respects_client_close() {
+    let mut value = program();
+    value["routes"][0]["respond"]["keep_alive"] = json!(true);
+    let server = app(&value, Box::new(MemoryStore::new()));
+    let reply = dispatch(&server, "nm=A&sc=4");
+    assert!(reply
+        .windows(24)
+        .any(|s| s == b"Connection: keep-alive\r\n"));
+    let raw = request("GET", "/submit?nm=A&sc=4", &[], "text/plain");
+    let raw = String::from_utf8(raw).unwrap().replace(
+        "Host: synthetic.test\r\n",
+        "Host: synthetic.test\r\nConnection: close\r\n",
+    );
+    let reply = server.dispatch_http(raw.as_bytes());
+    assert!(reply.windows(19).any(|s| s == b"Connection: close\r\n"));
+}
+#[test]
 fn schema_is_closed_and_bundled_definitions_roundtrip() {
     for definition in Definition::bundled().unwrap() {
         schema::validate(definition.json()).unwrap();
