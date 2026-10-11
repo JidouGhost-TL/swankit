@@ -3,7 +3,7 @@ use crate::map::{Asset, Codec, Kind, Num};
 use crate::text::Charmaps;
 use crate::{malformed, AssetMap};
 use formatkit_core::{bytes_at, Result};
-use ws_compress::{lz_bits_16, lz_rle_7f, okumura, BitOrder, MAX_DECODED};
+use ws_compress::{lz_bits_16, lz_rle_7f, lzss_12, lzss_u16_zero, okumura, BitOrder, MAX_DECODED};
 
 /// Upper bound on the decoded bytes of one asset.
 pub const MAX_ASSET_BYTES: usize = 4 * 1024 * 1024;
@@ -16,6 +16,63 @@ pub struct Stored {
     pub length: usize,
     /// Decoded (uncompressed) payload.
     pub decoded: Vec<u8>,
+}
+
+fn lzss_u16_params(asset: &Asset) -> Result<(u16, lzss_u16_zero::Prehistory)> {
+    let p = &asset.codec_params;
+    let destination = p
+        .destination
+        .and_then(|n| u16::try_from(n.0).ok())
+        .ok_or_else(|| malformed(format!("{}: LZSS needs destination u16", asset.id)))?;
+    let policy = match p.prehistory.as_deref() {
+        Some("low5-prefix") => lzss_u16_zero::Prehistory::Low5Prefix,
+        Some("low8-prefix") => lzss_u16_zero::Prehistory::Low8Prefix,
+        Some("zero-until-start") => lzss_u16_zero::Prehistory::ZeroUntilStart,
+        _ => {
+            return Err(malformed(format!(
+                "{}: LZSS needs a known prehistory policy",
+                asset.id
+            )))
+        }
+    };
+    Ok((destination, policy))
+}
+
+fn lzss12_params(asset: &Asset) -> Result<(usize, &[u8])> {
+    let p = &asset.codec_params;
+    let size = p
+        .decoded_length
+        .ok_or_else(|| malformed(format!("{}: LZSS needs decoded_length", asset.id)))?
+        .usize()?;
+    if size > MAX_ASSET_BYTES {
+        return Err(malformed(format!("{}: decoded asset too large", asset.id)));
+    }
+    let history = p.history.as_deref().ok_or_else(|| {
+        malformed(format!(
+            "{}: LZSS needs explicit history (possibly empty)",
+            asset.id
+        ))
+    })?;
+    if history.len() > 4096 {
+        return Err(malformed(format!(
+            "{}: LZSS history exceeds 4096 bytes",
+            asset.id
+        )));
+    }
+    Ok((size, history))
+}
+
+pub(crate) fn validate_codec_params(asset: &Asset) -> Result<()> {
+    match asset.codec {
+        Codec::LzssU16Zero => {
+            lzss_u16_params(asset)?;
+        }
+        Codec::Lzss12 => {
+            lzss12_params(asset)?;
+        }
+        _ => {}
+    }
+    Ok(())
 }
 
 fn okumura_params(asset: &Asset) -> Result<(usize, BitOrder, u8)> {
@@ -57,11 +114,19 @@ pub fn decode_asset(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -
             }
             None => return Err(malformed(format!("{id}: raw asset needs a length"))),
         },
-        Codec::LzRle7f | Codec::LzBits16 => {
-            let outcome = if asset.codec == Codec::LzRle7f {
-                lz_rle_7f::decode(window, MAX_DECODED)?
-            } else {
-                lz_bits_16::decode(window, MAX_DECODED)?
+        Codec::LzRle7f | Codec::LzBits16 | Codec::LzssU16Zero | Codec::Lzss12 => {
+            let outcome = match asset.codec {
+                Codec::LzRle7f => lz_rle_7f::decode(window, MAX_DECODED)?,
+                Codec::LzBits16 => lz_bits_16::decode(window, MAX_DECODED)?,
+                Codec::LzssU16Zero => {
+                    let (destination, policy) = lzss_u16_params(asset)?;
+                    lzss_u16_zero::decode_with_policy(window, MAX_ASSET_BYTES, destination, policy)?
+                }
+                Codec::Lzss12 => {
+                    let (size, history) = lzss12_params(asset)?;
+                    lzss_12::decode_with_history(window, history, size, MAX_ASSET_BYTES)?
+                }
+                _ => unreachable!(),
             };
             if let Some(n) = declared {
                 if outcome.consumed != n {
@@ -217,6 +282,20 @@ pub fn encode_payload(asset: &Asset, decoded: &[u8]) -> Result<Vec<u8>> {
         Codec::Raw => Ok(decoded.to_vec()),
         Codec::LzRle7f => lz_rle_7f::encode(decoded),
         Codec::LzBits16 => lz_bits_16::encode(decoded),
+        Codec::LzssU16Zero => {
+            lzss_u16_params(asset)?;
+            lzss_u16_zero::encode(decoded)
+        }
+        Codec::Lzss12 => {
+            let (size, _) = lzss12_params(asset)?;
+            if decoded.len() != size {
+                return Err(malformed(format!(
+                    "{}: LZSS payload must stay {size} bytes (the length lives in the carrier)",
+                    asset.id
+                )));
+            }
+            lzss_12::encode(decoded)
+        }
         Codec::Okumura => {
             let (size, order, fill) = okumura_params(asset)?;
             if decoded.len() != size {

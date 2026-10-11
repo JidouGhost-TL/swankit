@@ -2,8 +2,8 @@
 use formatkit_core::Image;
 use serde_json::{json, Value};
 use ws_assets::{
-    decode_asset, extract, fix_checksum, replace, sha256_hex, verify, AssetMap, Charmaps,
-    ExtractedFile, ReplaceInput, ReplaceOutcome, Replacement,
+    decode_asset, extract, fix_checksum, render_tiles, replace, sha256_hex, verify, AssetMap,
+    Charmaps, ExtractedFile, ReplaceInput, ReplaceOutcome, Replacement,
 };
 use ws_gfx::{decode_tile, encode_tile, TileFormat};
 
@@ -104,6 +104,131 @@ fn checksum_ok(rom: &[u8]) -> bool {
     let n = rom.len() - 2;
     let sum = rom[..n].iter().fold(0u16, |s, &b| s.wrapping_add(b.into()));
     rom[n..] == sum.to_le_bytes()
+}
+
+#[test]
+fn map_lzss_codecs_render_and_replace_with_explicit_parameters() {
+    for (codec, params, stored, expected) in [
+        (
+            "ws-lzss-u16-zero",
+            json!({"destination": "0x2001", "prehistory": "low5-prefix"}),
+            vec![4, 0, 1, b'A', 0x20, 0],
+            vec![b'A', 0, 0, 0],
+        ),
+        (
+            "ws-lzss-u16-zero",
+            json!({"destination": "0x2001", "prehistory": "low8-prefix"}),
+            vec![4, 0, 1, b'A', 0x20, 0],
+            vec![b'A', 0, b'A', 0],
+        ),
+        (
+            "ws-lzss-u16-zero",
+            json!({"destination": "0x2001", "prehistory": "zero-until-start"}),
+            vec![4, 0, 1, b'A', 0x20, 0],
+            vec![b'A', 0, b'A', 0],
+        ),
+        (
+            "ws-lzss-12",
+            json!({"decoded_length": 9, "history": [65, 66, 67]}),
+            vec![0, 2, 0, 0, 0, 0, 0],
+            b"ABCCCCCCC".to_vec(),
+        ),
+    ] {
+        let mut rom = rom();
+        rom[PACKED..PACKED + stored.len()].copy_from_slice(&stored);
+        let mut v = map_json(&rom);
+        v["assets"][5]["codec"] = json!(codec);
+        v["assets"][5]["codec_params"] = params;
+        v["assets"][5]["length"] = json!(stored.len());
+        let map = load(&v);
+        let c = charmaps(&map);
+        assert_eq!(decode_asset(&map, &c, &rom, "z").unwrap().decoded, expected);
+        let replacement = vec![0; expected.len()];
+        let outcome = replace(
+            &map,
+            &c,
+            &rom,
+            &Replacement {
+                id: "z".into(),
+                input: ReplaceInput::Bytes(replacement.clone()),
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            decode_asset(&outcome.map, &c, &outcome.rom, "z")
+                .unwrap()
+                .decoded,
+            replacement
+        );
+        assert!(verify(&outcome.map, &c, &outcome.rom).unwrap().ok());
+    }
+    let mut rom = rom();
+    let tile = rom[TILES..TILES + 32].to_vec();
+    let stored = ws_compress::lzss_u16_zero::encode(&tile).unwrap();
+    rom[TILES..TILES + stored.len()].copy_from_slice(&stored);
+    let mut v = map_json(&rom);
+    v["assets"][0]["codec"] = json!("ws-lzss-u16-zero");
+    v["assets"][0]["codec_params"] = json!({"destination": "0x2000", "prehistory": "low5-prefix"});
+    v["assets"][0]["length"] = json!(stored.len());
+    let map = load(&v);
+    let c = charmaps(&map);
+    let rendered = render_tiles(&map, &c, &rom, "t").unwrap();
+    let outcome = replace(
+        &map,
+        &c,
+        &rom,
+        &Replacement {
+            id: "t".into(),
+            input: ReplaceInput::Image(rendered.clone()),
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        render_tiles(&outcome.map, &c, &outcome.rom, "t").unwrap(),
+        rendered
+    );
+}
+
+#[test]
+fn map_lzss_parameters_and_extents_are_checked() {
+    for (codec, params) in [
+        ("ws-lzss-u16-zero", json!({})),
+        (
+            "ws-lzss-u16-zero",
+            json!({"destination": 65536, "prehistory": "low5-prefix"}),
+        ),
+        (
+            "ws-lzss-u16-zero",
+            json!({"destination": 8192, "prehistory": "invented"}),
+        ),
+        ("ws-lzss-12", json!({"decoded_length": 3})),
+        ("ws-lzss-12", json!({"history": []})),
+        ("ws-lzss-12", json!({"decoded_length": 3, "history": [256]})),
+    ] {
+        let rom = rom();
+        let mut v = map_json(&rom);
+        v["assets"][5]["codec"] = json!(codec);
+        v["assets"][5]["codec_params"] = params;
+        let parsed = AssetMap::from_json(&serde_json::to_vec(&v).unwrap());
+        assert!(
+            parsed.is_err()
+                || decode_asset(
+                    &parsed.unwrap(),
+                    &charmaps(&load(&map_json(&rom))),
+                    &rom,
+                    "z"
+                )
+                .is_err()
+        );
+    }
+    let mut rom = rom();
+    rom[PACKED..PACKED + 4].copy_from_slice(&[0, 2, 0, 99]);
+    let mut v = map_json(&rom);
+    v["assets"][5]["codec"] = json!("ws-lzss-12");
+    v["assets"][5]["codec_params"] = json!({"decoded_length": 3, "history": [65, 66, 67]});
+    v["assets"][5]["length"] = json!(4);
+    let map = load(&v);
+    assert!(decode_asset(&map, &charmaps(&map), &rom, "z").is_err());
 }
 
 #[test]

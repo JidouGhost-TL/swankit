@@ -73,13 +73,16 @@
         "kind": {"enum": ["tiles", "tilemap", "palette", "font", "text", "pointer-table", "music", "sound-effect", "pcm", "data-table", "sprite-table", "other"]},
         "offset": {"$ref": "#/$defs/num"},
         "length": {"$ref": "#/$defs/num", "description": "Stored bytes; omit for codec-terminated streams or end-terminated text."},
-        "codec": {"enum": ["raw", "ws-lz-rle-7f", "ws-lz-bits-16", "ws-okumura-lzss"]},
+        "codec": {"enum": ["raw", "ws-lz-rle-7f", "ws-lz-bits-16", "ws-okumura-lzss", "ws-lzss-u16-zero", "ws-lzss-12"]},
         "codec_params": {
           "type": "object", "additionalProperties": false,
           "properties": {
             "decoded_length": {"$ref": "#/$defs/num"},
             "bit_order": {"enum": ["lsb", "msb"]},
-            "ring_fill": {"$ref": "#/$defs/num"}
+            "ring_fill": {"$ref": "#/$defs/num"},
+            "destination": {"$ref": "#/$defs/num"},
+            "prehistory": {"enum": ["low5-prefix", "low8-prefix", "zero-until-start"]},
+            "history": {"type": "array", "maxItems": 4096, "items": {"type": "integer", "minimum": 0, "maximum": 255}}
           }
         },
         "address": {

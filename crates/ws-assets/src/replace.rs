@@ -4,7 +4,7 @@
 //! range, a declared free range or a declared reference.
 use crate::data::{decode_asset, encode_payload};
 use crate::gfx::{unrender_tilemap_with, unrender_tiles, Allocation};
-use crate::map::{AssetMap, FreeRange, Kind, Num, TileRange};
+use crate::map::{AssetMap, Codec, FreeRange, Kind, Num, TileRange};
 use crate::refs::{encode_reference, references_for};
 use crate::text::Charmaps;
 use crate::{check_identity, malformed, sha256_hex};
@@ -224,9 +224,10 @@ pub fn replace_with(
                 let pad = u8::try_from(pad.0).map_err(|_| malformed("pad must be a byte"))?;
                 out[old.offset + stored.len()..old.offset + old.length].fill(pad);
             }
-            // A terminated stream's declared length is its consumed extent.
+            // A self-delimited stream's declared length is its consumed extent.
             if let Some(a) = new_map.assets.iter_mut().find(|a| a.id == *id) {
-                if a.length.is_some() && asset.codec.terminated() {
+                if a.length.is_some() && (asset.codec.terminated() || asset.codec == Codec::Lzss12)
+                {
                     a.length = Some(Num(stored.len() as u64));
                 }
             }

@@ -161,19 +161,23 @@ pub enum Codec {
     LzBits16,
     #[serde(rename = "ws-okumura-lzss")]
     Okumura,
+    #[serde(rename = "ws-lzss-u16-zero")]
+    LzssU16Zero,
+    #[serde(rename = "ws-lzss-12")]
+    Lzss12,
 }
 
 impl Codec {
-    /// Whether the stream carries its own end marker.
+    /// Whether the stream carries its own end marker or decoded size.
     pub fn terminated(self) -> bool {
-        matches!(self, Codec::LzRle7f | Codec::LzBits16)
+        matches!(self, Codec::LzRle7f | Codec::LzBits16 | Codec::LzssU16Zero)
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct CodecParams {
-    /// Decoded size for codecs without a terminator (Okumura).
+    /// Decoded size for codecs without a stored output size.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub decoded_length: Option<Num>,
     /// Okumura flag bit order: `lsb` (default) or `msb`.
@@ -182,6 +186,16 @@ pub struct CodecParams {
     /// Okumura ring fill byte, default 0x20.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ring_fill: Option<Num>,
+    /// Original destination offset, used by destination-relative prehistory.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub destination: Option<Num>,
+    /// `low5-prefix`, `low8-prefix`, or `zero-until-start`; no implicit policy.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prehistory: Option<String>,
+    /// Explicit bytes immediately preceding the destination, oldest first.
+    /// An empty array declares that no prior bytes are available.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub history: Option<Vec<u8>>,
 }
 
 /// CPU view of the asset when loaded: purely descriptive.
@@ -735,6 +749,7 @@ impl AssetMap {
             if a.codec == Codec::Okumura && a.codec_params.decoded_length.is_none() {
                 return Err(malformed(format!("{}: okumura needs decoded_length", a.id)));
             }
+            crate::data::validate_codec_params(a)?;
             for r in &a.references {
                 check_encoding(&r.encoding(), &a.id)?;
             }
