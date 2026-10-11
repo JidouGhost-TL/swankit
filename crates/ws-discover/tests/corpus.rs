@@ -22,6 +22,17 @@ fn check_baseline(got: &AssetMap, expected: &AssetMap) -> Result<()> {
         }
         let mut current = current.clone();
         current.overlaps = prior.overlaps.clone();
+        if !prior
+            .relations
+            .tiles
+            .iter()
+            .all(|r| current.relations.tiles.contains(r))
+        {
+            return Err(Error::Malformed("frozen tile relation removed".into()));
+        }
+        // New decoded streams may explain additional snapshot slots. Preserve
+        // every baseline placement while allowing verified added relations.
+        current.relations.tiles = prior.relations.tiles.clone();
         if current != *prior {
             return Err(Error::Malformed("frozen asset changed".into()));
         }
@@ -101,6 +112,15 @@ fn baseline_allows_additions_but_rejects_loss_and_changes() {
     check_baseline(&got, &expected).unwrap();
     got.assets[0].overlaps.push("additional".into());
     check_baseline(&got, &expected).unwrap();
+    got.assets[0].relations.tiles.push(ws_assets::map::TileRef {
+        id: "additional".into(),
+        at: ws_assets::map::Num(0),
+        skip: ws_assets::map::Num(0),
+    });
+    check_baseline(&got, &expected).unwrap();
+    let expected_relations = got.clone();
+    got.assets[0].relations.tiles.clear();
+    assert!(check_baseline(&got, &expected_relations).is_err());
     got.assets[0].offset.0 = 101;
     assert!(check_baseline(&got, &expected).is_err());
     got.assets.remove(0);

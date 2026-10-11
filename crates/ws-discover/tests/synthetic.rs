@@ -26,6 +26,7 @@ fn codec_requires_full_output_and_correct_identity() {
     e.seed["rom"]["sha256"] = json!(ws_assets::sha256_hex(&rom));
     e.ram[0x2000..0x2100].copy_from_slice(&payload);
     e.observations.push(Observation {
+        codec_destination: None,
         source: 100,
         routine: "f000:0100".into(),
         destination: Some(0x2000),
@@ -51,6 +52,7 @@ fn snapshot_sizes_and_source_bounds() {
     assert!(discover(&rom, &e).is_err());
     e.ram.push(0);
     e.observations.push(Observation {
+        codec_destination: None,
         source: usize::MAX,
         routine: "unknown".into(),
         destination: None,
@@ -66,6 +68,7 @@ fn snapshot_sizes_and_source_bounds() {
 fn uniform_false_positives_are_rejected() {
     let (rom, mut e) = fixture();
     e.observations.push(Observation {
+        codec_destination: None,
         source: 0,
         routine: "fill".into(),
         destination: Some(0x2000),
@@ -87,6 +90,7 @@ fn invalid_reference_is_not_promoted_to_verified_map() {
     let reference =
         serde_json::from_value(json!({"at":300,"width":2,"kind":"code-immediate"})).unwrap();
     e.observations.push(Observation {
+        codec_destination: None,
         source: 100,
         routine: "copy".into(),
         destination: Some(0x2000),
@@ -107,6 +111,7 @@ fn exit_witness_requires_exact_output_and_bounded_destination() {
     rom[100..100 + stored.len()].copy_from_slice(&stored);
     e.seed["rom"]["sha256"] = json!(ws_assets::sha256_hex(&rom));
     e.observations.push(Observation {
+        codec_destination: None,
         source: 100,
         routine: "decoder-exit".into(),
         destination: Some(0x4000),
@@ -133,6 +138,7 @@ fn same_source_and_destination_different_lengths_have_distinct_ids() {
     e.seed["rom"]["sha256"] = json!(ws_assets::sha256_hex(&rom));
     for n in [64, 128] {
         e.observations.push(Observation {
+            codec_destination: None,
             source: 100,
             routine: "copy".into(),
             destination: Some(0x2000),
@@ -169,6 +175,7 @@ fn temporal_destination_hint_cannot_hide_a_complete_header_witness() {
     e.seed["rom"]["sha256"] = json!(ws_assets::sha256_hex(&rom));
     e.ram[0x1000..0x1000 + payload.len()].copy_from_slice(&payload);
     e.observations.push(Observation {
+        codec_destination: None,
         source: 100,
         routine: "header-reader".into(),
         destination: Some(0x1001),
@@ -183,4 +190,66 @@ fn temporal_destination_hint_cannot_hide_a_complete_header_witness() {
     assert_eq!(proof[0].destination, 0x1000);
     e.ram[0x1000 + payload.len() - 1] ^= 1;
     assert!(discover(&rom, &e).unwrap().report.codec_proofs.is_empty());
+}
+
+#[test]
+fn new_codec_witnesses_have_editable_decoded_map_assets() {
+    let (mut rom, mut e) = fixture();
+    let payload: Vec<_> = (0..128).map(|n| (n % 17) as u8).collect();
+    let stored = ws_compress::lzss_12::encode(&payload).unwrap();
+    rom[100..100 + stored.len()].copy_from_slice(&stored);
+    e.seed["rom"]["sha256"] = json!(ws_assets::sha256_hex(&rom));
+    e.observations = serde_json::from_value(json!([{
+        "source":100,"routine":"instruction-flow entry=f0100", "destination":16384,
+        "decoded_length":128,"output":payload,"references":[]
+    }]))
+    .unwrap();
+    let got = discover(&rom, &e).unwrap();
+    assert!(got
+        .map
+        .assets
+        .iter()
+        .any(|a| a.codec == ws_assets::map::Codec::Lzss12));
+    assert!(got.report.codec_proofs[0].representable_in_map);
+    let c = ws_assets::Charmaps::load(&got.map, |_| unreachable!()).unwrap();
+    for a in got
+        .map
+        .assets
+        .iter()
+        .filter(|a| a.codec == ws_assets::map::Codec::Lzss12)
+    {
+        assert_eq!(
+            ws_assets::decode_asset(&got.map, &c, &rom, &a.id)
+                .unwrap()
+                .decoded,
+            payload
+        );
+    }
+}
+
+#[test]
+fn decoder_offset_is_distinct_from_linear_capture_destination() {
+    let (mut rom, mut e) = fixture();
+    let payload: Vec<u8> = (0..64).map(|n| n % 11).collect();
+    let stored = ws_compress::lzss_u16_zero::encode(&payload).unwrap();
+    rom[0x100..0x100 + stored.len()].copy_from_slice(&stored);
+    e.seed["rom"]["sha256"] = json!(ws_assets::sha256_hex(&rom));
+    let input = json!({"source":256,"routine":"executed-entry","destination":0x2013,
+        "codec_destination":0x13,"decoded_length":64,"output":payload,"prehistory":"low5-prefix"});
+    e.observations
+        .push(serde_json::from_value(input.clone()).unwrap());
+    let got = discover(&rom, &e).unwrap();
+    let asset = got
+        .map
+        .assets
+        .iter()
+        .find(|a| a.codec == ws_assets::map::Codec::LzssU16Zero)
+        .unwrap();
+    assert_eq!(
+        asset.codec_params.destination,
+        Some(ws_assets::map::Num(0x13))
+    );
+    let mut bad = input;
+    bad["codec_destination"] = json!(65536);
+    assert!(serde_json::from_value::<Observation>(bad).is_err());
 }

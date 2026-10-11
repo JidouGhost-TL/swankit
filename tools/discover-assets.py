@@ -6,6 +6,7 @@ A read/write temporal link is a candidate; Rust checks complete decode equality.
 No profile is selected from a title name. No free space is inferred.
 """
 import argparse, bisect, csv, hashlib, json, pathlib, re, subprocess, tempfile
+from asset_trace import observations as instruction_observations
 
 
 def addresses(decomp):
@@ -141,7 +142,7 @@ def table_texts(rom, plugin):
                            'font': table.get('font')})
     return result
 
-def prepare(rom_path, ram_path, ports_path, flow, decomp, profile, out, binary):
+def prepare(rom_path, ram_path, ports_path, flow, decomp, profile, out, binary, instruction_flow=None):
     rom = rom_path.read_bytes()
     ram = ram_path.read_bytes()
     routines = addresses(decomp) if decomp else []
@@ -194,6 +195,8 @@ def prepare(rom_path, ram_path, ports_path, flow, decomp, profile, out, binary):
             texts.append({'offset': offset, 'length': len(match[0]),
                           'charmap': ascii_map, 'routine': o['routine'],
                           'references': []})
+    if instruction_flow:
+        observations.extend(instruction_observations(instruction_flow.read_bytes()))
     family = None
     if profile:
         plugin = json.loads(profile.read_text())
@@ -230,12 +233,14 @@ def main():
     p.add_argument('--ram', type=pathlib.Path, required=True)
     p.add_argument('--ports', type=pathlib.Path, required=True)
     p.add_argument('--flow', type=pathlib.Path)
+    p.add_argument('--instruction-flow', type=pathlib.Path,
+                   help='WSAssetTrace calls.jsonl with instruction propagation and exact return outputs')
     p.add_argument('--decomp', type=pathlib.Path)
     p.add_argument('--profile', type=pathlib.Path)
     p.add_argument('--binary', type=pathlib.Path, required=True)
     p.add_argument('-o', '--output', type=pathlib.Path, required=True)
     a = p.parse_args()
-    prepare(a.rom, a.ram, a.ports, a.flow, a.decomp, a.profile, a.output, a.binary)
+    prepare(a.rom, a.ram, a.ports, a.flow, a.decomp, a.profile, a.output, a.binary, a.instruction_flow)
 
 
 if __name__ == '__main__':

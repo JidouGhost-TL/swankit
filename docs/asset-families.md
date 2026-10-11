@@ -5,12 +5,38 @@ ROM bytes, charmaps and screenshots belong in external corpus profiles.
 An identical routine proves a shared object, not a shared whole-game engine.
 A skeleton fingerprint without operand comparison is a candidate only.
 
-The snapshot adapter and `ws-discover` retain uncertainty. A temporal ROM read /
-RAM write association supplies a source candidate. A useful complete decoder
-output must equal captured RAM before a compressed source is accepted. This is
-not instruction taint tracking. Exact routine-exit witnesses can prove overwritten
-outputs; a prefix match cannot. Prior history requires an entry-state capture. Uniform data is excluded from codec evidence. References are checked
-against their stored arithmetic and stay incomplete, so relocation is disabled.
+The instruction collector `tools/ghidra/WSAssetTrace.java` wraps only the
+installed extension's private emulator instance and delegates every hardware
+callback. It propagates byte origins through executed loads, stores, register
+copies, integer operations and GDMA transfers. Call witnesses include entry
+registers, bank settings, source reads, destination spans and bytes captured at
+return. Run it through your isolated headless runner with arguments
+`OUTPUT FRAMES INPUT_KEYS 0`; `INPUT_KEYS` contains `first last hexmask` rows.
+The optional fifth argument `self-test` runs byte-provenance regressions instead.
+The collector targets the pinned Ghidra callback API; it never modifies the
+installed extension.
+
+`tools/discover-assets.py --instruction-flow OUTPUT/calls.jsonl` normalizes
+complete return witnesses without a temporal fallback. An exact complete decode
+must equal those captured bytes before a codec is accepted. `--flow` remains a
+legacy candidate input for reproducibility. The data-flow collector does not
+propagate branch control dependence, IRQ/DMA side effects outside the recorded
+callbacks, sound DMA, or arbitrary userops. Unknown output operators and origin
+sets over 64 bytes become opaque. Register/address origins can include constants,
+table indices and banks; they are reference candidates until field arithmetic
+and reader semantics are independently reviewed. They never authorize relocation.
+Uniform data and incomplete calls are not codec proof. Supplied prior history
+still requires an entry-state capture.
+
+`tools/discover-scenes.py ROM CAPTURES.json --binary SWANKIT -o OUT` accepts a
+`swankit-scene-captures/1` manifest with a `scenes` array of `id`, `ram`, `ports`,
+optional `instruction_flow` and optional `profile` paths (relative to the manifest).
+It writes and verifies a separate asset map per scene, preserving each scene's
+palette and tile placements. Its summary counts overlapping ROM ranges once and
+counts text offsets and reference fields once. The scene VRAM metric sums the
+per-scene denominators; compare a fixed single-frame selection separately.
+Hardware snapshot composition includes OAM sprites; it does not establish the
+ROM animation or frame-table grammar.
 
 | Family | Recognizing evidence | Storage and loader policy |
 | --- | --- | --- |
@@ -59,11 +85,11 @@ not typography. Data profiles must preserve this distinction.
 
 ## Current map boundary
 
-The existing map codec enum accepts three compression grammars. New codec proofs
-are emitted in a discovery sidecar; their stored extents are represented as raw
-`other` assets. They are not mislabeled as extractable tiles. A map enum addition
-and corresponding `ws-assets` decode/encode dispatch are required to render and
-replace these new compressed assets. That owner change is tracked externally.
+The map accepts all five compression grammars, including `ws-lzss-u16-zero` with
+an explicit destination and prehistory policy, and `ws-lzss-12` with a decoded
+size and explicit prior history. Discovery retains immutable raw stored-byte
+sidecars and adds editable decoded assets for complete witnesses. Earlier maps
+remain valid baselines; a sidecar alone does not represent an editable tile set.
 
 No free-space ledger is synthesized. Executed/data-read CDL alone cannot prove
 that an unvisited byte is free. Multi-scene captures, routine entry/exit witnesses,
@@ -103,3 +129,10 @@ entry/exit evidence establishes execution context. Decoder destination
 parameters denote the original segment offset. Segmented observations must
 distinguish that offset from linear RAM placement; bank aliases and DMA origins
 need explicit evidence rather than an inferred history buffer.
+
+An observation may supply `codec_destination` (u16) separately from the linear
+RAM `destination`. It is the decoder's original offset register. Explicit
+register evidence disables the legacy aligned fallback and is retained in the
+map codec parameters. The instruction adapter infers it only when entry DI and
+DS or ES reproduce the captured span's linear start. Other register conventions
+require a reviewed profile, rather than a guessed DI.

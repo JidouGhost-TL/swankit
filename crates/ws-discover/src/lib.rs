@@ -16,6 +16,9 @@ pub struct Observation {
     pub routine: String,
     #[serde(default)]
     pub destination: Option<usize>,
+    /// Actual decoder offset register when its segmented address matches the capture.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub codec_destination: Option<u16>,
     /// Known transfer length, not a codec's claimed length.
     #[serde(default)]
     pub length: Option<usize>,
@@ -138,6 +141,16 @@ fn locate_witness(evidence: &Evidence, o: &Observation, bytes: &[u8]) -> Option<
 
 /// Codec acceptance requires complete decoder output equality to captured RAM.
 /// Seeds are identity checked, references validated, and relocation stays disabled.
+fn add_asset(document: &mut Value, asset: Value) -> Result<()> {
+    let assets = document["assets"]
+        .as_array_mut()
+        .ok_or_else(|| bad("assets is not array"))?;
+    if !assets.iter().any(|a| a["id"] == asset["id"]) {
+        assets.push(asset);
+    }
+    Ok(())
+}
+
 pub fn discover(rom: &[u8], evidence: &Evidence) -> Result<Discovery> {
     if evidence.schema != SCHEMA {
         return Err(bad("unsupported discovery evidence schema"));
@@ -209,10 +222,14 @@ pub fn discover(rom: &[u8], evidence: &Evidence) -> Result<Discovery> {
                                 decoded_length: d.bytes.len(),
                                 decoded_sha256: ws_assets::sha256_hex(&d.bytes),
                                 routine: o.routine.clone(),
-                                representable_in_map: false,
+                                representable_in_map: true,
                                 prehistory: None,
                             });
-                            document["assets"].as_array_mut().ok_or_else(||bad("assets not array"))?.push(json!({"id":format!("codec-source.{:x}",o.source),"kind":"other","offset":o.source,"length":d.consumed,"codec":"raw","confidence":"high","references_complete":false,"references":o.references,"evidence":{"loader":o.routine,"trace":format!("ws-lzss-12 output equals RAM {dest:#x}; see discovery report"),"notes":"Stored compressed bytes only; codec enum addition requested."}}));
+                            add_asset(
+                                &mut document,
+                                json!({"id":format!("codec-source.{:x}",o.source),"kind":"other","offset":o.source,"length":d.consumed,"codec":"raw","confidence":"high","references_complete":false,"references":o.references,"evidence":{"loader":o.routine,"trace":format!("ws-lzss-12 output equals RAM {dest:#x}; see discovery report"),"notes":"Stored compressed bytes only; codec enum addition requested."}}),
+                            )?;
+                            candidates.push(("ws-lzss-12", d.bytes, d.consumed));
                         }
                     }
                 }
@@ -225,14 +242,14 @@ pub fn discover(rom: &[u8], evidence: &Evidence) -> Result<Discovery> {
             _ => return Err(bad("unknown LZSS prehistory policy")),
         };
         let initial_destination = o
-            .destination
-            .and_then(|d| u16::try_from(d).ok())
+            .codec_destination
+            .or_else(|| o.destination.and_then(|d| u16::try_from(d).ok()))
             .unwrap_or(0x2000);
         // A temporal RAM-write hint is not the decoder's original DI. Retry
         // the canonical aligned destination if the hint produces no witness;
         // the actual located destination must still reproduce every byte.
         let mut destinations = vec![initial_destination];
-        if initial_destination != 0x2000 {
+        if o.codec_destination.is_none() && initial_destination != 0x2000 {
             destinations.push(0x2000);
         }
         for initial_destination in destinations {
@@ -249,7 +266,7 @@ pub fn discover(rom: &[u8], evidence: &Evidence) -> Result<Discovery> {
                     let Ok(checked) = ws_compress::lzss_u16_zero::decode_with_policy(
                         window,
                         65536,
-                        dest as u16,
+                        o.codec_destination.unwrap_or(dest as u16),
                         policy,
                     ) else {
                         continue;
@@ -265,12 +282,15 @@ pub fn discover(rom: &[u8], evidence: &Evidence) -> Result<Discovery> {
                         decoded_length: d.bytes.len(),
                         decoded_sha256: ws_assets::sha256_hex(&d.bytes),
                         routine: o.routine.clone(),
-                        representable_in_map: false,
+                        representable_in_map: true,
                         prehistory: o.prehistory.clone(),
                     });
-                    // The existing asset codec enum cannot represent this stream.
-                    // Keep its stored extent as raw data; never mislabel it as tiles.
-                    document["assets"].as_array_mut().ok_or_else(||bad("assets not array"))?.push(json!({"id":format!("codec-source.{:x}",o.source),"kind":"other","offset":o.source,"length":d.consumed,"codec":"raw","confidence":"high","references_complete":false,"references":o.references,"evidence":{"loader":o.routine,"trace":format!("ws-lzss-u16-zero output equals RAM {dest:#x}; see discovery report"),"notes":"Stored compressed bytes only; codec enum addition requested."}}));
+                    // Retain the immutable stored-byte baseline alongside the decoded asset.
+                    add_asset(
+                        &mut document,
+                        json!({"id":format!("codec-source.{:x}",o.source),"kind":"other","offset":o.source,"length":d.consumed,"codec":"raw","confidence":"high","references_complete":false,"references":o.references,"evidence":{"loader":o.routine,"trace":format!("ws-lzss-u16-zero output equals RAM {dest:#x}; see discovery report"),"notes":"Stored compressed bytes only; codec enum addition requested."}}),
+                    )?;
+                    candidates.push(("ws-lzss-u16-zero", d.bytes, d.consumed));
                     break;
                 }
             }
@@ -293,15 +313,27 @@ pub fn discover(rom: &[u8], evidence: &Evidence) -> Result<Discovery> {
                 && (dest - base) % tb == 0
                 && bytes.len() % tb == 0;
             let id = format!("trace.{codec}.{:x}.{dest:x}.{stored:x}", o.source);
-            let mut format = if tiles {
+            if document["assets"]
+                .as_array()
+                .is_some_and(|a| a.iter().any(|a| a["id"] == id))
+            {
+                accepted = true;
+                continue;
+            }
+            let format = if tiles {
                 json!({"bpp":if tb==32 {4}else{2},"layout":if tb==32 && mode&0x20!=0 {"packed"}else{"planar"},"width":16})
             } else {
                 json!({})
             };
-            if codec == "ws-okumura-lzss" {
-                format["decoded_length"] = json!(bytes.len());
-            }
-            let asset = json!({"id":id,"kind":if tiles {"tiles"}else{"other"},"offset":o.source,"length":stored,"codec":codec,"format":format,"confidence":"high","references_complete":false,"references":o.references,"evidence":{"loader":o.routine,"trace":format!("complete {codec} decode equals captured RAM {dest:#x}..{end:#x}"),"notes":"A complete byte match establishes this payload, not a general taint relationship or exhaustive references."}});
+            let codec_params = match codec {
+                "ws-okumura-lzss" => json!({"decoded_length": bytes.len()}),
+                "ws-lzss-12" => json!({"decoded_length": bytes.len(), "history": []}),
+                "ws-lzss-u16-zero" => {
+                    json!({"destination": o.codec_destination.map_or(dest, usize::from), "prehistory": o.prehistory.as_deref().unwrap_or("low5-prefix")})
+                }
+                _ => json!({}),
+            };
+            let asset = json!({"id":id,"kind":if tiles {"tiles"}else{"other"},"offset":o.source,"length":stored,"codec":codec,"codec_params":codec_params,"format":format,"confidence":"high","references_complete":false,"references":o.references,"evidence":{"loader":o.routine,"trace":format!("complete {codec} decode equals captured RAM {dest:#x}..{end:#x}"),"notes":"A complete byte match establishes this payload, not a general taint relationship or exhaustive references."}});
             document["assets"]
                 .as_array_mut()
                 .ok_or_else(|| bad("assets is not array"))?
@@ -362,7 +394,10 @@ pub fn discover(rom: &[u8], evidence: &Evidence) -> Result<Discovery> {
         if let Some(f) = &t.font {
             relations["font"] = json!(f);
         }
-        document["assets"].as_array_mut().ok_or_else(||bad("assets not array"))?.push(json!({"id":id,"kind":"text","offset":t.offset,"length":t.length,"relations":relations,"references":t.references,"references_complete":false,"confidence":"low","evidence":{"loader":t.routine,"notes":"External charmap/profile and observed source; reading a string does not prove dialogue semantics."}}));
+        add_asset(
+            &mut document,
+            json!({"id":id,"kind":"text","offset":t.offset,"length":t.length,"relations":relations,"references":t.references,"references_complete":false,"confidence":"low","evidence":{"loader":t.routine,"notes":"External charmap/profile and observed source; reading a string does not prove dialogue semantics."}}),
+        )?;
         report.text_entries += 1;
         report.references += t.references.len();
     }
@@ -452,7 +487,7 @@ pub fn discover(rom: &[u8], evidence: &Evidence) -> Result<Discovery> {
             }
         }
     }
-    // Sidecar proofs explain VRAM but cannot yet be rendered by the map codec enum.
+    // Include legacy proofs as well as decoded assets; byte membership is a union.
     for p in &report.codec_proofs {
         let stored = bytes_at(rom, p.source, p.stored_length)?;
         let d = if p.codec == "ws-lzss-u16-zero" {
