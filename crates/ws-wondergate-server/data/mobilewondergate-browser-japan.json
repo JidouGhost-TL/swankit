@@ -1,0 +1,41 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "mobilewondergate-browser-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "MobileWonderGate browser home route observed in a native request. This small local HTML page is newly authored revival content; no original service page, assets or personal data are bundled."
+  },
+  "hosts": [
+    "www.mopera.ne.jp"
+  ],
+  "boards": {},
+  "values": {},
+  "records": {},
+  "routes": [
+    {
+      "id": "local-home",
+      "method": "GET",
+      "match": {
+        "path": "/"
+      },
+      "errors": {
+        "invalid": 400,
+        "method": 405,
+        "method_first": true
+      },
+      "respond": {
+        "status": 200,
+        "content_type": "text/html",
+        "body": [
+          {
+            "text": "<html><head><title>Local page</title></head><body><h1>WonderGate</h1><p>Local service is working.</p></body></html>\r\n"
+          }
+        ]
+      }
+    }
+  ],
+  "limits": {
+    "max_body": 128,
+    "max_response": 256
+  }
+}

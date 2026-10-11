@@ -6,9 +6,11 @@ use serde_json::{json, Value};
 use ws_wondergate_server::{
     http,
     services::bpl,
-    store::{MemoryStore, Store, Submission},
+    store::{MemoryStore, Submission},
     FixedClock, Limits, SeededRng, Server, Timestamp,
 };
+#[path = "../examples/support/history.rs"]
+mod history;
 struct ServicesDigest;
 impl Digest for ServicesDigest {
     fn digest(&self, bytes: &[u8], args: &Args) -> Result<Value> {
@@ -22,7 +24,7 @@ impl Digest for ServicesDigest {
             .ok_or_else(|| Error::Malformed("missing corpus seed".into()))?;
         let (reply, error) = match args.str("protocol") {
             Some("HTTP") => {
-                let store = MemoryStore::new();
+                let mut history = Vec::new();
                 if let Some(rows) = args.get("store") {
                     let rows = rows
                         .as_array()
@@ -33,9 +35,7 @@ impl Digest for ServicesDigest {
                     for row in rows {
                         let row: Submission = serde_json::from_value(row.clone())
                             .map_err(|e| Error::Malformed(e.to_string()))?;
-                        store
-                            .submit(row)
-                            .map_err(|e| Error::Malformed(e.to_string()))?;
+                        history.push(row);
                     }
                 }
                 if let Some(path) = args.str("store_path") {
@@ -58,11 +58,11 @@ impl Digest for ServicesDigest {
                         return Err(Error::Malformed("oversized corpus starting history".into()));
                     }
                     for row in rows {
-                        store
-                            .submit(row)
-                            .map_err(|e| Error::Malformed(e.to_string()))?;
+                        history.push(row);
                     }
                 }
+                let store = history::FixtureStore::new(history)
+                    .map_err(|e| Error::Malformed(e.to_string()))?;
                 let app = Server::bundled(
                     Box::new(store),
                     Box::new(FixedClock(clock)),
