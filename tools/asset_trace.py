@@ -34,7 +34,7 @@ def observations(capture):
         di = registers.get('DI')
         codec_dest = None
         if isinstance(di, int) and 0 <= di <= 65535:
-            if any(isinstance(registers.get(seg), int) and ((registers[seg]*16+di) & 0xfffff) == dest
+            if any(isinstance(registers.get(seg), int) and ((registers[seg]*16+di) & 0xfffff) == row.get('cpu_destination', dest)
                    for seg in ['DS', 'ES']):
                 codec_dest = di
         result.append({'source': source, 'routine': f"instruction-flow entry={row['entry']:05x} call={row['id']} capture={capture_hash}",

@@ -63,3 +63,7 @@ class TraceTests(unittest.TestCase):
         self.assertIn(dict(at=20,width=4,form='far',source=0x10040,proof_kind='rom-read'),fields)
         partial=self.row(source=0x10040,source_end=0x10080,pointer_origins=[20,21,22],banks=['0:1:0'])
         self.assertFalse(any(r['width']==4 for r in reference_fields(partial,bytes(rom))))
+
+    def test_mirrored_ram_keeps_the_cpu_offset_evidence(self):
+        row=self.row(destination=0x2000,cpu_destination=0x6000,entry_registers={'DI':0x6000,'DS':0})
+        self.assertEqual(observations(row)[0]['codec_destination'],0x6000)

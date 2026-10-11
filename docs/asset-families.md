@@ -8,11 +8,16 @@ A skeleton fingerprint without operand comparison is a candidate only.
 The instruction collector `tools/ghidra/WSAssetTrace.java` wraps only the
 installed extension's private emulator instance and delegates every hardware
 callback. It propagates byte origins through executed loads, stores, register
-copies, integer operations and GDMA transfers. Call witnesses include entry
-registers, bank settings, source reads, destination spans and bytes captured at
+copies, integer operations and GDMA transfers. Monochrome RAM aliases share
+provenance cells; CPU stores crossing the RAM boundary do not wrap. Call witnesses include entry
+registers, bank settings for direct ROM reads, source origins carried through
+earlier registers/RAM, physical destination spans, CPU destination addresses and bytes captured at
 return. Run it through your isolated headless runner with arguments
 `OUTPUT FRAMES INPUT_KEYS 0`; `INPUT_KEYS` contains `first last hexmask` rows.
 The optional fifth argument `self-test` runs byte-provenance regressions instead.
+`WSAssetTraceCarryChecks.java OUTPUT` adds cross-call, RAM alias and boundary
+regressions. Inherited RAM origins retain ROM file offsets but do not invent the
+bank settings of an earlier call.
 The collector targets the pinned Ghidra callback API; it never modifies the
 installed extension.
 
@@ -134,5 +139,5 @@ An observation may supply `codec_destination` (u16) separately from the linear
 RAM `destination`. It is the decoder's original offset register. Explicit
 register evidence disables the legacy aligned fallback and is retained in the
 map codec parameters. The instruction adapter infers it only when entry DI and
-DS or ES reproduce the captured span's linear start. Other register conventions
+DS or ES reproduce the captured span's CPU start before physical RAM aliasing. Other register conventions
 require a reviewed profile, rather than a guessed DI.

@@ -40,10 +40,12 @@ public class WSAssetTrace extends GhidraScript {
         String regs;
         final TreeSet<Long> sources = new TreeSet<>(), pointers = new TreeSet<>();
         final TreeSet<Integer> destinations = new TreeSet<>();
+        final Map<Integer,Integer> cpuDestinations = new HashMap<>();
         final TreeSet<String> banks = new TreeSet<>();
         long opaque;
     }
     static String key(AddressSpace space, long at) { return space.getSpaceID()+":"+at; }
+    int physicalRam(long at) {return (int)at & (machine.color?65535:16383);}
     static long number(byte[] b) {
         long v=0; for(int i=0;i<Math.min(8,b.length);i++) v|=(b[i]&255L)<<(8*i); return v;
     }
@@ -188,12 +190,13 @@ public class WSAssetTrace extends GhidraScript {
         TreeSet<Long> all=new TreeSet<>();
         for(int i=0;i<size;i++) {
             long ro=machine.romOffset(at+i);
-            Set<Long> src=ro>=0?Set.of(ro):get(space,at+i,1);
+            Set<Long> src=ro>=0?Set.of(ro):get(space,at+i<65536?physicalRam(at+i):at+i,1);
             all.addAll(src);put(out.getAddress().getAddressSpace(),out.getOffset()+i,1,src);
         }
-        for(Call c:stack) if(at>=0x20000) {
+        for(Call c:stack) {
             for(long ro:all) if(ro<IMMEDIATE)c.sources.add(ro);
-            c.pointers.addAll(ptr);c.banks.add(machine.ports[0xc0]+":"+machine.ports[0xc2]+":"+machine.ports[0xc3]);
+            c.pointers.addAll(ptr);
+            if(at>=0x20000)c.banks.add(machine.ports[0xc0]+":"+machine.ports[0xc2]+":"+machine.ports[0xc3]);
         }
     }
     void stored(PcodeOp op, AddressSpace space, byte[] offset, int size, byte[] value) {
@@ -206,10 +209,14 @@ public class WSAssetTrace extends GhidraScript {
         if(space!=machine.ram || at>=0x10000)return;
         stores++;
         for(int i=0;i<size;i++) {
+            if(at+i>=65536)continue;
+            int physical=physicalRam(at+i);
             Set<Long> origin=src.isConstant()?origins(src):get(src.getAddress().getAddressSpace(),src.getOffset()+i,1);
-            put(space,at+i,1,origin);
-            boolean rom=origin.stream().anyMatch(x->x<IMMEDIATE);
-            for(Call c:stack)c.destinations.add((int)at+i);
+            put(space,physical,1,origin);
+            for(Call c:stack) {
+                for(long source:origin)if(source<IMMEDIATE)c.sources.add(source);
+                c.destinations.add(physical);c.cpuDestinations.put(physical,(int)at+i);
+            }
         }
     }
     void dma() {
@@ -223,10 +230,13 @@ public class WSAssetTrace extends GhidraScript {
             int source=fields.get("src"),dest=fields.get("dst"),n=fields.get("words")*2;
             int step=(machine.ports[0x48]&0x40)!=0?-2:2;
             for(int i=0;i<n;i+=2)for(int b=0;b<2;b++) {
-                int a=(source+(i/2)*step+b)&0xfffff,d=(dest+(i/2)*step+b)&65535;
-                long ro=machine.romOffset(a);Set<Long> origin=ro>=0?Set.of(ro):get(machine.ram,a,1);
+                int a=(source+(i/2)*step+b)&0xfffff,cpuDest=(dest+(i/2)*step+b)&65535,d=physicalRam(cpuDest);
+                long ro=machine.romOffset(a);Set<Long> origin=ro>=0?Set.of(ro):get(machine.ram,a<65536?physicalRam(a):a,1);
                 put(machine.ram,d,1,origin);
-                for(Call c:stack) {if(ro>=0)c.sources.add(ro);c.destinations.add(d);}
+                for(Call c:stack) {
+                    for(long sourceOrigin:origin)if(sourceOrigin<IMMEDIATE)c.sources.add(sourceOrigin);
+                    c.destinations.add(d);c.cpuDestinations.put(d,cpuDest);
+                }
             }
         }
     }
@@ -252,7 +262,7 @@ public class WSAssetTrace extends GhidraScript {
         }
         if(causal.isEmpty())return;
         byte[] output=machine.read(lo,hi-lo);StringBuilder hex=new StringBuilder();for(byte b:output)hex.append(String.format("%02x",b&255));
-        calls.printf("{\"kind\":\"instruction-flow\",\"id\":%d,\"frame\":%d,\"entry\":%d,\"return\":%d,\"entry_registers\":%s,\"source\":%d,\"source_end\":%d,\"source_bytes\":%d,\"causal_source_bytes\":%d,\"destination\":%d,\"length\":%d,\"explained_bytes\":%d,\"complete_return\":%s,\"opaque_operations\":%d,\"pointer_origins\":%s,\"banks\":%s,\"output_hex\":\"%s\"}%n",c.id,c.frame,c.entry,c.ret,c.regs,c.sources.first(),c.sources.last()+1,c.sources.size(),causal.size(),lo,hi-lo,explained,complete,opaque-c.opaque,c.pointers,listStrings(c.banks),hex);
+        calls.printf("{\"kind\":\"instruction-flow\",\"id\":%d,\"frame\":%d,\"entry\":%d,\"return\":%d,\"entry_registers\":%s,\"source\":%d,\"source_end\":%d,\"source_bytes\":%d,\"causal_source_bytes\":%d,\"destination\":%d,\"cpu_destination\":%d,\"length\":%d,\"explained_bytes\":%d,\"complete_return\":%s,\"opaque_operations\":%d,\"pointer_origins\":%s,\"banks\":%s,\"output_hex\":\"%s\"}%n",c.id,c.frame,c.entry,c.ret,c.regs,c.sources.first(),c.sources.last()+1,c.sources.size(),causal.size(),lo,c.cpuDestinations.getOrDefault(lo,lo),hi-lo,explained,complete,opaque-c.opaque,c.pointers,listStrings(c.banks),hex);
     }
     static String listStrings(Collection<String> s) {StringJoiner j=new StringJoiner(",","[","]");for(String x:s)j.add("\""+x+"\"");return j.toString();}
     @Override public void run() throws Exception {
