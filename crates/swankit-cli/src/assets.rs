@@ -115,7 +115,8 @@ pub fn run(words: Vec<String>) -> Result<()> {
                 _ => ReplaceInput::Bytes(raw),
             };
             let options = ReplaceOptions { force, allocate };
-            let outcome = replace_with(&map, &charmaps, &rom, &Replacement { id, input }, &options)?;
+            let outcome =
+                replace_with(&map, &charmaps, &rom, &Replacement { id, input }, &options)?;
             io::write(&output, &outcome.rom, force)?;
             if let Some(path) = &ips {
                 io::write(path, &swankit::patch::create(&rom, &outcome.rom)?, force)?;

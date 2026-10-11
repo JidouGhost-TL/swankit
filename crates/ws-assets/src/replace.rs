@@ -3,8 +3,8 @@
 //! when every reference is known. Nothing is written outside the asset's own
 //! range, a declared free range or a declared reference.
 use crate::data::{decode_asset, encode_payload};
-use crate::gfx::{unrender_tilemap, unrender_tiles};
-use crate::map::{AssetMap, FreeRange, Kind, Num};
+use crate::gfx::{unrender_tilemap_with, unrender_tiles, Allocation};
+use crate::map::{AssetMap, FreeRange, Kind, Num, TileRange};
 use crate::refs::{encode_reference, references_for};
 use crate::text::Charmaps;
 use crate::{check_identity, malformed, sha256_hex};
@@ -90,13 +90,16 @@ fn payloads(
     charmaps: &Charmaps,
     rom: &[u8],
     r: &Replacement,
-    _options: &ReplaceOptions,
+    options: &ReplaceOptions,
+    allocated: &mut Vec<Allocation>,
 ) -> Result<(BTreeMap<String, Vec<u8>>, usize)> {
     let asset = map.asset(&r.id)?;
     Ok(match (&r.input, asset.kind) {
         (ReplaceInput::Image(img), Kind::Tiles) => unrender_tiles(map, charmaps, rom, &r.id, img)?,
         (ReplaceInput::Image(img), Kind::Tilemap) => {
-            unrender_tilemap(map, charmaps, rom, &r.id, img)?
+            let edits = unrender_tilemap_with(map, charmaps, rom, &r.id, img, options.allocate)?;
+            *allocated = edits.allocated;
+            (edits.payloads, edits.approximated)
         }
         (ReplaceInput::Image(img), Kind::Palette) => {
             if asset.format.palette_format.as_deref().unwrap_or("rgb444") != "rgb444" {
@@ -127,6 +130,36 @@ fn payloads(
     })
 }
 
+/// Remove one tile index from a tiles asset's declared free tiles.
+fn take_free_tile(map: &mut AssetMap, id: &str, index: usize) -> Result<()> {
+    let asset = map
+        .assets
+        .iter_mut()
+        .find(|a| a.id == id)
+        .ok_or_else(|| malformed(format!("unknown asset id {id:?}")))?;
+    let mut ranges = Vec::new();
+    for r in asset.format.free_tiles.take().unwrap_or_default() {
+        let (first, count) = (r.first.usize()?, r.count.usize()?);
+        if (first..first + count).contains(&index) {
+            for (f, c) in [
+                (first, index - first),
+                (index + 1, first + count - index - 1),
+            ] {
+                if c > 0 {
+                    ranges.push(TileRange {
+                        first: Num(f as u64),
+                        count: Num(c as u64),
+                    });
+                }
+            }
+        } else {
+            ranges.push(r);
+        }
+    }
+    asset.format.free_tiles = (!ranges.is_empty()).then_some(ranges);
+    Ok(())
+}
+
 fn bank(offset: usize) -> usize {
     offset >> 16
 }
@@ -150,7 +183,9 @@ pub fn replace_with(
     options: &ReplaceOptions,
 ) -> Result<ReplaceOutcome> {
     check_identity(map, rom)?;
-    let (decoded, approximated_pixels) = payloads(map, charmaps, rom, replacement, options)?;
+    let mut allocated = Vec::new();
+    let (decoded, approximated_pixels) =
+        payloads(map, charmaps, rom, replacement, options, &mut allocated)?;
     let mut warnings = Vec::new();
     for (id, payload) in &decoded {
         let asset = map.asset(id)?;
@@ -168,6 +203,13 @@ pub fn replace_with(
     let mut out = rom.to_vec();
     let mut new_map = map.clone();
     let mut actions = Vec::new();
+    for (tiles, index, slot, cells) in &allocated {
+        take_free_tile(&mut new_map, tiles, *index)?;
+        actions.push(format!(
+            "{tiles}: free tile {index} (VRAM slot {slot}) allocated for {} cells {cells:?}",
+            replacement.id
+        ));
+    }
     for (id, payload) in &decoded {
         let asset = map.asset(id)?;
         let old = decode_asset(map, charmaps, rom, id)?;

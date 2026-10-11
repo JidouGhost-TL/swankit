@@ -114,6 +114,8 @@
             "line_width": {"type": "integer", "minimum": 1},
             "lines": {"type": "integer", "minimum": 1},
             "page_break": {"type": "string"},
+            "free_tiles": {"type": "array", "items": {"type": "object", "additionalProperties": false,
+              "required": ["first", "count"], "properties": {"first": {"$ref": "#/$defs/num"}, "count": {"$ref": "#/$defs/num"}}}},
             "advance": {"type": "integer", "minimum": 0},
             "glyph_widths": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}}
           }

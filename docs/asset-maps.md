@@ -49,7 +49,9 @@ hexadecimal strings. Unknown fields are errors.
 Format parameters by kind:
 
 - `tiles`: `bpp` 2 or 4, `layout` `planar`/`packed`, preview `width` (columns)
-  and `palette_index` with `relations.palette`.
+  and `palette_index` with `relations.palette`. `free_tiles` (`first`,
+  `count` runs of tile indices) declares tiles the game never draws, with
+  evidence; `replace --allocate` fills them.
 - `tilemap`: `width`, `height` in cells; `entry` `ws-word` (the hardware screen
   word: tile 0-8, palette 9-12, bank 13, flips 14-15; `color` false ignores the
   bank bit), `byte` (tile number plus `tile_base`, `attributes` OR-ed), or
@@ -130,7 +132,12 @@ spelling, or any other file as decoded bytes. Pixels map to the cell's palette
 (exact colour first, otherwise nearest; the count of nearest matches is
 reported). A tilemap edit rewrites the tiles it draws and leaves the map words
 alone; a tile drawn by several cells must receive identical pixels or the
-command refuses. Text edits use `ws_text::CharacterMap::encode_edit`: every
+command refuses. With `--allocate` the version equal to the original tile
+(otherwise the most used one) keeps the slot and every other version takes a
+declared free tile of a tiles asset this map loads (at the VRAM slot that
+relation loads it to, and only where no later relation owns the slot); the
+cells drawing it are rewritten to that slot (other entry bits kept) and the
+patched map no longer lists the tile as free. Too few free tiles is refused. Text edits use `ws_text::CharacterMap::encode_edit`: every
 unchanged source token is kept byte for byte (hidden control operands,
 attribute bits, aliases), only the edited span is canonically encoded, and
 inside that span each glyph keeps the hidden attribute bits (the bits a

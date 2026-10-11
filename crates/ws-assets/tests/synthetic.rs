@@ -572,3 +572,83 @@ fn too_wide_lines_are_refused_unless_forced() {
     let forced = edit(&map, &rom, &"Ａ".repeat(19), true).unwrap();
     assert!(forced.warnings.iter().any(|w| w.contains("304")));
 }
+
+/// Three cells all drawn by tile slot 0; tile index 2 of `t` is declared free.
+fn shared_tile_map() -> (Vec<u8>, AssetMap) {
+    let mut rom = rom();
+    rom[MAP..MAP + 6].fill(0);
+    rom[TILES + 32..TILES + 48].copy_from_slice(&tile(0));
+    fix_checksum(&mut rom).unwrap();
+    let mut v = map_json(&rom);
+    v["assets"][0]["length"] = json!(48);
+    v["assets"][0]["format"]["free_tiles"] = json!([{"first": 2, "count": 1}]);
+    v["assets"][1]["length"] = json!(6);
+    v["assets"][1]["format"]["width"] = json!(3);
+    (rom, load(&v))
+}
+
+fn paint_cells(cells: &[(usize, [u8; 4])]) -> Image {
+    let mut image = Image::try_new(24, 8, [255, 0, 0, 255].repeat(192)).unwrap();
+    for &(cell, colour) in cells {
+        for y in 0..8 {
+            for x in cell * 8..cell * 8 + 8 {
+                image.rgba[(y * 24 + x) * 4..(y * 24 + x) * 4 + 4].copy_from_slice(&colour);
+            }
+        }
+    }
+    image
+}
+
+fn edit_map(
+    map: &AssetMap,
+    rom: &[u8],
+    image: Image,
+    allocate: bool,
+) -> Result<ReplaceOutcome, String> {
+    ws_assets::replace_with(
+        map,
+        &charmaps(map),
+        rom,
+        &Replacement {
+            id: "m".into(),
+            input: ReplaceInput::Image(image),
+        },
+        &ws_assets::ReplaceOptions {
+            allocate,
+            ..Default::default()
+        },
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[test]
+fn allocate_gives_differently_edited_shared_cells_free_tiles() {
+    let (rom, map) = shared_tile_map();
+    let blue = [0, 0, 255, 255];
+    // Without --allocate the shared tile cannot take two different edits.
+    let err = edit_map(&map, &rom, paint_cells(&[(2, blue)]), false).unwrap_err();
+    assert!(err.contains("--allocate"), "{err}");
+    // With it, cell 2 gets free tile 2 (VRAM slot 2); cells 0 and 1 keep slot 0.
+    let out = edit_map(&map, &rom, paint_cells(&[(2, blue)]), true).unwrap();
+    assert_eq!(out.rom[MAP..MAP + 6], [0, 0, 0, 0, 2, 0]);
+    assert_eq!(out.rom[TILES..TILES + 32], rom[TILES..TILES + 32]);
+    let t2 = decode_tile(&out.rom, TILES + 32, TileFormat::Bpp2).unwrap();
+    assert!(t2.iter().all(|&v| v == 3));
+    assert!(checksum_ok(&out.rom));
+    // The patched map no longer lists the used tile as free and renders the edit.
+    let t = out.map.asset("t").unwrap();
+    assert!(t.format.free_tiles.as_ref().is_none_or(|f| f.is_empty()));
+    let cm = charmaps(&out.map);
+    let image = ws_assets::render_tilemap(&out.map, &cm, &out.rom, "m").unwrap();
+    assert_eq!(pixel(&image, 16, 0), blue);
+    assert_eq!(pixel(&image, 0, 0), [255, 0, 0, 255]);
+    // Two new versions need two free tiles: refused clearly.
+    let err = edit_map(
+        &map,
+        &rom,
+        paint_cells(&[(1, [0, 255, 0, 255]), (2, blue)]),
+        true,
+    )
+    .unwrap_err();
+    assert!(err.contains("free tile"), "{err}");
+}

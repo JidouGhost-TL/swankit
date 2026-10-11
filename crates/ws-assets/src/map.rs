@@ -440,9 +440,21 @@ pub struct Format {
     /// Font: pixels a glyph advances (default `tiles_wide` * 8).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub advance: Option<u32>,
+    /// Tiles: tile indices of the decoded payload the game never draws
+    /// (declared with evidence); `replace --allocate` fills them with new tiles.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub free_tiles: Option<Vec<TileRange>>,
     /// Font: advances of glyphs that differ from `advance`, by decoded spelling.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub glyph_widths: Option<BTreeMap<String, u32>>,
+}
+
+/// A run of tile indices inside a tiles asset.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TileRange {
+    pub first: Num,
+    pub count: Num,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]

@@ -652,6 +652,81 @@ pub fn unrender_tilemap(
     id: &str,
     image: &Image,
 ) -> Result<TileEdits> {
+    let edits = unrender_tilemap_with(map, charmaps, rom, id, image, false)?;
+    Ok((edits.payloads, edits.approximated))
+}
+
+/// A free tile used by `--allocate`: tiles asset id, tile index, VRAM slot,
+/// and the cells now drawing it.
+pub(crate) type Allocation = (String, usize, usize, Vec<usize>);
+
+/// One edited version of a tile and the cells that draw it.
+type TileVersion = ([u8; 64], Vec<usize>);
+
+/// Result of a tilemap image edit.
+pub(crate) struct MapEdits {
+    pub payloads: BTreeMap<String, Vec<u8>>,
+    pub approximated: usize,
+    /// Free tiles used: (tiles asset id, tile index, VRAM slot, cells).
+    pub allocated: Vec<Allocation>,
+}
+
+/// One tile relation of a tilemap: which VRAM slots its tiles occupy.
+struct Loaded {
+    id: String,
+    at: usize,
+    skip: usize,
+    count: usize,
+}
+
+/// Set a cell's tile slot in the stored map entry, keeping its other bits.
+fn set_cell_tile(asset: &Asset, data: &mut [u8], cell: usize, slot: usize) -> Result<()> {
+    let f = &asset.format;
+    let base = f.tile_base.unwrap_or_default().0 as u16;
+    let color = f.color.unwrap_or(true);
+    let refuse = || {
+        malformed(format!(
+            "{}: cell {cell} cannot address tile slot {slot}",
+            asset.id
+        ))
+    };
+    let slot16 = u16::try_from(slot).map_err(|_| refuse())?;
+    match f.entry.as_deref().unwrap_or("ws-word") {
+        "ws-word" => {
+            if slot >= if color { 1024 } else { 512 } {
+                return Err(refuse());
+            }
+            let at = cell * 2;
+            let word = u16::from_le_bytes([data[at], data[at + 1]]).wrapping_add(base);
+            let word = (word & !0x21ff) | (slot16 & 0x1ff) | ((slot16 & 0x200) << 4);
+            data[at..at + 2].copy_from_slice(&word.wrapping_sub(base).to_le_bytes());
+        }
+        "byte" => {
+            data[cell] =
+                u8::try_from(slot16.checked_sub(base).ok_or_else(refuse)?).map_err(|_| refuse())?;
+        }
+        "index12-flip" => {
+            if slot >= 4096 {
+                return Err(refuse());
+            }
+            let at = cell * 2;
+            let word = u16::from_le_bytes([data[at], data[at + 1]]);
+            let index = slot16.wrapping_sub(base) & 0xfff;
+            data[at..at + 2].copy_from_slice(&((word & 0xf000) | index).to_le_bytes());
+        }
+        other => return Err(malformed(format!("{}: map entry {other:?}", asset.id))),
+    }
+    Ok(())
+}
+
+pub(crate) fn unrender_tilemap_with(
+    map: &AssetMap,
+    charmaps: &Charmaps,
+    rom: &[u8],
+    id: &str,
+    image: &Image,
+    allocate: bool,
+) -> Result<MapEdits> {
     let asset = map.asset(id)?;
     let c = cells(map, charmaps, rom, asset)?;
     let v = vram(map, charmaps, rom, asset)?;
@@ -663,8 +738,9 @@ pub fn unrender_tilemap(
             c.height * 8
         )));
     }
-    let mut edited: BTreeMap<usize, ([u8; 64], usize)> = BTreeMap::new();
-    let mut approx = 0;
+    // Every cell's edited tile, grouped by the slot it draws.
+    let mut versions: BTreeMap<usize, Vec<TileVersion>> = BTreeMap::new();
+    let mut approximated = 0;
     for (i, e) in c.entries.iter().enumerate() {
         let slot = usize::from(e.tile);
         let (Some(original), Some(pal)) = (v.slots.get(&slot), pals[usize::from(e.palette)]) else {
@@ -677,24 +753,101 @@ pub fn unrender_tilemap(
                 let sy = if e.v_flip { 7 - y } else { y };
                 let px = get(image, i % c.width * 8 + x, i / c.width * 8 + y);
                 let (value, exact) = nearest(&pal, v.format.colors(), px, original[sy * 8 + sx]);
-                approx += usize::from(!exact);
+                approximated += usize::from(!exact);
                 tile[sy * 8 + sx] = value;
             }
         }
-        match edited.get(&slot) {
-            Some((prior, cell)) if *prior != tile => {
-                return Err(malformed(format!(
-                    "{id}: tile slot {slot} is drawn by cells {cell} and {i} with different edits; \
-                     edit only cells with unique tiles or replace the tiles asset"
-                )));
-            }
-            Some(_) => {}
-            None => {
-                edited.insert(slot, (tile, i));
+        let list = versions.entry(slot).or_default();
+        match list.iter_mut().find(|(t, _)| *t == tile) {
+            Some((_, cells)) => cells.push(i),
+            None => list.push((tile, vec![i])),
+        }
+    }
+    // Tile relations in load order; the last loader of a slot owns it.
+    let mut loaded = Vec::new();
+    for t in &asset.relations.tiles {
+        let tiles = map.asset(&t.id)?;
+        let format = tile_format(tiles)?;
+        let n = decode_asset(map, charmaps, rom, &t.id)?.decoded.len() / format.bytes_per_tile();
+        loaded.push(Loaded {
+            id: t.id.clone(),
+            at: t.at.usize()?,
+            skip: t.skip.usize()?,
+            count: n,
+        });
+    }
+    let owner = |slot: usize| {
+        loaded
+            .iter()
+            .rev()
+            .find(|l| slot >= l.at && slot < l.at + l.count.saturating_sub(l.skip))
+    };
+    // Free tiles reachable from this map: declared free indices whose slot is
+    // owned by their own relation and drawn by no cell.
+    let used: std::collections::BTreeSet<usize> = versions.keys().copied().collect();
+    let mut free: Vec<(String, usize, usize)> = Vec::new();
+    for l in &loaded {
+        for r in map.asset(&l.id)?.format.free_tiles.iter().flatten() {
+            let (first, count) = (r.first.usize()?, r.count.usize()?);
+            for index in first..first.saturating_add(count).min(l.count) {
+                if index < l.skip {
+                    continue;
+                }
+                let slot = l.at + index - l.skip;
+                if !used.contains(&slot) && owner(slot).is_some_and(|o| o.id == l.id) {
+                    free.push((l.id.clone(), index, slot));
+                }
             }
         }
     }
-    let mut out = BTreeMap::new();
+    free.dedup();
+    let mut edited: BTreeMap<usize, [u8; 64]> = BTreeMap::new();
+    let mut words = None;
+    let mut allocated = Vec::new();
+    let mut next_free = free.into_iter();
+    for (slot, mut list) in versions {
+        if list.len() > 1 && !allocate {
+            return Err(malformed(format!(
+                "{id}: tile slot {slot} is drawn by cells {} and {} with different edits; \
+                 edit only cells with unique tiles, replace the tiles asset, or use --allocate \
+                 with declared free_tiles",
+                list[0].1[0], list[1].1[0]
+            )));
+        }
+        // The version equal to the original keeps the slot, else the most used one.
+        let original = v.slots.get(&slot).copied();
+        let keep = list
+            .iter()
+            .position(|(t, _)| Some(*t) == original)
+            .unwrap_or_else(|| {
+                (0..list.len())
+                    .max_by_key(|&k| (list[k].1.len(), std::cmp::Reverse(k)))
+                    .unwrap_or(0)
+            });
+        let (tile, _) = list.swap_remove(keep);
+        edited.insert(slot, tile);
+        for (tile, cells) in list {
+            let (tiles_id, index, new_slot) = next_free.next().ok_or_else(|| {
+                malformed(format!(
+                    "{id}: no declared free tile left for a new version of tile slot {slot} \
+                     (cells {cells:?}); declare free_tiles on a tiles asset this map loads"
+                ))
+            })?;
+            let data = match &mut words {
+                Some(d) => d,
+                None => words.insert(decode_asset(map, charmaps, rom, id)?.decoded),
+            };
+            for &cell in &cells {
+                set_cell_tile(asset, data, cell, new_slot)?;
+            }
+            edited.insert(new_slot, tile);
+            allocated.push((tiles_id, index, new_slot, cells));
+        }
+    }
+    let mut payloads = BTreeMap::new();
+    if let Some(d) = words {
+        payloads.insert(id.to_owned(), d);
+    }
     // Later relations overwrite earlier ones in VRAM: the last loader owns a slot.
     let mut owned = std::collections::BTreeSet::new();
     for t in asset.relations.tiles.iter().rev() {
@@ -703,7 +856,7 @@ pub fn unrender_tilemap(
         let mut data = decode_asset(map, charmaps, rom, &t.id)?.decoded;
         let (at, skip) = (t.at.usize()?, t.skip.usize()?);
         let mut changed = false;
-        for (slot, (tile, _)) in &edited {
+        for (slot, tile) in &edited {
             if *slot < at || owned.contains(slot) {
                 continue;
             }
@@ -720,8 +873,12 @@ pub fn unrender_tilemap(
             }
         }
         if changed {
-            out.insert(t.id.clone(), data);
+            payloads.insert(t.id.clone(), data);
         }
     }
-    Ok((out, approx))
+    Ok(MapEdits {
+        payloads,
+        approximated,
+        allocated,
+    })
 }
