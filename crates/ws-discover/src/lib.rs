@@ -228,12 +228,22 @@ pub fn discover(rom: &[u8], evidence: &Evidence) -> Result<Discovery> {
             .destination
             .and_then(|d| u16::try_from(d).ok())
             .unwrap_or(0x2000);
-        if let Ok(d) = ws_compress::lzss_u16_zero::decode_with_policy(
-            window,
-            65536,
-            initial_destination,
-            policy,
-        ) {
+        // A temporal RAM-write hint is not the decoder's original DI. Retry
+        // the canonical aligned destination if the hint produces no witness;
+        // the actual located destination must still reproduce every byte.
+        let mut destinations = vec![initial_destination];
+        if initial_destination != 0x2000 {
+            destinations.push(0x2000);
+        }
+        for initial_destination in destinations {
+            let Ok(d) = ws_compress::lzss_u16_zero::decode_with_policy(
+                window,
+                65536,
+                initial_destination,
+                policy,
+            ) else {
+                continue;
+            };
             if useful(&d.bytes) {
                 if let Some(dest) = locate_witness(evidence, o, &d.bytes) {
                     let Ok(checked) = ws_compress::lzss_u16_zero::decode_with_policy(
@@ -261,6 +271,7 @@ pub fn discover(rom: &[u8], evidence: &Evidence) -> Result<Discovery> {
                     // The existing asset codec enum cannot represent this stream.
                     // Keep its stored extent as raw data; never mislabel it as tiles.
                     document["assets"].as_array_mut().ok_or_else(||bad("assets not array"))?.push(json!({"id":format!("codec-source.{:x}",o.source),"kind":"other","offset":o.source,"length":d.consumed,"codec":"raw","confidence":"high","references_complete":false,"references":o.references,"evidence":{"loader":o.routine,"trace":format!("ws-lzss-u16-zero output equals RAM {dest:#x}; see discovery report"),"notes":"Stored compressed bytes only; codec enum addition requested."}}));
+                    break;
                 }
             }
         }

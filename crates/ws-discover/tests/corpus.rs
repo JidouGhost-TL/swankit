@@ -7,6 +7,32 @@ use ws_assets::{AssetMap, Charmaps};
 struct DiscoveryDigest {
     root: PathBuf,
 }
+// Immutable drafts are verified baselines, not claims of a complete inventory.
+// New codec recognition may add assets and overlap declarations, but it must
+// preserve every prior entry, relation, reference and non-asset map field.
+fn check_baseline(got: &AssetMap, expected: &AssetMap) -> Result<()> {
+    for prior in &expected.assets {
+        let current = got.asset(&prior.id)?;
+        if !prior
+            .overlaps
+            .iter()
+            .all(|id| current.overlaps.contains(id))
+        {
+            return Err(Error::Malformed("frozen overlap removed".into()));
+        }
+        let mut current = current.clone();
+        current.overlaps = prior.overlaps.clone();
+        if current != *prior {
+            return Err(Error::Malformed("frozen asset changed".into()));
+        }
+    }
+    let mut baseline = got.clone();
+    baseline.assets = expected.assets.clone();
+    if baseline != *expected {
+        return Err(Error::Malformed("frozen map metadata changed".into()));
+    }
+    Ok(())
+}
 fn path_arg(root: &Path, args: &Args, key: &str) -> Result<PathBuf> {
     let name = args
         .get(key)
@@ -30,9 +56,7 @@ impl Digest for DiscoveryDigest {
             &std::fs::read(path_arg(&self.root, args, "map")?)
                 .map_err(|e| Error::Malformed(e.to_string()))?,
         )?;
-        if got.map != expected {
-            return Err(Error::Malformed("re-run differs from frozen draft".into()));
-        }
+        check_baseline(&got.map, &expected)?;
         let cm = Charmaps::load(&got.map, |_| {
             Err(Error::Malformed("external charmap in frozen map".into()))
         })?;
@@ -56,5 +80,32 @@ fn corpus_discovery() {
         return;
     };
     let n = run_dir("ws-discover", &DiscoveryDigest { root });
-    eprintln!("ws-discover: {n} frozen drafts re-run and verified");
+    eprintln!("ws-discover: {n} frozen baselines retained; extended drafts re-run and verified");
+}
+
+#[test]
+fn baseline_allows_additions_but_rejects_loss_and_changes() {
+    let make = |assets| {
+        AssetMap::from_json(
+            &serde_json::to_vec(&json!({
+                "schema":"swankit-asset-map/1", "rom":{"sha256":"00".repeat(32),"size":65536},
+                "assets":assets
+            }))
+            .unwrap(),
+        )
+        .unwrap()
+    };
+    let a = json!({"id":"prior","kind":"other","offset":100,"length":32});
+    let expected = make(json!([a]));
+    let mut got = make(json!([a,{"id":"additional","kind":"other","offset":200,"length":32}]));
+    check_baseline(&got, &expected).unwrap();
+    got.assets[0].overlaps.push("additional".into());
+    check_baseline(&got, &expected).unwrap();
+    got.assets[0].offset.0 = 101;
+    assert!(check_baseline(&got, &expected).is_err());
+    got.assets.remove(0);
+    assert!(check_baseline(&got, &expected).is_err());
+    got = expected.clone();
+    got.rom.sha256 = "11".repeat(32);
+    assert!(check_baseline(&got, &expected).is_err());
 }

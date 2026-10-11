@@ -81,3 +81,18 @@ and measures explained storage rather than a fully rendered scene. Sidecar codec
 witnesses are reported separately from assets the current map enum can render.
 The runtime association does not recover every true destination; explicit
 entry/exit or reviewed descriptor data can resolve those misses.
+For destination-sensitive header streams, a failed temporal hint is followed
+by one aligned probe. Acceptance still requires the whole output to match and
+decoding again at the actual located destination to produce identical bytes.
+
+The prehistory policies preserve distinct control flow. The five-bit prefix
+loop stops on its counter or token length. The eight-bit prefix loop also stops
+when the source reaches the original destination. The fill-until-start loop
+uses that destination boundary without a prefix counter. An unaligned
+destination therefore distinguishes policies even when aligned fixtures agree.
+
+Frozen discovery maps are verified baselines rather than complete inventories.
+Corpus replay preserves every baseline asset, relation, reference, map field and
+overlap declaration; it permits additional verified assets and overlap links.
+The original evidence and baseline files are never overwritten as recognition
+improves. Independent decoded-output hashes remain separate corpus expectations.

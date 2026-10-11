@@ -74,10 +74,14 @@ pub fn decode_with_policy(
                     let prefix = distance.wrapping_sub(usize::from(destination) + out.len()) & mask;
                     let zeros = if prefix == 0 { 256 } else { prefix };
                     let deficit = distance - out.len();
-                    let zeros = if policy == Prehistory::ZeroUntilStart {
-                        deficit
-                    } else {
-                        zeros.min(deficit)
+                    let zeros = match policy {
+                        // The five-bit routine tests only the counter and the
+                        // token length, so it can zero beyond the history gap.
+                        Prehistory::Low5Prefix => zeros,
+                        // The eight-bit routine additionally tests whether SI
+                        // has reached the original destination each iteration.
+                        Prehistory::Low8Prefix => zeros.min(deficit),
+                        Prehistory::ZeroUntilStart => deficit,
                     };
                     let n = remaining.min(zeros);
                     out.resize(out.len() + n, 0);
@@ -201,9 +205,14 @@ mod dialect_tests {
             let d = decode_with_policy(&stream, 100, 0x2000, policy).unwrap();
             assert_eq!(d.bytes, [vec![b'A'], vec![0; 18]].concat());
         }
-        // The source can reach the original destination before the counter ends.
+        // Only the eight-bit and fill-until-start routines test whether the
+        // source reaches the original destination before the counter ends.
         let stream = [4, 0, 1, b'A', 0x20, 0];
-        let d = decode_with_policy(&stream, 100, 0x2001, Prehistory::Low5Prefix).unwrap();
-        assert_eq!(d.bytes, [b'A', 0, b'A', 0]);
+        let low5 = decode_with_policy(&stream, 100, 0x2001, Prehistory::Low5Prefix).unwrap();
+        assert_eq!(low5.bytes, [b'A', 0, 0, 0]);
+        for policy in [Prehistory::Low8Prefix, Prehistory::ZeroUntilStart] {
+            let d = decode_with_policy(&stream, 100, 0x2001, policy).unwrap();
+            assert_eq!(d.bytes, [b'A', 0, b'A', 0]);
+        }
     }
 }

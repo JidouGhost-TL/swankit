@@ -145,3 +145,42 @@ fn same_source_and_destination_different_lengths_have_distinct_ids() {
     }
     assert_eq!(discover(&rom, &e).unwrap().map.assets.len(), 2);
 }
+
+#[test]
+fn temporal_destination_hint_cannot_hide_a_complete_header_witness() {
+    let (mut rom, mut e) = fixture();
+    // A match reaches before original DI. Its five-bit counter depends on DI;
+    // the deliberately unaligned temporal hint produces different bytes.
+    let payload = [b"ABCD\0\0".repeat(6), b"ABCD".to_vec()].concat();
+    let mut stream = vec![40, 0, 0x0f];
+    stream.extend_from_slice(b"ABCD");
+    stream.extend_from_slice(&[0x6f, 0, 0x6f, 0]);
+    let decoded = ws_compress::lzss_u16_zero::decode(&stream, 65536)
+        .unwrap()
+        .bytes;
+    assert_eq!(decoded, payload);
+    assert_ne!(
+        ws_compress::lzss_u16_zero::decode_with_destination(&stream, 65536, 0x1001)
+            .unwrap()
+            .bytes,
+        payload
+    );
+    rom[100..100 + stream.len()].copy_from_slice(&stream);
+    e.seed["rom"]["sha256"] = json!(ws_assets::sha256_hex(&rom));
+    e.ram[0x1000..0x1000 + payload.len()].copy_from_slice(&payload);
+    e.observations.push(Observation {
+        source: 100,
+        routine: "header-reader".into(),
+        destination: Some(0x1001),
+        length: None,
+        decoded_length: None,
+        output: None,
+        prehistory: Some("low5-prefix".into()),
+        references: vec![],
+    });
+    let proof = discover(&rom, &e).unwrap().report.codec_proofs;
+    assert_eq!(proof.len(), 1);
+    assert_eq!(proof[0].destination, 0x1000);
+    e.ram[0x1000 + payload.len() - 1] ^= 1;
+    assert!(discover(&rom, &e).unwrap().report.codec_proofs.is_empty());
+}
