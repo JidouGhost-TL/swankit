@@ -36,7 +36,8 @@ fn start(temp: &Temp, timeout: Duration) -> (TcpServer, Arc<WireLog>) {
 }
 fn exchange(address: std::net::SocketAddr, bytes: &[u8]) -> Vec<u8> {
     let mut s = TcpStream::connect(address).unwrap();
-    s.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
+    // Hang guard only: replies follow a journal fsync, which can take seconds on a loaded machine.
+    s.set_read_timeout(Some(Duration::from_secs(30))).unwrap();
     s.write_all(bytes).unwrap();
     s.shutdown(Shutdown::Write).unwrap();
     let mut out = vec![];
