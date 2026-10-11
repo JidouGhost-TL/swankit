@@ -86,7 +86,13 @@ impl Toolkit {
             declared_size_matches: f.declared_size_matches(),
             save_code: h.save_code,
             save: format!("{:?}", h.save()),
-            save_bytes: h.save().bytes(),
+            // WSdev and the Java hardware port map code 01 to observed 32 KiB.
+            // h.save() retains the separate nominal 64 Kbit declaration.
+            save_bytes: if h.save_code == 1 {
+                Some(32768)
+            } else {
+                h.save().bytes()
+            },
             flags: h.flags,
             orientation: match h.orientation() {
                 rom::Orientation::Horizontal => "horizontal",

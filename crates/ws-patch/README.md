@@ -46,8 +46,10 @@ than a literal. It splits long spans at 65535 bytes and includes the preceding
 byte when a record would otherwise start at reserved offset 454F46 (EOF).
 The resulting diff has minimal changed spans; it does not globally optimize
 compressed size by merging gaps or extracting interior runs. Creation supports
-targets up to 16777215 bytes; optional size extensions handle shrinkage and
-zero-filled growth. IPS carries no base checksum: callers must verify base
+targets up to 16777216 bytes. Growth emits explicit records, including zero
+padding beyond the base, for compatibility with truncate-only patchers. New
+patches use the optional EOF size only for shrinkage. Apply still accepts
+legacy zero-extending EOF sizes with explicit growth authorization. IPS carries no base checksum: callers must verify base
 identity externally. BPS is outside this milestone.
 
 Enroll an independent external manifest once:

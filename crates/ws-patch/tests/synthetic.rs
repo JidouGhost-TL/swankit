@@ -237,15 +237,16 @@ fn generated_inputs_never_panic_and_diff_outputs_match_independent_targets() {
 #[test]
 fn diff_escapes_reserved_eof_offset_including_record_splits() {
     let mut target = vec![0; EOF_OFFSET as usize + 2];
+    let base = target.clone();
     target[EOF_OFFSET as usize] = 1;
-    let bytes = create(&[], &target).unwrap();
+    let bytes = create(&base, &target).unwrap();
     let patch = Patch::parse(&bytes).unwrap();
     assert_eq!(patch.records[0].offset, EOF_OFFSET - 1);
-    assert_eq!(patch.apply(&[], growing()).unwrap(), target);
+    assert_eq!(patch.apply(&base, growing()).unwrap(), target);
     let start = EOF_OFFSET as usize - 0xffff;
     target[start..].fill(7);
-    let bytes = create(&[], &target).unwrap();
+    let bytes = create(&base, &target).unwrap();
     let patch = Patch::parse(&bytes).unwrap();
     assert_eq!(patch.records[1].offset, EOF_OFFSET - 1);
-    assert_eq!(patch.apply(&[], growing()).unwrap(), target);
+    assert_eq!(patch.apply(&base, growing()).unwrap(), target);
 }

@@ -315,15 +315,17 @@ impl<'a> Patch<'a> {
 /// Create a deterministic compact diff: unchanged spans are skipped, constant
 /// spans use RLE when smaller, and records split at the 16-bit length limit.
 /// This is a minimal changed-span diff, not a global compressed-size optimizer.
-/// The target length must fit the 24-bit EOF size extension.
+/// Targets can fill the 24-bit address space. Only shrinkage needs an EOF size.
 pub fn create(image: &[u8], target: &[u8]) -> Result<Vec<u8>> {
-    if target.len() > MAX_OFFSET as usize {
+    if target.len() > MAX_OFFSET as usize + 1
+        || (target.len() < image.len() && target.len() > MAX_OFFSET as usize)
+    {
         return Err(Error::Unsupported(
             "IPS creation target exceeds 24-bit size".into(),
         ));
     }
     let mut records = Vec::new();
-    let differs = |index: usize| target[index] != image.get(index).copied().unwrap_or(0);
+    let differs = |index: usize| image.get(index).is_none_or(|byte| target[index] != *byte);
     let mut index = 0;
     while index < target.len() {
         if !differs(index) {
@@ -371,7 +373,7 @@ pub fn create(image: &[u8], target: &[u8]) -> Result<Vec<u8>> {
     }
     Patch {
         records,
-        truncate_to: (image.len() != target.len()).then_some(target.len() as u32),
+        truncate_to: (target.len() < image.len()).then_some(target.len() as u32),
     }
     .encode()
 }
