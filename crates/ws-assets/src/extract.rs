@@ -87,9 +87,13 @@ pub(crate) fn font_definition(asset: &Asset) -> Result<FontDefinition> {
     })
 }
 
-fn font_sheet(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], asset: &Asset) -> Result<Image> {
+pub(crate) fn font_palette(
+    map: &AssetMap,
+    charmaps: &Charmaps,
+    rom: &[u8],
+    asset: &Asset,
+) -> Result<Vec<[u8; 4]>> {
     let def = font_definition(asset)?;
-    let data = decode_asset(map, charmaps, rom, &asset.id)?.decoded;
     let colors = match def.format {
         FontFormat::Bpp1 => 2,
         FontFormat::Bpp2 => 4,
@@ -112,6 +116,18 @@ fn font_sheet(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], asset: &Asset) ->
             })
             .collect(),
     };
+    Ok(palette)
+}
+
+pub(crate) fn font_sheet(
+    map: &AssetMap,
+    charmaps: &Charmaps,
+    rom: &[u8],
+    asset: &Asset,
+) -> Result<Image> {
+    let def = font_definition(asset)?;
+    let data = decode_asset(map, charmaps, rom, &asset.id)?.decoded;
+    let palette = font_palette(map, charmaps, rom, asset)?;
     let columns = asset.format.width.map_or(Ok(16), |w| w.usize())?.max(1);
     let (gw, gh) = (def.tiles_wide as usize * 8, def.tiles_high as usize * 8);
     let rows = def.count.div_ceil(columns);

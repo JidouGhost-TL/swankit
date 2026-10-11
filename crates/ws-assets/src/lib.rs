@@ -12,6 +12,7 @@
 
 mod data;
 mod extract;
+mod font;
 mod gfx;
 pub mod map;
 mod refs;

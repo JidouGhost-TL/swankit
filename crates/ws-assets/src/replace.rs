@@ -95,6 +95,9 @@ fn payloads(
 ) -> Result<(BTreeMap<String, Vec<u8>>, usize)> {
     let asset = map.asset(&r.id)?;
     Ok(match (&r.input, asset.kind) {
+        (ReplaceInput::Image(img), Kind::Font) => {
+            crate::font::unrender_font(map, charmaps, rom, &r.id, img)?
+        }
         (ReplaceInput::Image(img), Kind::Tiles) => unrender_tiles(map, charmaps, rom, &r.id, img)?,
         (ReplaceInput::Image(img), Kind::Tilemap) => {
             let edits = unrender_tilemap_with(map, charmaps, rom, &r.id, img, options.allocate)?;

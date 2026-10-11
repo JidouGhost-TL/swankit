@@ -11,7 +11,7 @@ pub const HELP: &str = "swankit assets: per-ROM asset maps (swankit-asset-map/1)
   assets extract ROM MAP OUTDIR [--force] [--json]
   assets replace ROM MAP --id ID --from FILE -o PATCHED [--ips PATCH] [--map-out MAP] [--allocate] [--force] [--json]
   assets verify ROM MAP [--json]
---from: .png (tiles sheet, tilemap or palette swatch as extracted), .txt (text in
+--from: .png (tiles/font sheet, tilemap or palette swatch as extracted), .txt (text in
 the charmap's spelling; one trailing newline is ignored) or any other file
 (decoded payload bytes). Replacement re-encodes with the asset's codec, writes
 in place when it fits, relocates into declared free space only when every

@@ -587,7 +587,7 @@ pub fn render_sprites(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str)
     Ok(image)
 }
 
-fn nearest(palette: &[Rgba], colors: usize, c: Rgba, original: u8) -> (u8, bool) {
+pub(crate) fn nearest(palette: &[Rgba], colors: usize, c: Rgba, original: u8) -> (u8, bool) {
     if palette[usize::from(original)][..3] == c[..3] {
         return (original, true);
     }

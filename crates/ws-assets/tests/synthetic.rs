@@ -878,3 +878,69 @@ fn references_refuse_stored_values_the_code_does_not_accept() {
         [0x34, 0x12]
     );
 }
+
+#[test]
+fn font_image_edit_preserves_padding_and_column_order() {
+    let mut rom = rom();
+    for i in 0..80 {
+        rom[0x2000 + i] = ((i * 37) & 255) as u8;
+    }
+    fix_checksum(&mut rom).unwrap();
+    let map = AssetMap::from_json(
+        &serde_json::to_vec(&json!({
+            "schema":"swankit-asset-map/1","rom":{"sha256":sha256_hex(&rom),"size":rom.len()},
+            "assets":[{"id":"font","kind":"font","offset":0x2000,"length":80,
+            "format":{"bpp":1,"count":2,"stride":40,"tiles_wide":2,"tiles_high":2,
+            "order":"column","tile_offsets":[0,16,8,24],"width":2}}]
+        }))
+        .unwrap(),
+    )
+    .unwrap();
+    let cm = Charmaps::load(&map, |_| unreachable!()).unwrap();
+    let extracted = extract(&map, &cm, &rom).unwrap();
+    let (_, ExtractedFile::Image(image)) = extracted
+        .files
+        .iter()
+        .find(|(n, _)| n == "font.png")
+        .unwrap()
+    else {
+        panic!()
+    };
+    let unchanged = replace(
+        &map,
+        &cm,
+        &rom,
+        &Replacement {
+            id: "font".into(),
+            input: ReplaceInput::Image(image.clone()),
+        },
+    )
+    .unwrap();
+    assert_eq!(unchanged.rom, rom);
+    let mut edited = image.clone();
+    // Tile at x=8,y=0 is column-major tile 2, explicitly stored at byte 8.
+    let pixel = 8 * 4;
+    let original = edited.rgba[pixel];
+    edited.rgba[pixel..pixel + 4].copy_from_slice(&[
+        255 - original,
+        255 - original,
+        255 - original,
+        255,
+    ]);
+    let changed = replace(
+        &map,
+        &cm,
+        &rom,
+        &Replacement {
+            id: "font".into(),
+            input: ReplaceInput::Image(edited),
+        },
+    )
+    .unwrap();
+    assert_eq!(changed.rom[0x2008], rom[0x2008] ^ 0x80);
+    assert_eq!(&changed.rom[0x2020..0x2028], &rom[0x2020..0x2028]);
+    assert!(verify(&changed.map, &cm, &changed.rom)
+        .unwrap()
+        .errors
+        .is_empty());
+}

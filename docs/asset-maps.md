@@ -191,3 +191,8 @@ Assets come from ROM data located through the code that loads it (loader
 call sites, pointer tables) or from traces of ROM bytes reaching VRAM, RAM or
 sound; never from screen captures. Mapped bytes over the ROM size measure
 coverage; confidence separates loader-proven entries from trace matches.
+
+Font PNG replacements use the extracted sheet geometry. Glyph row/column order,
+explicit tile offsets and stride padding are preserved. Pixels use the same
+nearest-palette policy as tile sheets; contradictory edits to aliased source
+bytes are rejected. Partially used sheet cells remain outside the font count.
