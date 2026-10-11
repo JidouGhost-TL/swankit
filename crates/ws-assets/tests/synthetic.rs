@@ -3,7 +3,7 @@ use formatkit_core::Image;
 use serde_json::{json, Value};
 use ws_assets::{
     decode_asset, extract, fix_checksum, replace, sha256_hex, verify, AssetMap, Charmaps,
-    ExtractedFile, ReplaceInput, Replacement,
+    ExtractedFile, ReplaceInput, ReplaceOutcome, Replacement,
 };
 use ws_gfx::{decode_tile, encode_tile, TileFormat};
 
@@ -506,4 +506,69 @@ fn wrapped_layers_scroll_around_the_256_pixel_plane() {
     let image = ws_assets::render_screen(&wrapped, &cm, &rom, "screen").unwrap();
     // Pixel 256 of the plane (cell 0, column 6) lands on screen x 0.
     assert_eq!(pixel(&image, 0, 0), [255, 0, 0, 255]);
+}
+
+const FONT: usize = 0x800;
+
+/// A dialogue string in a 12-cell box of 16-pixel glyphs, 2 lines per page
+/// (fd = new line, fc = new page, ff = end).
+fn dialogue(text: &[u8]) -> (Vec<u8>, AssetMap) {
+    let mut rom = rom();
+    rom[TEXT..TEXT + text.len()].copy_from_slice(text);
+    fix_checksum(&mut rom).unwrap();
+    let mut v = map_json(&rom);
+    v["charmaps"]["dlg"] = json!({"inline": {
+        "schema": "swankit-charmap/1",
+        "entries": [{"bytes": "01", "text": "Ａ"}, {"bytes": "02", "text": "ｉ"}],
+        "controls": [{"code": 255, "ends": true}, {"code": 253, "display": "\n"},
+                     {"code": 252, "display": "\n{page}\n"}]
+    }});
+    let s = &mut v["assets"][3];
+    s["length"] = json!(text.len());
+    s["relations"] = json!({"charmap": "dlg", "font": "f"});
+    s["format"] = json!({"pad": "0xff", "line_width": 192, "lines": 2, "page_break": "{page}"});
+    v["assets"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"id": "f", "kind": "font", "offset": FONT,
+        "length": 64, "format": {"bpp": 1, "tiles_wide": 2, "tiles_high": 2, "count": 2,
+        "glyph_widths": {"ｉ": 8}}}));
+    (rom, load(&v))
+}
+
+fn edit(map: &AssetMap, rom: &[u8], text: &str, force: bool) -> Result<ReplaceOutcome, String> {
+    ws_assets::replace_with(
+        map,
+        &charmaps(map),
+        rom,
+        &Replacement {
+            id: "s".into(),
+            input: ReplaceInput::Text(text.into()),
+        },
+        &ws_assets::ReplaceOptions {
+            force,
+            ..Default::default()
+        },
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[test]
+fn too_wide_lines_are_refused_unless_forced() {
+    let (rom, map) = dialogue(&[1, 0xfd, 1, 0xff, 0xff, 0xff]);
+    // Twelve 16-pixel cells fill the 192-pixel line exactly.
+    assert!(edit(&map, &rom, &"Ａ".repeat(12), false).is_ok());
+    // The 19-cell line (304 pixels) is refused with its measure...
+    let err = edit(&map, &rom, &"Ａ".repeat(19), false).unwrap_err();
+    assert!(err.contains("304") && err.contains("192"), "{err}");
+    // ...but narrow glyphs count at their own width: 11 * 16 + 2 * 8 = 192.
+    assert!(edit(&map, &rom, &format!("{}ｉｉ", "Ａ".repeat(11)), false).is_ok());
+    // Three lines on one page exceed the 2-line box; a page break resets it.
+    assert!(edit(&map, &rom, "Ａ\nＡ\nＡ", false)
+        .unwrap_err()
+        .contains("lines"));
+    assert!(edit(&map, &rom, "Ａ\nＡ\n{page}\nＡ", false).is_ok());
+    // --force writes it and reports the overflow as a warning.
+    let forced = edit(&map, &rom, &"Ａ".repeat(19), true).unwrap();
+    assert!(forced.warnings.iter().any(|w| w.contains("304")));
 }

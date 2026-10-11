@@ -27,7 +27,9 @@ pub use gfx::{
 };
 pub use map::{AssetMap, Kind, SCHEMA};
 pub use refs::{encode_reference, read_reference, references_for, ResolvedReference};
-pub use replace::{fix_checksum, replace, ReplaceInput, ReplaceOutcome, Replacement};
+pub use replace::{
+    fix_checksum, replace, replace_with, ReplaceInput, ReplaceOptions, ReplaceOutcome, Replacement,
+};
 pub use text::Charmaps;
 pub use verify::{verify, Finding, VerifyReport};
 

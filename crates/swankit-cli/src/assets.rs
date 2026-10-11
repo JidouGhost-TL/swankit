@@ -3,18 +3,23 @@ use crate::{args::Args, io, png, png_read, Result};
 use serde_json::json;
 use std::path::{Path, PathBuf};
 use ws_assets::{
-    extract, replace, verify, AssetMap, Charmaps, ExtractedFile, ReplaceInput, Replacement,
+    extract, replace_with, verify, AssetMap, Charmaps, ExtractedFile, ReplaceInput, ReplaceOptions,
+    Replacement,
 };
 
 pub const HELP: &str = "swankit assets: per-ROM asset maps (swankit-asset-map/1)
   assets extract ROM MAP OUTDIR [--force] [--json]
-  assets replace ROM MAP --id ID --from FILE -o PATCHED [--ips PATCH] [--map-out MAP] [--force] [--json]
+  assets replace ROM MAP --id ID --from FILE -o PATCHED [--ips PATCH] [--map-out MAP] [--allocate] [--force] [--json]
   assets verify ROM MAP [--json]
 --from: .png (tiles sheet, tilemap or palette swatch as extracted), .txt (text in
 the charmap's spelling; one trailing newline is ignored) or any other file
 (decoded payload bytes). Replacement re-encodes with the asset's codec, writes
 in place when it fits, relocates into declared free space only when every
-reference is listed, and always recomputes the footer checksum.";
+reference is listed, and always recomputes the footer checksum. Text that breaks
+its declared line limits (line_width, lines) is refused; --force writes it and
+reports warnings (and overwrites existing output files). --allocate gives cells of
+a shared tile that were edited differently new tiles from declared free tile
+space and rewrites those tilemap cells.";
 
 const MAX_ROM: usize = 64 * 1024 * 1024;
 
@@ -96,6 +101,7 @@ pub fn run(words: Vec<String>) -> Result<()> {
             let output = a.require("--output")?;
             let ips = a.value("--ips");
             let map_out = a.value("--map-out");
+            let allocate = a.flag("--allocate");
             a.finish(4)?;
             let (rom, map, charmaps) = load(&a.positional[2], &a.positional[3])?;
             let raw = io::read(&from, MAX_ROM)?;
@@ -108,7 +114,8 @@ pub fn run(words: Vec<String>) -> Result<()> {
                 }
                 _ => ReplaceInput::Bytes(raw),
             };
-            let outcome = replace(&map, &charmaps, &rom, &Replacement { id, input })?;
+            let options = ReplaceOptions { force, allocate };
+            let outcome = replace_with(&map, &charmaps, &rom, &Replacement { id, input }, &options)?;
             io::write(&output, &outcome.rom, force)?;
             if let Some(path) = &ips {
                 io::write(path, &swankit::patch::create(&rom, &outcome.rom)?, force)?;
@@ -119,6 +126,7 @@ pub fn run(words: Vec<String>) -> Result<()> {
             let summary = json!({
                 "output": output, "ips": ips, "map": map_out,
                 "actions": outcome.actions, "approximated_pixels": outcome.approximated_pixels,
+                "warnings": outcome.warnings,
                 "sha256": outcome.map.rom.sha256,
             });
             if json_mode {
@@ -126,6 +134,9 @@ pub fn run(words: Vec<String>) -> Result<()> {
             } else {
                 for action in &outcome.actions {
                     println!("{action}");
+                }
+                for warning in &outcome.warnings {
+                    println!("warning: {warning}");
                 }
                 if outcome.approximated_pixels > 0 {
                     println!(

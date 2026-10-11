@@ -28,6 +28,16 @@ pub struct Replacement {
     pub input: ReplaceInput,
 }
 
+/// Policy switches for [`replace_with`].
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ReplaceOptions {
+    /// Write text that breaks its declared line limits, reporting warnings.
+    pub force: bool,
+    /// Give differently edited cells of a shared tile new tiles from the
+    /// declared free tile space and rewrite those tilemap cells.
+    pub allocate: bool,
+}
+
 #[derive(Debug)]
 pub struct ReplaceOutcome {
     pub rom: Vec<u8>,
@@ -37,6 +47,8 @@ pub struct ReplaceOutcome {
     pub actions: Vec<String>,
     /// Pixels mapped to the nearest palette colour rather than an exact one.
     pub approximated_pixels: usize,
+    /// Limits broken under `force`.
+    pub warnings: Vec<String>,
 }
 
 /// Recompute the footer checksum (sum of all bytes but the last two).
@@ -78,6 +90,7 @@ fn payloads(
     charmaps: &Charmaps,
     rom: &[u8],
     r: &Replacement,
+    _options: &ReplaceOptions,
 ) -> Result<(BTreeMap<String, Vec<u8>>, usize)> {
     let asset = map.asset(&r.id)?;
     Ok(match (&r.input, asset.kind) {
@@ -118,15 +131,40 @@ fn bank(offset: usize) -> usize {
     offset >> 16
 }
 
-/// Apply one replacement and fix the checksum.
+/// Apply one replacement with default options and fix the checksum.
 pub fn replace(
     map: &AssetMap,
     charmaps: &Charmaps,
     rom: &[u8],
     replacement: &Replacement,
 ) -> Result<ReplaceOutcome> {
+    replace_with(map, charmaps, rom, replacement, &ReplaceOptions::default())
+}
+
+/// Apply one replacement and fix the checksum.
+pub fn replace_with(
+    map: &AssetMap,
+    charmaps: &Charmaps,
+    rom: &[u8],
+    replacement: &Replacement,
+    options: &ReplaceOptions,
+) -> Result<ReplaceOutcome> {
     check_identity(map, rom)?;
-    let (decoded, approximated_pixels) = payloads(map, charmaps, rom, replacement)?;
+    let (decoded, approximated_pixels) = payloads(map, charmaps, rom, replacement, options)?;
+    let mut warnings = Vec::new();
+    for (id, payload) in &decoded {
+        let asset = map.asset(id)?;
+        if asset.kind == Kind::Text {
+            let broken = charmaps.limit_violations(map, asset, payload)?;
+            if !broken.is_empty() && !options.force {
+                return Err(malformed(format!(
+                    "{}; refused (shorten or break the line, or force)",
+                    broken.join("; ")
+                )));
+            }
+            warnings.extend(broken);
+        }
+    }
     let mut out = rom.to_vec();
     let mut new_map = map.clone();
     let mut actions = Vec::new();
@@ -263,5 +301,6 @@ pub fn replace(
         map: new_map,
         actions,
         approximated_pixels,
+        warnings,
     })
 }

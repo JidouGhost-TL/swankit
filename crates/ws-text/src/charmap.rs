@@ -210,6 +210,20 @@ pub struct TextToken {
     pub text: String,
 }
 
+/// One displayed line of a laid-out text (see [`CharacterMap::measure_lines`]).
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct MeasuredLine {
+    /// Zero-based page (a page-break control starts a new one).
+    pub page: usize,
+    /// Zero-based line within the page.
+    pub line: usize,
+    /// Pixels: the sum of the glyph widths.
+    pub width: u32,
+    pub glyphs: usize,
+    /// Decoded spelling of the line (controls included).
+    pub text: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DecodedText {
     pub text: String,
@@ -566,6 +580,78 @@ impl CharacterMap {
             return Err(malformed("invalid or trailing text tokens"));
         }
         Ok(bytes)
+    }
+
+    /// Whether a decoded token is a control (zero width on screen).
+    pub fn is_control(&self, token: &TextToken) -> bool {
+        let d = &self.definition;
+        token.bytes.len() >= d.unit.width()
+            && d.unit
+                .read(&mut Reader::new(&token.bytes))
+                .is_ok_and(|code| d.controls.iter().any(|c| code & c.mask == c.code))
+    }
+
+    /// Lay decoded tokens out as displayed lines: each newline in a control's
+    /// spelling ends a line, a control fragment equal to `page_break` starts a
+    /// new page (the newline after it opens that page), controls are zero
+    /// width and every glyph token adds `width(token)` pixels. Lines without
+    /// glyphs at the end of a page are dropped.
+    pub fn measure_lines(
+        &self,
+        tokens: &[TextToken],
+        page_break: Option<&str>,
+        width: &dyn Fn(&TextToken) -> u32,
+    ) -> Vec<MeasuredLine> {
+        let mut pages: Vec<Vec<MeasuredLine>> = vec![Vec::new()];
+        let mut current = MeasuredLine::default();
+        let mut after_marker = false;
+        for token in tokens {
+            if !self.is_control(token) {
+                current.width += width(token);
+                current.glyphs += 1;
+                current.text.push_str(&token.text);
+                after_marker = false;
+                continue;
+            }
+            for (i, part) in token.text.split('\n').enumerate() {
+                if i > 0 {
+                    if after_marker {
+                        after_marker = false;
+                    } else if let Some(page) = pages.last_mut() {
+                        page.push(std::mem::take(&mut current));
+                    }
+                }
+                if page_break.is_some_and(|p| !p.is_empty() && part == p) {
+                    if !current.text.is_empty() {
+                        if let Some(page) = pages.last_mut() {
+                            page.push(std::mem::take(&mut current));
+                        }
+                    }
+                    pages.push(Vec::new());
+                    after_marker = true;
+                    continue;
+                }
+                if !part.is_empty() {
+                    after_marker = false;
+                }
+                current.text.push_str(part);
+            }
+        }
+        if let Some(page) = pages.last_mut() {
+            page.push(current);
+        }
+        let mut lines = Vec::new();
+        for (p, mut page) in pages.into_iter().enumerate() {
+            while page.last().is_some_and(|l| l.glyphs == 0) {
+                page.pop();
+            }
+            for (l, mut line) in page.into_iter().enumerate() {
+                line.page = p;
+                line.line = l;
+                lines.push(line);
+            }
+        }
+        lines
     }
 
     /// Hidden attribute bits of a single-unit glyph token: the bits a

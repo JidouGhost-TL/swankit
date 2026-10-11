@@ -4,7 +4,7 @@ use crate::map::{Asset, AssetMap, CharmapSource};
 use formatkit_core::Result;
 use std::collections::BTreeMap;
 use ws_text::{
-    builtin_definition, CharacterMap, CodeUnit, DecodedText, TextDefinition, TextLimits,
+    builtin_definition, CharacterMap, CodeUnit, DecodedText, TextDefinition, TextLimits, TextToken,
 };
 
 /// Longest string accepted for a codec-less text asset.
@@ -128,5 +128,62 @@ impl Charmaps {
         self.for_asset(asset)?
             .encode_edit(&original[..old.consumed], text, Self::limits())
             .map_err(|e| malformed(format!("{}: {e}", asset.id)))
+    }
+
+    /// Displayed lines of a text payload that break its declared limits
+    /// (`line_width`, `lines`), measured with the glyph widths of its font.
+    pub fn limit_violations(
+        &self,
+        map: &AssetMap,
+        asset: &Asset,
+        bytes: &[u8],
+    ) -> Result<Vec<String>> {
+        let f = &asset.format;
+        if f.line_width.is_none() && f.lines.is_none() {
+            return Ok(Vec::new());
+        }
+        let font =
+            asset.relations.font.as_deref().ok_or_else(|| {
+                malformed(format!("{}: line limits need relations.font", asset.id))
+            })?;
+        let font = map.asset(font)?;
+        let advance = font
+            .format
+            .advance
+            .unwrap_or(font.format.tiles_wide.unwrap_or(1) * 8);
+        let widths = font.format.glyph_widths.clone().unwrap_or_default();
+        let width = |t: &TextToken| widths.get(&t.text).copied().unwrap_or(advance);
+        let decoded = self.decode(asset, bytes)?;
+        let lines =
+            self.for_asset(asset)?
+                .measure_lines(&decoded.tokens, f.page_break.as_deref(), &width);
+        let mut out = Vec::new();
+        for l in &lines {
+            if let Some(max) = f.line_width.filter(|max| l.width > *max) {
+                out.push(format!(
+                    "{}: page {} line {} is {} pixels wide ({} glyphs), the limit is {max}: {:?}",
+                    asset.id,
+                    l.page + 1,
+                    l.line + 1,
+                    l.width,
+                    l.glyphs,
+                    l.text
+                ));
+            }
+        }
+        if let Some(max) = f.lines {
+            let pages = lines.iter().map(|l| l.page).max().map_or(0, |p| p + 1);
+            for page in 0..pages {
+                let n = lines.iter().filter(|l| l.page == page).count();
+                if n > max as usize {
+                    out.push(format!(
+                        "{}: page {} has {n} lines, the limit is {max}",
+                        asset.id,
+                        page + 1
+                    ));
+                }
+            }
+        }
+        Ok(out)
     }
 }

@@ -60,8 +60,16 @@ Format parameters by kind:
 - `palette`: `palette_format` `rgb444` (32-byte colour RAM records) or
   `mono-lut` (2-byte port 20+2p pairs with `shades`, the eight port 1C-1F levels).
 - `font`: `bpp` 1/2/4, `tiles_wide`, `tiles_high`, `order` row/column,
-  `count`, `stride`, `tile_offsets`, sheet `width`.
+  `count`, `stride`, `tile_offsets`, sheet `width`; `advance` and
+  `glyph_widths` for line measurement.
 - `text`: `relations.charmap`; `pad` fills the unused tail of the slot.
+  Optional box limits: `line_width` (pixels), `lines` (per page) and
+  `page_break` (decoded spelling of the control fragment that opens a page).
+  Lines end at each newline in a control's spelling; glyphs are measured with
+  the `relations.font` asset's `advance` (default `tiles_wide` * 8) and its
+  `glyph_widths` (pixels by decoded spelling); controls have no width.
+  `replace` refuses an edit that breaks a limit; `--force` writes it and
+  reports the overflow as a warning.
 - `pointer-table`: `pointer` (an encoding), `stride`, `pointer_offset`, `count`
   and `relations.targets`; each listed target receives the entry as a reference.
 - `pcm`: `sample_rate` (unsigned 8-bit samples, extracted as WAV).

@@ -428,6 +428,21 @@ pub struct Format {
     /// In-place replacement padding byte for the unused tail of the slot.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pad: Option<Num>,
+    /// Text: widest displayed line in pixels (glyph widths from the font).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub line_width: Option<u32>,
+    /// Text: most lines on one page (box).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lines: Option<u32>,
+    /// Text: decoded spelling of the control fragment that starts a new page.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub page_break: Option<String>,
+    /// Font: pixels a glyph advances (default `tiles_wide` * 8).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub advance: Option<u32>,
+    /// Font: advances of glyphs that differ from `advance`, by decoded spelling.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub glyph_widths: Option<BTreeMap<String, u32>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]

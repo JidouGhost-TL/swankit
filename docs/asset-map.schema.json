@@ -110,7 +110,12 @@
             "pointer": {"$ref": "#/$defs/encoding"},
             "pointer_offset": {"$ref": "#/$defs/num"},
             "sample_rate": {"type": "integer", "minimum": 1},
-            "pad": {"$ref": "#/$defs/num"}
+            "pad": {"$ref": "#/$defs/num"},
+            "line_width": {"type": "integer", "minimum": 1},
+            "lines": {"type": "integer", "minimum": 1},
+            "page_break": {"type": "string"},
+            "advance": {"type": "integer", "minimum": 0},
+            "glyph_widths": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}}
           }
         },
         "relations": {
