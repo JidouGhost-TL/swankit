@@ -33,6 +33,8 @@ pub enum Event {
     Probe {
         echoed: bool,
     },
+    /// Unframed client synchronization reply; no power or network action.
+    ZeroSync,
     /// Credential bytes in PPP input frames are replaced by zeros.
     FrameIn(Frame),
     FrameOut(Frame),
@@ -65,6 +67,7 @@ impl Drop for Slot {
 pub struct Adapter<N: Network> {
     pub(crate) config: Config,
     decoder: Decoder,
+    padding_zeros: u8,
     pub(crate) net: N,
     pub(crate) state: AdapterState,
     pub(crate) ppp: Ppp,
@@ -87,6 +90,7 @@ impl<N: Network> Adapter<N> {
         Self {
             config,
             decoder,
+            padding_zeros: 0,
             net,
             ppp,
             sockets: std::array::from_fn(|_| None),
@@ -142,6 +146,7 @@ impl<N: Network> Adapter<N> {
                 }
             }
             (1, 0 | 2) | (0x11, 3 | 0xd | 0xe | 0xf) => 3,
+            (1, 8) if self.config.dial_padding => 3,
             (0x11, 7) if self.config.profile.close_reply == crate::profile::CloseReply::SixByte => {
                 3
             }
@@ -169,6 +174,20 @@ impl<N: Network> Adapter<N> {
 
     pub fn push(&mut self, input: &[u8], out: &mut Vec<u8>, events: &mut dyn FnMut(Event)) {
         for &byte in input {
+            if self.config.zero_sync
+                && self.config.profile.skip_zero_padding
+                && self.decoder.at_boundary()
+                && byte == 0
+            {
+                self.padding_zeros += 1;
+                if self.padding_zeros == 10 {
+                    self.padding_zeros = 0;
+                    out.extend_from_slice(&[0; 5]);
+                    events(Event::ZeroSync);
+                }
+                continue;
+            }
+            self.padding_zeros = 0;
             if self.config.probe != Probe::Framed && byte == 0x8f && self.decoder.at_boundary() {
                 let echoed = self.config.probe == Probe::Echo;
                 if echoed {

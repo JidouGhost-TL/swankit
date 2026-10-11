@@ -47,6 +47,11 @@ pub enum Probe {
 pub struct Config {
     /// Standalone detector policy; bytes inside frames are always opaque.
     pub probe: Probe,
+    /// Reply with five raw zero bytes after ten boundary-padding zeros.
+    /// This client compatibility policy is disabled by default.
+    pub zero_sync: bool,
+    /// Add a trailing zero to the dial acknowledgment for older reply readers.
+    pub dial_padding: bool,
     pub pdc_reception: u8,
     pub ppp: Ppp,
     pub builtin_bpl: bool,
@@ -62,6 +67,8 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             probe: Probe::Framed,
+            zero_sync: false,
+            dial_padding: false,
             pdc_reception: 15,
             ppp: Ppp::default(),
             builtin_bpl: true,
@@ -199,6 +206,8 @@ impl Config {
                 return Err(error(line, "empty key"));
             }
             match (section, key) {
+                ("swankit", "zero_sync") => config.zero_sync = boolean(value, line)?,
+                ("swankit", "dial_padding") => config.dial_padding = boolean(value, line)?,
                 ("swankit", "probe") => {
                     config.probe = match value {
                         "framed" => Probe::Framed,

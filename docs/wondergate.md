@@ -80,6 +80,7 @@ BPL bytes opaquely when `builtin_bpl` is disabled.
 | poweroff_parameter | one zero parameter | none |
 | skip_zero_padding | false | true |
 | f_stack_metadata | false | true |
+| mode_select | false | true (alternate initialization) |
 | poll_reports_allocation | false | true |
 | dial_modes | 03 | 01, 03 |
 | status_params | 03 | 00, 03 |
@@ -120,6 +121,7 @@ The following table lists **reply parameters**, following `[type][BE length]
 | 01:02 | power on; reset only on off-to-on transition | 02, ASCII `10` |
 | 01:00 | check PDC | 00, `[pdc][reception]` |
 | 02:01 | status selector from profile, or none when enabled | **02**, `[status]` (off 00, on 02, PPP 03) |
+| 02:00 | exactly `03`, revival only | **02**, no parameters; initialize the same local powered-on state as 01:02 |
 | 01:01/03/04 | enabled metadata policy | same command, `[00]` |
 | 01:08 | `00 01 mode n phone[n]` | **0B**, result 00 or FF |
 | 01:09 | enabled answer policy | **0B**, result 00 |
@@ -243,6 +245,21 @@ retains the original decoder behavior. These are client compatibility policies,
 not a measurement of a physical adapter. Initialization still returns ASCII
 major/minor `10` in both profiles.
 
+`zero_sync=true` enables a client warm-up sequence: ten consecutive raw zero
+bytes between frames receive five raw zero bytes. Native client instructions
+send ten zeros and require five successful reads without testing their values.
+The reply is a revival placeholder; physical adapter reply values are unknown.
+The counter survives input chunk boundaries and resets on any other byte.
+Frame headers, payloads and rejected-frame drains remain opaque. This policy
+requires the profile's zero-padding behavior and performs no power or network
+action. It is disabled by default.
+
+`dial_padding=true` appends a zero parameter to a successful `01:08` reply.
+An older client reader decrements the remaining length twice around its status
+read; the extra declared byte prevents its drain counter from underflowing.
+The zero is a compatibility placeholder and can remain unread until the next
+header scan. Default dial replies retain one result parameter.
+
 Numeric values accept decimal, `0x`, `$`, `0b` and `0o` prefixes. Complete
 tokens and checked arithmetic replace C's suffix truncation and overflow.
 IPv4 uses dotted four-octet notation. Boolean fields accept `true`, `false`
@@ -252,6 +269,8 @@ or numeric zero/nonzero. `[swankit]` provides the following settings:
 | --- | --- |
 | `profile` | `revival`; also `upstream` |
 | `probe` | `framed`; opt-in `ignore` or `echo` for standalone `8F` at a frame boundary |
+| `zero_sync` | false; opt-in five-byte raw reply to ten boundary-padding zeros |
+| `dial_padding` | false; opt-in trailing zero on successful `01:08` acknowledgments |
 | `header` | profile default; `len16be` or `zero-then-len8`, independent of key order |
 | `backend` | `tcp`; also `transcript` (selection metadata for the caller) |
 | `transcript_file` | optional external path, loaded by the caller |

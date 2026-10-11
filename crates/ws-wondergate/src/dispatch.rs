@@ -9,6 +9,7 @@ use crate::{frame::Frame, Profile};
 pub(crate) fn known(frame: &Frame, profile: Profile) -> bool {
     match (frame.kind, frame.cmd) {
         (1, 1 | 3 | 4 | 9) => profile.f_stack_metadata,
+        (2, 0) => profile.mode_select,
         (1, 0 | 2 | 8 | 0xa | 0x10 | 0x11)
         | (2, 1)
         | (0xf, 0xff)

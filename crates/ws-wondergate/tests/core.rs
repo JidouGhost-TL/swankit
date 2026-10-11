@@ -664,6 +664,7 @@ fn upstream_poll_does_not_require_parameters_and_profiles_switch_independently()
     profile.poweroff_parameter = true;
     profile.skip_zero_padding = false;
     profile.f_stack_metadata = false;
+    profile.mode_select = false;
     profile.poll_reports_allocation = false;
     profile.dial_modes = &[3];
     profile.status_params = &[3];

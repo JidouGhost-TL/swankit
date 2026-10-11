@@ -26,20 +26,31 @@ fn reply(frame: &Frame, cmd: u8, params: Vec<u8>) -> Frame {
 }
 
 impl<N: Network> Adapter<N> {
+    fn initialize(&mut self) {
+        if self.state.status == 0 {
+            self.sockets.fill_with(|| None);
+            self.ppp = Ppp::default();
+            self.state.phone.clear();
+            self.state.dns = [[0; 4]; 2];
+            self.state.pdc = 0;
+            self.state.reception = self.config.pdc_reception;
+            self.state.status = 2;
+        }
+    }
+
     pub(crate) fn execute(&mut self, frame: &Frame) -> Result<Frame> {
         let mut reader = Reader::new(&frame.params);
         let params = match (frame.kind, frame.cmd) {
             (1, 2) => {
-                if self.state.status == 0 {
-                    self.sockets.fill_with(|| None);
-                    self.ppp = Ppp::default();
-                    self.state.phone.clear();
-                    self.state.dns = [[0; 4]; 2];
-                    self.state.pdc = 0;
-                    self.state.reception = self.config.pdc_reception;
-                    self.state.status = 2;
-                }
+                self.initialize();
                 vec![b'1', b'0']
+            }
+            (2, 0) => {
+                if frame.params.len() != 1 || reader.u8()? != 3 {
+                    return Err(malformed("mode selection"));
+                }
+                self.initialize();
+                return Ok(reply(frame, 2, vec![]));
             }
             (0xf, 0xff) => {
                 if reader.bytes(4)? != [0x55, 0xaa, 0x55, 0xaa] {
@@ -105,7 +116,15 @@ impl<N: Network> Adapter<N> {
                 let phone = reader.bytes(count)?;
                 self.state.phone = phone.to_vec();
                 self.state.status = 3;
-                return Ok(reply(frame, 0xb, vec![0]));
+                return Ok(reply(
+                    frame,
+                    0xb,
+                    if self.config.dial_padding {
+                        vec![0, 0]
+                    } else {
+                        vec![0]
+                    },
+                ));
             }
             (1, 9) => return Ok(reply(frame, 0xb, vec![0])),
             (1, 0xa) => {
