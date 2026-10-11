@@ -1,0 +1,174 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "another-heaven-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "Clean-room request and response grammar from the private wave-2 ROM probes. Empty histories, best-per-identity ordering, dates, score conversion and structural blank slots are newly authored revival policy; no original server data or assets."
+  },
+  "hosts": [
+    "heaven.wgg.channel.or.jp"
+  ],
+  "boards": {
+    "course-1": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "1"
+    }
+  },
+  "records": {
+    "row": [
+      {
+        "text": " "
+      },
+      {
+        "field": "rank",
+        "fmt": "dec"
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "score",
+        "fmt": "dec",
+        "zero_pad": true,
+        "width": 6
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "name",
+        "fmt": "raw",
+        "empty_bytes": [
+          32
+        ]
+      },
+      {
+        "text": "\r\n"
+      }
+    ]
+  },
+  "routes": [
+    {
+      "id": "ranking",
+      "method": "POST",
+      "match": {
+        "path": "/swan-ranking"
+      },
+      "source": "form",
+      "request": {
+        "*": {
+          "decode": "percent-plus",
+          "bytes": [
+            0,
+            8
+          ],
+          "alphabet": "0123456789ABCDEF"
+        },
+        "owner": {
+          "decode": "percent-plus",
+          "bytes": [
+            0,
+            16
+          ],
+          "min_byte": 32,
+          "deny": [
+            124,
+            127
+          ],
+          "trim_end": 32
+        },
+        "list": {
+          "decode": "percent-plus",
+          "equals": [
+            66,
+            69,
+            83,
+            84,
+            124,
+            49,
+            124,
+            53
+          ]
+        },
+        "group": {
+          "decode": "percent-plus",
+          "default": [
+            49
+          ],
+          "equals": [
+            49
+          ]
+        }
+      },
+      "tables": {
+        "score": {
+          "delimiter": 124,
+          "optional": true,
+          "rows": {
+            "1": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{6,6}$"
+              }
+            ]
+          },
+          "tag_decimal_width": [
+            1,
+            2
+          ]
+        }
+      },
+      "table_actions": [
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "1": "course-1"
+          }
+        }
+      ],
+      "respond": {
+        "status": 200,
+        "content_type": "application/x-swan-ranking-response",
+        "body": [
+          {
+            "text": "course=1|1|0|0|0|"
+          },
+          {
+            "board": "course-1",
+            "metric": "position",
+            "fmt": "dec",
+            "identity": "*",
+            "max": 999999,
+            "overflow_zero": true
+          },
+          {
+            "text": "\r\nBEST=5\r\n"
+          },
+          {
+            "each": {
+              "leaders": {
+                "board": "course-1",
+                "limit": 5,
+                "pad_to": 5
+              }
+            },
+            "record": "row"
+          }
+        ]
+      }
+    }
+  ],
+  "limits": {
+    "max_body": 65536,
+    "max_response": 2047
+  },
+  "errors": {
+    "method": 405,
+    "method_first": false
+  }
+}

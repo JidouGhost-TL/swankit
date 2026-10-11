@@ -1,0 +1,2676 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "final-lap-2000-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "Clean-room request and response grammar from the private wave-2 ROM probes. Empty histories, best-per-identity ordering, dates, score conversion and structural blank slots are newly authored revival policy; no original server data or assets."
+  },
+  "hosts": [
+    "wgg01.channel.or.jp"
+  ],
+  "boards": {
+    "course-1": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "1"
+    },
+    "course-2": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "2"
+    },
+    "course-3": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "3"
+    },
+    "course-4": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "4"
+    },
+    "course-5": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "5"
+    },
+    "course-6": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "6"
+    },
+    "course-7": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "7"
+    },
+    "course-8": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "8"
+    },
+    "course-9": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "9"
+    },
+    "course-10": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "10"
+    },
+    "course-11": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "11"
+    },
+    "course-12": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "12"
+    },
+    "course-13": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "13"
+    },
+    "course-14": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "14"
+    },
+    "course-15": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "15"
+    },
+    "course-16": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "16"
+    },
+    "course-17": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "17"
+    },
+    "course-18": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "18"
+    },
+    "course-19": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "19"
+    },
+    "course-20": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "20"
+    },
+    "course-21": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "21"
+    },
+    "course-22": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "22"
+    },
+    "course-23": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "23"
+    },
+    "course-24": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "24"
+    },
+    "course-25": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "25"
+    },
+    "course-26": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "26"
+    },
+    "course-27": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "27"
+    },
+    "course-28": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "28"
+    },
+    "course-29": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "29"
+    },
+    "course-30": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "30"
+    },
+    "course-31": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "31"
+    },
+    "course-32": {
+      "identity": "*",
+      "order": "asc",
+      "ties": "first-best-submission",
+      "course": "32"
+    }
+  },
+  "records": {
+    "row": [
+      {
+        "field": "rank",
+        "fmt": "dec",
+        "zero_pad": true,
+        "width": 3
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "score",
+        "fmt": "dec",
+        "zero_pad": true,
+        "width": 5
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "name",
+        "fmt": "raw",
+        "width": 3
+      },
+      {
+        "text": "|0\r\n"
+      }
+    ]
+  },
+  "routes": [
+    {
+      "id": "ranking",
+      "method": "POST",
+      "match": {
+        "path": "/service/swan-ranking/final-lap"
+      },
+      "source": "form",
+      "request": {
+        "*": {
+          "decode": "percent-plus",
+          "bytes": [
+            8,
+            8
+          ],
+          "alphabet": "0123456789ABCDEF"
+        },
+        "owner": {
+          "decode": "percent-plus",
+          "bytes": [
+            0,
+            3
+          ],
+          "min_byte": 32,
+          "deny": [
+            124,
+            127
+          ],
+          "trim_end": 32
+        },
+        "list": {
+          "decode": "percent-plus",
+          "choices": [
+            [
+              70,
+              76,
+              84,
+              79,
+              80,
+              124,
+              49,
+              124,
+              49
+            ],
+            [
+              70,
+              76,
+              84,
+              79,
+              80,
+              124,
+              43,
+              49,
+              124,
+              49
+            ]
+          ]
+        },
+        "group": {
+          "decode": "percent-plus",
+          "default": [
+            49
+          ],
+          "choices": [
+            [
+              49
+            ],
+            [
+              50
+            ]
+          ]
+        }
+      },
+      "tables": {
+        "score": {
+          "delimiter": 124,
+          "optional": true,
+          "rows": {
+            "1": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "2": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "3": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "4": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "5": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "6": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "7": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "8": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "9": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "10": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "11": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "12": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "13": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "14": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "15": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "16": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "17": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "18": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "19": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "20": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "21": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "22": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "23": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "24": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "25": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "26": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "27": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "28": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "29": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "30": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "31": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ],
+            "32": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{5,5}$"
+              },
+              {
+                "equals": [
+                  48
+                ]
+              },
+              {
+                "equals": []
+              }
+            ]
+          },
+          "tag_decimal_width": [
+            1,
+            2
+          ]
+        }
+      },
+      "table_actions": [
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "1": "course-1"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "2": "course-2"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "3": "course-3"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "4": "course-4"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "5": "course-5"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "6": "course-6"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "7": "course-7"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "8": "course-8"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "9": "course-9"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "10": "course-10"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "11": "course-11"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "12": "course-12"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "13": "course-13"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "14": "course-14"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "15": "course-15"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "16": "course-16"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "17": "course-17"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "18": "course-18"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "19": "course-19"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "20": "course-20"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "21": "course-21"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "22": "course-22"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "23": "course-23"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "24": "course-24"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "25": "course-25"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "26": "course-26"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "27": "course-27"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "28": "course-28"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "29": "course-29"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "30": "course-30"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "31": "course-31"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "32": "course-32"
+          }
+        }
+      ],
+      "respond": {
+        "status": 200,
+        "content_type": "application/x-swan-ranking-response",
+        "body": [
+          {
+            "when": {
+              "equals": {
+                "group": [
+                  49
+                ],
+                "list": [
+                  70,
+                  76,
+                  84,
+                  79,
+                  80,
+                  124,
+                  49,
+                  124,
+                  49
+                ]
+              },
+              "absent": []
+            },
+            "segments": [
+              {
+                "text": "date="
+              },
+              {
+                "date": 8
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "text": "course=1|1|1|0|0|"
+              },
+              {
+                "board": "course-1",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-1",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|2|0|0|"
+              },
+              {
+                "board": "course-2",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-2",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|3|0|0|"
+              },
+              {
+                "board": "course-3",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-3",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|4|0|0|"
+              },
+              {
+                "board": "course-4",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-4",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|5|0|0|"
+              },
+              {
+                "board": "course-5",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-5",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|6|0|0|"
+              },
+              {
+                "board": "course-6",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-6",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|7|0|0|"
+              },
+              {
+                "board": "course-7",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-7",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|8|0|0|"
+              },
+              {
+                "board": "course-8",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-8",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|9|0|0|"
+              },
+              {
+                "board": "course-9",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-9",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|10|0|0|"
+              },
+              {
+                "board": "course-10",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-10",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|11|0|0|"
+              },
+              {
+                "board": "course-11",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-11",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|12|0|0|"
+              },
+              {
+                "board": "course-12",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-12",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|13|0|0|"
+              },
+              {
+                "board": "course-13",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-13",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|14|0|0|"
+              },
+              {
+                "board": "course-14",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-14",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|15|0|0|"
+              },
+              {
+                "board": "course-15",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-15",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|16|0|0|"
+              },
+              {
+                "board": "course-16",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-16",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          },
+          {
+            "when": {
+              "equals": {
+                "group": [
+                  49
+                ],
+                "list": [
+                  70,
+                  76,
+                  84,
+                  79,
+                  80,
+                  124,
+                  43,
+                  49,
+                  124,
+                  49
+                ]
+              },
+              "absent": []
+            },
+            "segments": [
+              {
+                "text": "date="
+              },
+              {
+                "date": 8
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "text": "course=1|1|1|0|0|"
+              },
+              {
+                "board": "course-1",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-1",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|2|0|0|"
+              },
+              {
+                "board": "course-2",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-2",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|3|0|0|"
+              },
+              {
+                "board": "course-3",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-3",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|4|0|0|"
+              },
+              {
+                "board": "course-4",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-4",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|5|0|0|"
+              },
+              {
+                "board": "course-5",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-5",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|6|0|0|"
+              },
+              {
+                "board": "course-6",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-6",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|7|0|0|"
+              },
+              {
+                "board": "course-7",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-7",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|8|0|0|"
+              },
+              {
+                "board": "course-8",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-8",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|9|0|0|"
+              },
+              {
+                "board": "course-9",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-9",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|10|0|0|"
+              },
+              {
+                "board": "course-10",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-10",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|11|0|0|"
+              },
+              {
+                "board": "course-11",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-11",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|12|0|0|"
+              },
+              {
+                "board": "course-12",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-12",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|13|0|0|"
+              },
+              {
+                "board": "course-13",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-13",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|14|0|0|"
+              },
+              {
+                "board": "course-14",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-14",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|15|0|0|"
+              },
+              {
+                "board": "course-15",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-15",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|1|16|0|0|"
+              },
+              {
+                "board": "course-16",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-16",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          },
+          {
+            "when": {
+              "equals": {
+                "group": [
+                  50
+                ],
+                "list": [
+                  70,
+                  76,
+                  84,
+                  79,
+                  80,
+                  124,
+                  49,
+                  124,
+                  49
+                ]
+              },
+              "absent": []
+            },
+            "segments": [
+              {
+                "text": "date="
+              },
+              {
+                "date": 8
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "text": "course=1|2|17|0|0|"
+              },
+              {
+                "board": "course-17",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-17",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|18|0|0|"
+              },
+              {
+                "board": "course-18",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-18",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|19|0|0|"
+              },
+              {
+                "board": "course-19",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-19",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|20|0|0|"
+              },
+              {
+                "board": "course-20",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-20",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|21|0|0|"
+              },
+              {
+                "board": "course-21",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-21",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|22|0|0|"
+              },
+              {
+                "board": "course-22",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-22",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|23|0|0|"
+              },
+              {
+                "board": "course-23",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-23",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|24|0|0|"
+              },
+              {
+                "board": "course-24",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-24",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|25|0|0|"
+              },
+              {
+                "board": "course-25",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-25",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|26|0|0|"
+              },
+              {
+                "board": "course-26",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-26",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|27|0|0|"
+              },
+              {
+                "board": "course-27",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-27",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|28|0|0|"
+              },
+              {
+                "board": "course-28",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-28",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|29|0|0|"
+              },
+              {
+                "board": "course-29",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-29",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|30|0|0|"
+              },
+              {
+                "board": "course-30",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-30",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|31|0|0|"
+              },
+              {
+                "board": "course-31",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-31",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|32|0|0|"
+              },
+              {
+                "board": "course-32",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-32",
+                    "n": 1
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          },
+          {
+            "when": {
+              "equals": {
+                "group": [
+                  50
+                ],
+                "list": [
+                  70,
+                  76,
+                  84,
+                  79,
+                  80,
+                  124,
+                  43,
+                  49,
+                  124,
+                  49
+                ]
+              },
+              "absent": []
+            },
+            "segments": [
+              {
+                "text": "date="
+              },
+              {
+                "date": 8
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "text": "course=1|2|17|0|0|"
+              },
+              {
+                "board": "course-17",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-17",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|18|0|0|"
+              },
+              {
+                "board": "course-18",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-18",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|19|0|0|"
+              },
+              {
+                "board": "course-19",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-19",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|20|0|0|"
+              },
+              {
+                "board": "course-20",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-20",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|21|0|0|"
+              },
+              {
+                "board": "course-21",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-21",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|22|0|0|"
+              },
+              {
+                "board": "course-22",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-22",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|23|0|0|"
+              },
+              {
+                "board": "course-23",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-23",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|24|0|0|"
+              },
+              {
+                "board": "course-24",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-24",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|25|0|0|"
+              },
+              {
+                "board": "course-25",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-25",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|26|0|0|"
+              },
+              {
+                "board": "course-26",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-26",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|27|0|0|"
+              },
+              {
+                "board": "course-27",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-27",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|28|0|0|"
+              },
+              {
+                "board": "course-28",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-28",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|29|0|0|"
+              },
+              {
+                "board": "course-29",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-29",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|30|0|0|"
+              },
+              {
+                "board": "course-30",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-30",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|31|0|0|"
+              },
+              {
+                "board": "course-31",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-31",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|32|0|0|"
+              },
+              {
+                "board": "course-32",
+                "metric": "position",
+                "fmt": "dec",
+                "identity": "*",
+                "max": 999,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nFLTOP="
+              },
+              {
+                "row": {
+                  "place": {
+                    "board": "course-32",
+                    "n": 2
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "limits": {
+    "max_body": 65536,
+    "max_response": 1151
+  },
+  "errors": {
+    "method": 405,
+    "method_first": false
+  }
+}

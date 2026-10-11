@@ -24,7 +24,7 @@ response sizes. Unknown properties, primitives and plugins fail to load.
 | --- | --- |
 | `schema`, `id` | Exact version and a stable scope identifier. Identifiers have 1..128 ASCII letters, digits, hyphen, underscore or dot. |
 | `provenance` | Required `server: "new"` and `notes` explaining evidence and policy. |
-| `hosts` | Nonempty unique normalized hostnames, without port or trailing dot. Server construction rejects ownership collisions with another definition or shared services. |
+| `hosts` | Nonempty unique normalized hostnames, without port or trailing dot. Definitions may share a host when their paths are disjoint. A path belongs to one definition; shared charge paths cannot be overridden. |
 | `boards` | Named ranking policies: `identity` field, `order: "asc"` or `"desc"`, `ties`, and explicit `course`. Storage scope is `(definition id, board id, course)`. |
 | `values` | Named `cyclic-phase` values, described below. |
 | `records` | Named segment arrays for a row. A record cannot contain another `each` or `row`; this prevents recursive templates. |
@@ -53,6 +53,26 @@ chooses an occurrence, but all occurrences must pass validation.
 | `charset` | `"raw"` (default), `"ascii"`, or strict standard `"shift-jis"`. Length always counts bytes. |
 | `regex` | Only anchored decimal widths: `^[0-9]{N}$` or `^[0-9]{N,M}$`, with 1..20 digits. Other regex grammars are unsupported. |
 | `as` | Checked unsigned `"u32"` or `"u64"`; signs, nondigits and overflow fail. Without a regex, numeric width is 1..20. |
+| `optional`, `default` | Permit an absent field, or supply default bytes and validate them. Action fields must always be available. |
+| `choices`, `alphabet` | Allowed complete byte values, or an ASCII alphabet for each decoded byte. |
+| `prefix`, `suffix`, `last_bytes` | Required byte prefixes/suffixes, or allowed final bytes; checked before trimming. |
+| `trim_end`, `max_number` | Remove trailing occurrences of one byte after validation; cap a declared numeric value. |
+
+`tables` declares repeated delimited fields separately from `request`. Each
+table has a nonzero byte `delimiter`, `optional`, and `rows` mapping a tag to
+one through eight checked column declarations. Values are percent-plus decoded
+before splitting. A row must have exactly the declared columns. Optional
+`tag_decimal_width: [minimum, maximum]` parses a checked decimal tag and
+normalizes it to its canonical decimal key; aliases such as `01` and `1`
+therefore count as a duplicate. Without this option, tags match literal bytes.
+All tags and columns in every table are validated before any submission.
+
+`table_actions` maps a table `field` and its tags to `boards`, with required
+request `identity` and `name` references, a numeric `score` column index and
+optional numeric `extra` column index. The latter must have a declared maximum
+inside the signed 64-bit range. Optional route `form_trim_end` lists tolerated
+trailing form bytes; this is applied before form splitting. Neither trimming
+nor numeric tag normalization is implicit.
 
 A route may have one action: `record` or `increment`, with `board`, `identity`,
 `name` and numeric `score` field references. The identity reference must match
@@ -102,6 +122,9 @@ phase definition uses seven lines and mirrors its three state bytes in its
 | `{"each":{"leaders":{"board":"main","limit":3,"pad_to":3}},"record":"row"}` | Bounded leaders followed by empty rows until `pad_to`; larger real selections are retained. |
 | `{"row":{"submitter":"main"},"record":"row"}` | Current submission; requires an action on this board. |
 | `{"row":{"place":{"board":"main","n":4}},"record":"row"}` | One-based placed leader or an empty row. |
+| `{"date":14}` | Injected UTC timestamp as 14 decimal digits; `8` emits just the UTC date. |
+| `{"board":"main","metric":"position","identity":"owner","fmt":"dec"}` | Board `count`, request identity's `position`, or selected `length`. Length uses bounded `limit`/`pad_to`; `max` clamps, or `overflow_zero` emits zero beyond it. |
+| `{"when":{"equals":{"mode":[49]},"absent":["list"]},"segments":[...]}` | Render only when every declared byte equality and absence condition holds. Conditions refer to validated request fields, including defaults. |
 
 Numeric formats are `u8` (one checked byte), `dec`, `hex-lower` and `hex-upper`.
 Row numeric options `width` and `zero_pad` control minimum text width/padding;
@@ -111,6 +134,10 @@ Negative `extra` cannot be rendered as unsigned. Byte fields use `raw` or
 `html-shift-jis`, without numeric options. The latter decodes standard Shift-JIS
 with replacement for invalid bytes, escapes `&<>"'`, and emits UTF-8.
 Windows-only characters remain invalid, matching the Python oracle's codec.
+Raw byte fields can declare a minimum `width` with space padding and
+`empty_bytes` for a structural empty row. Numeric row `divide` is a nonzero
+unsigned divisor applied before formatting and clamping. These operations never
+truncate names or turn structural rows into players.
 
 The envelope is `primitive: "sum16-hex-envelope"`, an ASCII `marker`,
 `case: "lower"`/`"upper"`, and literal byte `terminator`. Sum every payload
@@ -161,8 +188,9 @@ fn edit_and_run(text: &str, request: &[u8])
 2. Edit a JSON copy, preserving the identity unless a new history scope is
    intended. Validate the candidate and review `to_json()` before saving it.
 3. Compose definitions with `Server::from_definitions`. For custom shared
-   services and HTTP limits use `Server::with_definitions`; duplicate ids/hosts
-   fail. `Server::bundled` loads the shipped service and title data together.
+   services and HTTP limits use `Server::with_definitions`; duplicate ids and
+   shared-host path collisions fail. `Server::bundled` loads the shipped service
+   and title data together.
 4. Supply a store, clock and RNG. Use `MemoryStore` for an empty test history,
    or `JournalStore::open` for a durable journal. Render synthetic requests and
    check status, full bytes, header line count and body/client response limits.
@@ -208,6 +236,27 @@ There is no registered plugin API in v1. A `plugin` member fails closed. A
 future plugin must use a generic identifier, load-time parameter validation,
 an explicit registration and a ledger entry explaining why data cannot express
 its independent consumers. No dormant native handler is added for future work.
+
+The bundled ranking programs additionally cover nine delimited client grammars:
+four-course packed scores, four-course fixed-width single leaders, two groups
+of sixteen ascending time boards, five-course scores with decimal conversion,
+one-course five-row lists, fourteen-course list/upload selectors, bounded
+sixteen-row lists with byte extras, fifteen-course three-slot lists, and a
+one-course fifty-row body installer. Their hosts and title identities stay in
+JSON data. Empty histories, best-per-identity ordering, UTC dates and structural
+padding are newly authored revival policy. Parser acceptance alone does not
+establish native connectivity, eligibility, rewards or original server content.
+
+Independent history-backed vectors enroll with the existing
+`--wondergate-server-manifest` option and schema
+`swankit-wondergate-ranking-manifest/1`. Each HTTP record binds a synthetic
+starting history with `store_path`/`store_sha256`, in addition to request and
+response paths/digests, fixed clock, seed and oracle provenance. Staging creates
+a new `ws-wondergate-rankings` selection and refuses replacement. The required
+safe runner checks the history digest, bundled production definitions and full
+reply bytes without rewriting any expectation. The generic
+`definition_vectors` example accepts external definitions, submissions, raw
+requests and a clock as JSON lines for independent oracle comparisons.
 
 Run ordinary checks with corpus variables unset. Schema/semantic/form/primitive
 and lineage service tests use synthetic inputs. Independent native HTTP captures

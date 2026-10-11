@@ -1,0 +1,266 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "ds-garage-tanetori-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "Clean-room request and response grammar from the private wave-2 ROM probes. Empty histories, best-per-identity ordering, dates, score conversion and structural blank slots are newly authored revival policy; no original server data or assets."
+  },
+  "hosts": [
+    "wgg01.channel.or.jp"
+  ],
+  "boards": {
+    "course-1": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "1"
+    },
+    "course-2": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "2"
+    },
+    "course-3": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "3"
+    },
+    "course-4": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "4"
+    }
+  },
+  "records": {
+    "row": [
+      {
+        "field": "rank",
+        "fmt": "dec",
+        "zero_pad": true,
+        "width": 4
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "score",
+        "fmt": "dec",
+        "zero_pad": true,
+        "width": 10
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "name",
+        "fmt": "raw",
+        "width": 16
+      },
+      {
+        "text": "\r\n"
+      }
+    ]
+  },
+  "routes": [
+    {
+      "id": "ranking",
+      "method": "POST",
+      "match": {
+        "path": "/service/swan-ranking/tanetori"
+      },
+      "source": "form",
+      "request": {
+        "*": {
+          "decode": "percent-plus",
+          "bytes": [
+            6,
+            6
+          ],
+          "alphabet": "0123456789ABCDEF"
+        },
+        "owner": {
+          "decode": "percent-plus",
+          "bytes": [
+            0,
+            16
+          ],
+          "min_byte": 32,
+          "deny": [
+            124,
+            127
+          ],
+          "trim_end": 32
+        },
+        "list": {
+          "decode": "percent-plus",
+          "equals": [
+            84,
+            65,
+            78,
+            69,
+            84,
+            79,
+            82,
+            73,
+            124,
+            49,
+            124,
+            49
+          ]
+        },
+        "group": {
+          "decode": "percent-plus",
+          "default": [
+            49
+          ],
+          "equals": [
+            49
+          ]
+        }
+      },
+      "tables": {
+        "score": {
+          "delimiter": 124,
+          "optional": true,
+          "rows": {
+            "1": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{10,10}$",
+                "prefix": "0000"
+              }
+            ],
+            "2": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{10,10}$",
+                "prefix": "0000"
+              }
+            ],
+            "3": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{10,10}$",
+                "prefix": "0000"
+              }
+            ],
+            "4": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{10,10}$",
+                "prefix": "0000"
+              }
+            ]
+          },
+          "tag_decimal_width": [
+            1,
+            2
+          ]
+        }
+      },
+      "table_actions": [
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "1": "course-1"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "2": "course-2"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "3": "course-3"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "4": "course-4"
+          }
+        }
+      ],
+      "respond": {
+        "status": 200,
+        "content_type": "application/x-swan-ranking-response",
+        "body": [
+          {
+            "text": "courseNo=1|0|0|0|"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-1",
+                "n": 1
+              }
+            },
+            "record": "row"
+          },
+          {
+            "text": "courseNo=2|0|0|0|"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-2",
+                "n": 1
+              }
+            },
+            "record": "row"
+          },
+          {
+            "text": "courseNo=3|0|0|0|"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-3",
+                "n": 1
+              }
+            },
+            "record": "row"
+          },
+          {
+            "text": "courseNo=4|0|0|0|"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-4",
+                "n": 1
+              }
+            },
+            "record": "row"
+          }
+        ]
+      }
+    }
+  ],
+  "limits": {
+    "max_body": 65536,
+    "max_response": 2047
+  },
+  "errors": {
+    "method": 405,
+    "method_first": false
+  }
+}

@@ -380,7 +380,7 @@ def main():
     selection.add_argument("--wondergate-manifest", type=Path,
                            help="enroll independent adapter taps and TCP peers in a NEW frozen adapter selection")
     selection.add_argument("--wondergate-server-manifest", type=Path,
-                           help="enroll shared HTTP/BPL vectors or title HTTP captures in a NEW frozen server selection")
+                           help="enroll shared vectors, title captures or ranking histories in a NEW frozen server selection")
     selection.add_argument("--interop-manifest", type=Path,
                            help="enroll independent Java header/tile vectors in a NEW swankit-interop selection")
     selection.add_argument("--link-manifest", type=Path,

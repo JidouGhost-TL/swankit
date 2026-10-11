@@ -113,20 +113,21 @@ pub(crate) fn handle(
         {
             return Err(malformed("form content type required"));
         }
-        if route.request.is_empty() {
-            return Ok(BTreeMap::new());
+        if route.request.is_empty() && route.tables.is_empty() {
+            return Ok((BTreeMap::new(), BTreeMap::new()));
         }
-        let fields = if let Some(fields) = parsed {
+        let mut fields = if let Some(fields) = parsed {
             fields
         } else {
             match route.source {
                 Source::Query => form::fields(&form::latin1(&request.query)?)?,
-                Source::Form => form::fields(&request.body)?,
+                Source::Form => form::fields(trim_form(&request.body, &route.form_trim_end))?,
             }
         };
-        form::validate(&fields, &route.request)
+        let tables = form::tables(&mut fields, &route.tables)?;
+        Ok((form::validate(&fields, &route.request)?, tables))
     })();
-    let fields = match fields {
+    let (fields, tables) = match fields {
         Ok(fields) => fields,
         Err(_) => return Ok(Some(http::empty_response(invalid))),
     };
@@ -167,6 +168,35 @@ pub(crate) fn handle(
         };
         store.submit(submission.clone()).map_err(store_error)?;
         cx.submitted.insert(record.board.clone(), submission);
+    }
+    for action in &route.table_actions {
+        for (tag, columns) in &tables[&action.field] {
+            let Some(board) = action.boards.get(tag) else {
+                continue;
+            };
+            let score = columns[action.score]
+                .number
+                .ok_or_else(|| malformed("non-numeric table score"))?;
+            let extra = action
+                .extra
+                .map(|i| {
+                    columns[i]
+                        .number
+                        .ok_or_else(|| malformed("non-numeric table extra"))
+                })
+                .transpose()?
+                .unwrap_or(0);
+            let submission = Submission {
+                scope: cx.scope(board)?,
+                identity: cx.field(&action.identity)?.bytes.clone(),
+                name: cx.field(&action.name)?.bytes.clone(),
+                score,
+                extra: i64::try_from(extra).map_err(|_| malformed("table extra overflow"))?,
+                submitted_at: cx.now,
+            };
+            store.submit(submission.clone()).map_err(store_error)?;
+            cx.submitted.insert(board.clone(), submission);
+        }
     }
     // Serialization/configuration failures are server failures, never client input.
     let reply = cx
@@ -269,6 +299,58 @@ impl Context<'_> {
     fn render(&self, segments: &[Segment], row: Option<&RowData>, out: &mut Vec<u8>) -> Result<()> {
         for segment in segments {
             match segment {
+                Segment::Date { date } => {
+                    self.append(out, &self.now.utc_digits().as_bytes()[..*date])?
+                }
+                Segment::Board {
+                    board,
+                    metric,
+                    identity,
+                    limit,
+                    pad_to,
+                    fmt,
+                    width,
+                    max,
+                    overflow_zero,
+                    zero_pad,
+                } => {
+                    let board = self.board(board)?;
+                    let mut value = match metric {
+                        Metric::Count => board.count().map_err(store_error)?,
+                        Metric::Position => board
+                            .position(
+                                &self
+                                    .field(
+                                        identity
+                                            .as_deref()
+                                            .ok_or_else(|| malformed("missing metric identity"))?,
+                                    )?
+                                    .bytes,
+                            )
+                            .map_err(store_error)?,
+                        Metric::Length => board
+                            .leaders(limit.unwrap_or(0))
+                            .map_err(store_error)?
+                            .len()
+                            .max(pad_to.unwrap_or(0)),
+                    } as u64;
+                    if let Some(max) = max {
+                        if value > *max {
+                            value = if *overflow_zero { 0 } else { *max };
+                        }
+                    }
+                    self.append(out, &numeric(value, *fmt, *width, *zero_pad)?)?;
+                }
+                Segment::When { when, segments } => {
+                    if when
+                        .equals
+                        .iter()
+                        .all(|(k, v)| self.fields.get(k).is_some_and(|f| &f.bytes == v))
+                        && when.absent.iter().all(|k| !self.fields.contains_key(k))
+                    {
+                        self.render(segments, row, out)?;
+                    }
+                }
                 Segment::Text { text } => self.append(out, text.as_bytes())?,
                 Segment::Bytes { bytes } => self.append(out, bytes)?,
                 Segment::Zero { zero } => {
@@ -303,6 +385,8 @@ impl Context<'_> {
                     min,
                     max,
                     empty,
+                    empty_bytes,
+                    divide,
                     zero_pad,
                 } => {
                     let row = row.ok_or_else(|| malformed("field outside row"))?;
@@ -312,8 +396,17 @@ impl Context<'_> {
                         } else {
                             &row.identity
                         };
+                        let bytes = if bytes.is_empty() {
+                            empty_bytes.as_ref().unwrap_or(bytes)
+                        } else {
+                            bytes
+                        };
+                        let mut padded = bytes.clone();
+                        if let Some(width) = width {
+                            padded.resize(padded.len().max(*width), b' ');
+                        }
                         match fmt {
-                            Format::Raw => bytes.clone(),
+                            Format::Raw => padded,
                             Format::HtmlShiftJis => html_shift_jis(bytes)?.into_bytes(),
                             _ => return Err(malformed("invalid byte field format")),
                         }
@@ -328,6 +421,7 @@ impl Context<'_> {
                         if row.rank == 0 {
                             n = empty.unwrap_or(n);
                         }
+                        n /= divide.unwrap_or(1);
                         if let Some(min) = min {
                             n = n.max(*min);
                         }
@@ -457,4 +551,11 @@ fn html_shift_jis(bytes: &[u8]) -> Result<String> {
         .replace('>', "&gt;")
         .replace('"', "&quot;")
         .replace('\'', "&#x27;"))
+}
+
+fn trim_form<'a>(mut body: &'a [u8], suffix: &[u8]) -> &'a [u8] {
+    while body.last().is_some_and(|b| suffix.contains(b)) {
+        body = &body[..body.len() - 1];
+    }
+    body
 }
