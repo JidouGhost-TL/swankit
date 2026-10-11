@@ -33,6 +33,8 @@ pub struct Header {
     pub segment: u16,
     pub bank: Option<u8>,
     pub tracks: Vec<TrackPointer>,
+    /// Mask-zero byte-C entries carry a PCM descriptor instead of tracks.
+    pub pcm: Option<ByteCPcm>,
 }
 
 impl Header {
@@ -41,6 +43,17 @@ impl Header {
     pub fn parse(bytes: &[u8], dialect: Dialect, fixed_segment: u16) -> Result<Self> {
         let mut reader = Reader::new(bytes);
         let mask = reader.u8()?;
+        if mask == 0 && dialect == Dialect::C {
+            let pcm = ByteCPcm::parse(bytes)?;
+            return Ok(Self {
+                mask,
+                priority: 0,
+                segment: pcm.segment,
+                bank: Some(pcm.bank),
+                tracks: vec![],
+                pcm: Some(pcm),
+            });
+        }
         let priority = reader.u8()?;
         let bank = if dialect == Dialect::C {
             Some(reader.u8()?)
@@ -52,11 +65,6 @@ impl Header {
         } else {
             reader.u16_le()?
         };
-        if mask == 0 && dialect == Dialect::C {
-            return Err(Error::Unsupported(
-                "mask-zero byte-C headers use the PCM descriptor grammar".into(),
-            ));
-        }
         let mut tracks = Vec::with_capacity(mask.count_ones() as usize);
         for ordinal in 0..8 {
             let bit = if dialect == Dialect::B {
@@ -79,6 +87,7 @@ impl Header {
             segment,
             bank,
             tracks,
+            pcm: None,
         })
     }
 }
@@ -99,6 +108,7 @@ pub fn table(
         let prefix = match dialect {
             Dialect::A => 4,
             Dialect::B => 2,
+            Dialect::C if first == 0 => 9,
             Dialect::C => 5,
         };
         let bytes = view.span(
@@ -131,6 +141,10 @@ pub struct PcmCommand {
     pub length: u16,
     pub repeat: bool,
     pub reverse: bool,
+    /// Whole final DMA operand, before the driver adds flags and enable.
+    pub control_operand: u8,
+    /// Low byte written to SDMA_CONTROL; driver flags are added, not ORed.
+    pub dma_control: u8,
     pub rate: u32,
 }
 
@@ -141,13 +155,20 @@ impl PcmCommand {
         let length = reader.u16_le()?;
         let repeat = reader.u8()? == 0;
         let reverse = reader.u8()? & 0x40 != 0;
-        let rate = DMA_RATES[(reader.u8()? & 3) as usize];
+        let control_operand = reader.u8()?;
+        let rate = DMA_RATES[(control_operand & 3) as usize];
+        let dma_control = control_operand
+            .wrapping_add(if repeat { 8 } else { 0 })
+            .wrapping_add(if reverse { 0x40 } else { 0 })
+            .wrapping_add(0x80);
         Ok(Self {
             segment,
             offset,
             length,
             repeat,
             reverse,
+            control_operand,
+            dma_control,
             rate,
         })
     }
@@ -321,7 +342,10 @@ pub struct ByteCPcm {
 }
 
 impl ByteCPcm {
-    /// Mask-zero grammar has different positions from the music header.
+    /// Nine-byte mask-zero grammar: mask, bank, flags, offset, segment, length.
+    /// The reconstructed byte-C snd_start_header advances SI past the mask;
+    /// snd_sample_start reads these operands at SI+0, +1, +2, +4 and +6.
+    /// It programs a one-shot DMA transfer; there is no repeat operand.
     pub fn parse(bytes: &[u8]) -> Result<Self> {
         let mut reader = Reader::new(bytes);
         if reader.u8()? != 0 {
@@ -329,11 +353,10 @@ impl ByteCPcm {
                 "byte-C PCM header mask must be zero".into(),
             ));
         }
-        let flags = reader.u8()?;
         let bank = reader.u8()?;
-        let segment = reader.u16_le()?;
+        let flags = reader.u8()?;
         let offset = reader.u16_le()?;
-        let repeat = reader.u8()? == 0;
+        let segment = reader.u16_le()?;
         let length = reader.u16_le()?;
         Ok(Self {
             flags,
@@ -341,7 +364,7 @@ impl ByteCPcm {
             segment,
             offset,
             length,
-            repeat,
+            repeat: false,
             rate: DMA_RATES[(3 - (flags & 3)) as usize],
         })
     }

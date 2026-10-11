@@ -205,7 +205,10 @@ impl SoundDigest {
             let mut records = vec![];
             for data in bytes_at(bytes, offset, size)?.chunks_exact(11) {
                 let command = byte::pcm_se(data)?;
-                records.push(json!({"segment":command.segment,"offset":command.offset,"length":command.length,"repeat":command.repeat,"reverse":command.reverse,"rate":command.rate}));
+                records.push(
+                    serde_json::to_value(command)
+                        .map_err(|error| Error::Malformed(error.to_string()))?,
+                );
                 self.se_records.set(self.se_records.get() + 1);
             }
             directories.push(json!({"offset":offset,"records":records}));
@@ -485,3 +488,7 @@ fn sound_parity() {
         eprintln!("ws-sound parity: {inspected} samples; {} headers, {} tracks, {} waves, {} sequence cells, {} PCM source bytes, {} preview frames; all frozen digests passed",handler.headers.get(),handler.tracks.get(),handler.waves.get(),handler.cells.get(),handler.pcm_bytes.get(),handler.preview_frames.get());
     }
 }
+
+// Include the driver-derived real headers in the workspace corpus acceptance gate.
+#[path = "review_byte_c.rs"]
+mod byte_c;
