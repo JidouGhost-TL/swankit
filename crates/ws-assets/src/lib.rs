@@ -22,8 +22,8 @@ mod verify;
 pub use data::{decode_asset, encode_payload, stored_range, Stored};
 pub use extract::{extract, ExtractedFile, Extraction};
 pub use gfx::{
-    palette_colors, render_screen, render_tilemap, render_tiles, unrender_tilemap, unrender_tiles,
-    TileSheet,
+    palette_colors, render_screen, render_sprites, render_tilemap, render_tiles, unrender_tilemap,
+    unrender_tiles, TileSheet,
 };
 pub use map::{AssetMap, Kind, SCHEMA};
 pub use refs::{encode_reference, read_reference, references_for, ResolvedReference};

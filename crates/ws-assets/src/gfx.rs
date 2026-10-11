@@ -3,12 +3,13 @@
 //! Display/Screen); the tile encoder is `ws_gfx::encode_tile`.
 use crate::data::decode_asset;
 use crate::malformed;
-use crate::map::{parse_rgb, Asset, AssetMap, Kind};
+use crate::map::{parse_rgb, Asset, AssetMap, Kind, Layer, SpriteLayer, Window};
 use crate::text::Charmaps;
 use formatkit_core::{Image, Result};
 use std::collections::BTreeMap;
 use ws_gfx::{
-    decode_tile, encode_tile, transparent, ColorPalettes, MapEntry, TileFormat, HEIGHT, WIDTH,
+    decode_tile, encode_tile, transparent, ColorPalettes, MapEntry, Sprite, TileFormat, HEIGHT,
+    WIDTH,
 };
 
 /// Largest rendered image.
@@ -373,7 +374,181 @@ pub fn render_tilemap(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str)
     Ok(image)
 }
 
-/// A composed 224x144 screen: layers back to front with hardware transparency.
+/// Hardware sprite records of a sprite table (WSdev Display/Sprites).
+pub(crate) fn sprite_records(
+    map: &AssetMap,
+    charmaps: &Charmaps,
+    rom: &[u8],
+    asset: &Asset,
+) -> Result<Vec<Sprite>> {
+    if asset.kind != Kind::SpriteTable {
+        return Err(malformed(format!("{} is not a sprite table", asset.id)));
+    }
+    match asset.format.entry.as_deref().unwrap_or("ws-oam") {
+        "ws-oam" => {}
+        other => return Err(malformed(format!("{}: sprite entry {other:?}", asset.id))),
+    }
+    let data = decode_asset(map, charmaps, rom, &asset.id)?.decoded;
+    let count = asset
+        .format
+        .count
+        .map_or(Ok(data.len() / 4), |c| c.usize())?;
+    if count > 128
+        || data.len() < count * 4
+        || (asset.format.count.is_none() && data.len() % 4 != 0)
+    {
+        return Err(malformed(format!(
+            "{}: sprite tables hold up to 128 four-byte records",
+            asset.id
+        )));
+    }
+    data.chunks_exact(4)
+        .take(count)
+        .map(Sprite::parse)
+        .collect()
+}
+
+/// One sprite with the tiles and palettes its table relates.
+struct Placed<'a> {
+    sprite: Sprite,
+    vram: &'a Vram,
+    palettes: &'a PaletteSet,
+}
+
+/// The winning sprite pixel at each display position: the first record (in
+/// sprite-RAM order) with an opaque pixel there, at most 32 sprites per line.
+/// Returns colour and priority.
+fn sprite_plane(placed: &[Placed], window: Option<Window>) -> Vec<Option<(Rgba, bool)>> {
+    let (w, h) = (WIDTH as usize, HEIGHT as usize);
+    let mut plane = vec![None; w * h];
+    for (y, row) in plane.chunks_exact_mut(w).enumerate() {
+        let on_line: Vec<&Placed> = placed
+            .iter()
+            .filter(|p| (y as u8).wrapping_sub(p.sprite.y) < 8)
+            .take(32)
+            .collect();
+        for (x, out) in row.iter_mut().enumerate() {
+            let inside = window.map(|win| {
+                (usize::from(win.x0)..=usize::from(win.x1)).contains(&x)
+                    && (usize::from(win.y0)..=usize::from(win.y1)).contains(&y)
+            });
+            for p in &on_line {
+                let s = p.sprite;
+                let dx = usize::from((x as u8).wrapping_sub(s.x));
+                if dx >= 8 || inside.is_some_and(|i| i != s.inside_window) {
+                    continue;
+                }
+                let dy = usize::from((y as u8).wrapping_sub(s.y));
+                let e = MapEntry {
+                    tile: s.tile,
+                    palette: s.palette,
+                    bank: false,
+                    h_flip: s.h_flip,
+                    v_flip: s.v_flip,
+                };
+                let (Some(index), Some(pal)) = (
+                    cell_pixel(p.vram, e, dx, dy),
+                    p.palettes[usize::from(s.palette)],
+                ) else {
+                    continue;
+                };
+                if transparent(s.palette, index, p.vram.format) {
+                    continue;
+                }
+                *out = Some((pal[usize::from(index)], s.high_priority));
+                break;
+            }
+        }
+    }
+    plane
+}
+
+fn draw_layer(
+    image: &mut Image,
+    map: &AssetMap,
+    charmaps: &Charmaps,
+    rom: &[u8],
+    layer: &Layer,
+) -> Result<()> {
+    let asset = map.asset(&layer.tilemap)?;
+    let c = cells(map, charmaps, rom, asset)?;
+    let v = vram(map, charmaps, rom, asset)?;
+    let pals = scene_palettes(map, charmaps, rom, asset)?;
+    for (i, e) in c.entries.iter().enumerate() {
+        let Some(pal) = pals[usize::from(e.palette)] else {
+            continue;
+        };
+        for y in 0..8 {
+            for x in 0..8 {
+                let Some(index) = cell_pixel(&v, *e, x, y) else {
+                    continue;
+                };
+                if transparent(e.palette, index, v.format) {
+                    continue;
+                }
+                let mut px = layer.x + (i % c.width * 8 + x) as i32;
+                let mut py = layer.y + (i / c.width * 8 + y) as i32;
+                if layer.wrap {
+                    px = px.rem_euclid(256);
+                    py = py.rem_euclid(256);
+                }
+                if (0..WIDTH as i32).contains(&px) && (0..HEIGHT as i32).contains(&py) {
+                    put(image, px as usize, py as usize, pal[usize::from(index)]);
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn draw_sprites(image: &mut Image, plane: &[Option<(Rgba, bool)>], high: bool) {
+    for (i, p) in plane.iter().enumerate() {
+        if let Some((c, h)) = p {
+            if *h == high {
+                put(image, i % WIDTH as usize, i / WIDTH as usize, *c);
+            }
+        }
+    }
+}
+
+/// Sprites of a screen's tables, in sprite-RAM order, with their tiles and palettes.
+fn screen_sprites(
+    map: &AssetMap,
+    charmaps: &Charmaps,
+    rom: &[u8],
+    tables: &[SpriteLayer],
+    window: Option<Window>,
+) -> Result<Vec<Option<(Rgba, bool)>>> {
+    let mut resources = Vec::new();
+    for t in tables {
+        let asset = map.asset(&t.table)?;
+        let mut sprites = sprite_records(map, charmaps, rom, asset)?;
+        for s in &mut sprites {
+            s.x = (i32::from(s.x) + t.x).rem_euclid(256) as u8;
+            s.y = (i32::from(s.y) + t.y).rem_euclid(256) as u8;
+        }
+        resources.push((
+            sprites,
+            vram(map, charmaps, rom, asset)?,
+            scene_palettes(map, charmaps, rom, asset)?,
+        ));
+    }
+    let placed: Vec<Placed> = resources
+        .iter()
+        .flat_map(|(sprites, vram, palettes)| {
+            sprites.iter().map(move |&sprite| Placed {
+                sprite,
+                vram,
+                palettes,
+            })
+        })
+        .collect();
+    Ok(sprite_plane(&placed, window))
+}
+
+/// A composed 224x144 screen with hardware transparency: back colour,
+/// screen-1 layers, low-priority sprites, screen-2 layers, high-priority
+/// sprites (WSdev Display, Display/Sprites).
 pub fn render_screen(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -> Result<Image> {
     let screen = map
         .screens
@@ -385,37 +560,29 @@ pub fn render_screen(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) 
         .as_deref()
         .map_or(Ok([0, 0, 0, 255]), parse_rgb)?;
     let mut image = blank(WIDTH as usize, HEIGHT as usize, back)?;
-    for layer in &screen.layers {
-        let asset = map.asset(&layer.tilemap)?;
-        let c = cells(map, charmaps, rom, asset)?;
-        let v = vram(map, charmaps, rom, asset)?;
-        let pals = scene_palettes(map, charmaps, rom, asset)?;
-        for (i, e) in c.entries.iter().enumerate() {
-            let Some(pal) = pals[usize::from(e.palette)] else {
-                continue;
-            };
-            for y in 0..8 {
-                for x in 0..8 {
-                    let Some(index) = cell_pixel(&v, *e, x, y) else {
-                        continue;
-                    };
-                    if transparent(e.palette, index, v.format) {
-                        continue;
-                    }
-                    let px = layer.x + (i % c.width * 8 + x) as i32;
-                    let py = layer.y + (i / c.width * 8 + y) as i32;
-                    if (0..WIDTH as i32).contains(&px) && (0..HEIGHT as i32).contains(&py) {
-                        put(
-                            &mut image,
-                            px as usize,
-                            py as usize,
-                            pal[usize::from(index)],
-                        );
-                    }
-                }
-            }
-        }
+    let plane = screen_sprites(map, charmaps, rom, &screen.sprites, screen.sprite_window)?;
+    for layer in screen.layers.iter().filter(|l| l.screen != Some(2)) {
+        draw_layer(&mut image, map, charmaps, rom, layer)?;
     }
+    draw_sprites(&mut image, &plane, false);
+    for layer in screen.layers.iter().filter(|l| l.screen == Some(2)) {
+        draw_layer(&mut image, map, charmaps, rom, layer)?;
+    }
+    draw_sprites(&mut image, &plane, true);
+    Ok(image)
+}
+
+/// One sprite table alone on the display (transparent elsewhere).
+pub fn render_sprites(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -> Result<Image> {
+    let table = SpriteLayer {
+        table: id.to_owned(),
+        x: 0,
+        y: 0,
+    };
+    let plane = screen_sprites(map, charmaps, rom, std::slice::from_ref(&table), None)?;
+    let mut image = blank(WIDTH as usize, HEIGHT as usize, [0, 0, 0, 0])?;
+    draw_sprites(&mut image, &plane, false);
+    draw_sprites(&mut image, &plane, true);
     Ok(image)
 }
 

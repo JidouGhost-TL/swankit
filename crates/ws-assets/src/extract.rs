@@ -1,6 +1,8 @@
 //! Extraction: every mapped asset to a file, plus an index.
 use crate::data::decode_asset;
-use crate::gfx::{palette_colors, render_screen, render_tilemap, render_tiles, MAX_IMAGE_BYTES};
+use crate::gfx::{
+    palette_colors, render_screen, render_sprites, render_tilemap, render_tiles, MAX_IMAGE_BYTES,
+};
 use crate::map::{Asset, AssetMap, Codec, Kind};
 use crate::refs::{read_reference, references_for};
 use crate::text::Charmaps;
@@ -189,6 +191,26 @@ pub(crate) fn extract_one(
             ExtractedFile::Image(render_tilemap(map, charmaps, rom, id)?),
             files,
         ),
+        Kind::SpriteTable if asset.relations.tiles.is_empty() => {
+            extra = json!({"rendered": false, "reason": "no tiles relation"});
+            add(
+                format!("{id}.bin"),
+                ExtractedFile::Bytes(stored.decoded.clone()),
+                files,
+            );
+        }
+        Kind::SpriteTable => {
+            add(
+                format!("{id}.png"),
+                ExtractedFile::Image(render_sprites(map, charmaps, rom, id)?),
+                files,
+            );
+            add(
+                format!("{id}.bin"),
+                ExtractedFile::Bytes(stored.decoded.clone()),
+                files,
+            );
+        }
         Kind::Palette => {
             let set = palette_colors(map, charmaps, rom, &[id])?;
             add(

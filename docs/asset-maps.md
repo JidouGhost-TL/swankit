@@ -24,7 +24,7 @@ are title independent, and maps live outside the repository with the corpus.
 | `palettes` | Named inline palettes (`#rrggbb` lists, 16 per hardware palette) for colours set by code immediates (monochrome shade ports) rather than ROM data |
 | `free_space` | `offset`, `length`, optional uniform `fill`: the only places relocation may write |
 | `assets` | The located assets (below) |
-| `screens` | Composed screens: tilemap `layers` (pixel positions after scrolling) over a `back_color` |
+| `screens` | Composed screens: tilemap `layers` (pixel positions after scrolling; `screen` 1/2, `wrap`) and `sprites` (sprite tables, optional `sprite_window`) over a `back_color` |
 | `coverage` | Free notes on what is and is not mapped |
 
 Numbers are JSON integers or `0x` strings; maps written by the tools use
@@ -35,7 +35,7 @@ hexadecimal strings. Unknown fields are errors.
 | Field | Meaning |
 | --- | --- |
 | `id` | Stable id, `[A-Za-z0-9._-]`, unique in the map |
-| `kind` | `tiles`, `tilemap`, `palette`, `font`, `text`, `pointer-table`, `music`, `sound-effect`, `pcm`, `data-table`, `other` |
+| `kind` | `tiles`, `tilemap`, `palette`, `font`, `text`, `pointer-table`, `music`, `sound-effect`, `pcm`, `data-table`, `sprite-table`, `other` |
 | `offset`, `length` | File offset and stored length. `length` may be omitted for terminated codecs (the codec's end marker defines it) and for text (the charmap's end control) |
 | `codec`, `codec_params` | `raw` (default) or a `ws-compress` id: `ws-lz-rle-7f`, `ws-lz-bits-16`, `ws-okumura-lzss` (with `decoded_length`, `bit_order`, `ring_fill`) |
 | `address` | Descriptive CPU view (`window` c0/c2/c3, `bank`, `segment`, `offset`) |
@@ -65,6 +65,21 @@ Format parameters by kind:
 - `pointer-table`: `pointer` (an encoding), `stride`, `pointer_offset`, `count`
   and `relations.targets`; each listed target receives the entry as a reference.
 - `pcm`: `sample_rate` (unsigned 8-bit samples, extracted as WAV).
+- `sprite-table`: `entry` `ws-oam` (the hardware sprite record: attribute word
+  with tile 0-8, palette 9-11 (8-15), window 12, priority 13, flips 14-15; then
+  Y, X), `count` records (up to 128). `relations.tiles` and
+  `relations.palettes` as for tilemaps (sprites use tile bank 0). Extracted as
+  the sprites alone on a transparent 224x144 image plus the records.
+
+Screens compose like the display (WSdev Display, Display/Sprites): back
+colour, layers on screen 1 (the default), low-priority sprites, layers with
+`screen: 2`, high-priority sprites. Sprite tables are concatenated in the
+order listed, which is sprite-RAM order: at each pixel the first sprite with
+an opaque pixel wins, and at most 32 sprites draw on one line. A screen's
+`sprite_window` (ports 0C-0F, inclusive) keeps each sprite inside or outside
+it per its window bit. A layer with `wrap` lies on the 256x256 screen plane:
+give `x`/`y` as its map position minus the scroll registers and positions
+wrap modulo 256, as hardware scrolling does.
 
 ## References
 

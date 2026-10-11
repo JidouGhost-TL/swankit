@@ -66,7 +66,7 @@
       "required": ["id", "kind", "offset"],
       "properties": {
         "id": {"$ref": "#/$defs/id"},
-        "kind": {"enum": ["tiles", "tilemap", "palette", "font", "text", "pointer-table", "music", "sound-effect", "pcm", "data-table", "other"]},
+        "kind": {"enum": ["tiles", "tilemap", "palette", "font", "text", "pointer-table", "music", "sound-effect", "pcm", "data-table", "sprite-table", "other"]},
         "offset": {"$ref": "#/$defs/num"},
         "length": {"$ref": "#/$defs/num", "description": "Stored bytes; omit for codec-terminated streams or end-terminated text."},
         "codec": {"enum": ["raw", "ws-lz-rle-7f", "ws-lz-bits-16", "ws-okumura-lzss"]},
@@ -94,7 +94,7 @@
             "layout": {"enum": ["planar", "packed"]},
             "width": {"$ref": "#/$defs/num"},
             "height": {"$ref": "#/$defs/num"},
-            "entry": {"enum": ["ws-word", "byte", "index12-flip"]},
+            "entry": {"enum": ["ws-word", "byte", "index12-flip", "ws-oam"]},
             "tile_base": {"$ref": "#/$defs/num"},
             "attributes": {"$ref": "#/$defs/num"},
             "color": {"type": "boolean"},
@@ -181,8 +181,18 @@
         "id": {"$ref": "#/$defs/id"},
         "layers": {"type": "array", "items": {
           "type": "object", "additionalProperties": false, "required": ["tilemap"],
-          "properties": {"tilemap": {"$ref": "#/$defs/id"}, "x": {"type": "integer"}, "y": {"type": "integer"}}
+          "properties": {"tilemap": {"$ref": "#/$defs/id"}, "x": {"type": "integer"}, "y": {"type": "integer"},
+                         "screen": {"enum": [1, 2]}, "wrap": {"type": "boolean"}}
         }},
+        "sprites": {"type": "array", "items": {
+          "type": "object", "additionalProperties": false, "required": ["table"],
+          "properties": {"table": {"$ref": "#/$defs/id"}, "x": {"type": "integer"}, "y": {"type": "integer"}}
+        }},
+        "sprite_window": {"type": "object", "additionalProperties": false, "required": ["x0", "y0", "x1", "y1"],
+          "properties": {"x0": {"type": "integer", "minimum": 0, "maximum": 255},
+                         "y0": {"type": "integer", "minimum": 0, "maximum": 255},
+                         "x1": {"type": "integer", "minimum": 0, "maximum": 255},
+                         "y1": {"type": "integer", "minimum": 0, "maximum": 255}}},
         "back_color": {"$ref": "#/$defs/rgb"},
         "note": {"type": "string"}
       }

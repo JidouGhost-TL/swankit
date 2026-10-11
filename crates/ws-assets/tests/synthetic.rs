@@ -434,3 +434,76 @@ fn text_edits_keep_hidden_attribute_bits_in_the_edited_span() {
         [0x01, 0x00, 0x03, 0x18, 0x03, 0x00, 0xff, 0xff]
     );
 }
+
+const OAM: usize = 0x700;
+const SPAL: usize = 0x340;
+
+/// Two sprites over the two-cell map: a high-priority tile-2 sprite at x=8
+/// and a low-priority tile-1 sprite at x=4, h-flipped (WSdev Display/Sprites).
+fn sprite_rom() -> (Vec<u8>, Value) {
+    let mut rom = rom();
+    for (i, word) in [0x000u16, 0x00f, 0x0f0, 0xfff].iter().enumerate() {
+        rom[SPAL + 2 * i..SPAL + 2 * i + 2].copy_from_slice(&word.to_le_bytes());
+    }
+    // Records: attributes (tile | palette-8 << 9 | 0x2000 high | 0x4000 h-flip), y, x.
+    rom[OAM..OAM + 8].copy_from_slice(&[0x01, 0x20, 0x00, 0x08, 0x00, 0x40, 0x00, 0x04]);
+    fix_checksum(&mut rom).unwrap();
+    let mut v = map_json(&rom);
+    let assets = v["assets"].as_array_mut().unwrap();
+    assets.push(
+        json!({"id": "sp", "kind": "palette", "offset": SPAL, "length": 32,
+        "format": {"palette_format": "rgb444", "palette_index": 8}}),
+    );
+    assets.push(
+        json!({"id": "oam", "kind": "sprite-table", "offset": OAM, "length": 8,
+        "relations": {"tiles": [{"id": "t", "at": 0}], "palettes": ["sp"]}}),
+    );
+    v["screens"][0]["sprites"] = json!([{"table": "oam"}]);
+    (rom, v)
+}
+
+#[test]
+fn screens_compose_sprite_tables_with_priority_and_flips() {
+    let (rom, v) = sprite_rom();
+    let map = load(&v);
+    let cm = charmaps(&map);
+    let image = ws_assets::render_screen(&map, &cm, &rom, "screen").unwrap();
+    let blue = [0, 0, 255, 255];
+    let green = [0, 255, 0, 255];
+    let red = [255, 0, 0, 255];
+    // Slot 1 (tile index 2 everywhere) drawn by the high sprite at x 8..15.
+    assert_eq!(pixel(&image, 8, 0), green);
+    assert_eq!(pixel(&image, 15, 7), green);
+    // The low sprite (slot 0, index 1) covers x 4..7 where no other sprite is:
+    // with the map on screen 1 it is drawn over the map.
+    assert_eq!(pixel(&image, 4, 0), blue);
+    // Uncovered map pixels stay the map's (slot 0, palette 0 index 1 = red).
+    assert_eq!(pixel(&image, 0, 0), red);
+    // On screen 2 the map hides low-priority sprites but not high ones.
+    let mut v2 = v.clone();
+    v2["screens"][0]["layers"][0]["screen"] = json!(2);
+    let map2 = load(&v2);
+    let image = ws_assets::render_screen(&map2, &cm, &rom, "screen").unwrap();
+    assert_eq!(pixel(&image, 4, 0), red);
+    assert_eq!(pixel(&image, 8, 0), green);
+    // Extraction writes the sprite table as an image of its own.
+    let out = extract(&map, &cm, &rom).unwrap();
+    assert!(out.files.iter().any(|(n, _)| n == "oam.png"));
+    assert_eq!(out.failures, 0);
+}
+
+#[test]
+fn wrapped_layers_scroll_around_the_256_pixel_plane() {
+    let rom = rom();
+    let mut v = map_json(&rom);
+    v["screens"][0]["layers"][0]["x"] = json!(250);
+    let plain = load(&v);
+    let cm = charmaps(&plain);
+    let image = ws_assets::render_screen(&plain, &cm, &rom, "screen").unwrap();
+    assert_eq!(pixel(&image, 0, 0), [0, 0, 0, 255]);
+    v["screens"][0]["layers"][0]["wrap"] = json!(true);
+    let wrapped = load(&v);
+    let image = ws_assets::render_screen(&wrapped, &cm, &rom, "screen").unwrap();
+    // Pixel 256 of the plane (cell 0, column 6) lands on screen x 0.
+    assert_eq!(pixel(&image, 0, 0), [255, 0, 0, 255]);
+}

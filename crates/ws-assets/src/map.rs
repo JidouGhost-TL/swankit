@@ -101,11 +101,14 @@ pub enum Kind {
     SoundEffect,
     Pcm,
     DataTable,
+    /// Hardware sprite attribute records (WSdev Display/Sprites): 4 bytes
+    /// each, attribute word (tile, palette, window, priority, flips), Y, X.
+    SpriteTable,
     Other,
 }
 
 impl Kind {
-    pub const ALL: [Kind; 11] = [
+    pub const ALL: [Kind; 12] = [
         Kind::Tiles,
         Kind::Tilemap,
         Kind::Palette,
@@ -116,6 +119,7 @@ impl Kind {
         Kind::SoundEffect,
         Kind::Pcm,
         Kind::DataTable,
+        Kind::SpriteTable,
         Kind::Other,
     ];
     pub fn name(self) -> &'static str {
@@ -130,6 +134,7 @@ impl Kind {
             Kind::SoundEffect => "sound-effect",
             Kind::Pcm => "pcm",
             Kind::DataTable => "data-table",
+            Kind::SpriteTable => "sprite-table",
             Kind::Other => "other",
         }
     }
@@ -517,13 +522,22 @@ pub struct CharmapSource {
     pub unit: Option<String>,
 }
 
-/// A composed screen: tilemap layers drawn back to front over a back colour.
+/// A composed screen: tilemap layers drawn back to front over a back colour,
+/// with sprite tables between and above them (WSdev Display: screen 1,
+/// low-priority sprites, screen 2, high-priority sprites).
 /// Positions are pixels on the 224x144 display (after scrolling).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Screen {
     pub id: String,
     pub layers: Vec<Layer>,
+    /// Sprite tables in sprite-RAM order (earlier records win overlaps).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sprites: Vec<SpriteLayer>,
+    /// Sprite window (port 0C-0F, inclusive) when the display enables it:
+    /// each sprite draws only inside or only outside it, per its attribute.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sprite_window: Option<Window>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub back_color: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -538,6 +552,40 @@ pub struct Layer {
     pub x: i32,
     #[serde(default)]
     pub y: i32,
+    /// Hardware screen (1 or 2): low-priority sprites draw above screen 1
+    /// and below screen 2. Absent means screen 1.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub screen: Option<u8>,
+    /// Positions wrap around the 256x256 screen plane, as hardware scrolling
+    /// does: give `x`/`y` as the map position minus the scroll register.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub wrap: bool,
+}
+
+fn is_false(b: &bool) -> bool {
+    !*b
+}
+
+/// One sprite table placed in a screen; `x`/`y` are added to every record
+/// (modulo 256, like the hardware coordinates).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SpriteLayer {
+    pub table: String,
+    #[serde(default)]
+    pub x: i32,
+    #[serde(default)]
+    pub y: i32,
+}
+
+/// Inclusive pixel rectangle.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Window {
+    pub x0: u8,
+    pub y0: u8,
+    pub x1: u8,
+    pub y1: u8,
 }
 
 /// Inline palette for monochrome games whose shades are set by code
@@ -682,6 +730,12 @@ impl AssetMap {
                 )));
             }
             for layer in &screen.layers {
+                if layer.screen.is_some_and(|n| !(1..=2).contains(&n)) {
+                    return Err(malformed(format!(
+                        "screen {}: layer screen must be 1 or 2",
+                        screen.id
+                    )));
+                }
                 if !self
                     .assets
                     .iter()
@@ -690,6 +744,18 @@ impl AssetMap {
                     return Err(malformed(format!(
                         "screen {}: {:?} is not a tilemap",
                         screen.id, layer.tilemap
+                    )));
+                }
+            }
+            for s in &screen.sprites {
+                if !self
+                    .assets
+                    .iter()
+                    .any(|a| a.id == s.table && a.kind == Kind::SpriteTable)
+                {
+                    return Err(malformed(format!(
+                        "screen {}: {:?} is not a sprite table",
+                        screen.id, s.table
                     )));
                 }
             }
