@@ -19,3 +19,6 @@ ws-compress = { path = "../ws-compress" }
 ws-text = { path = "../ws-text" }
 ws-sound = { path = "../ws-sound" }
 ws-patch = { path = "../ws-patch" }
+
+[dev-dependencies]
+formatkit-corpus-test.workspace = true

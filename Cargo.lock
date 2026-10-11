@@ -621,6 +621,7 @@ name = "ws-assets"
 version = "0.1.0"
 dependencies = [
  "formatkit-core",
+ "formatkit-corpus-test",
  "serde",
  "serde_json",
  "sha2",
