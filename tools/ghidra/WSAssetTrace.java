@@ -222,7 +222,7 @@ public class WSAssetTrace extends GhidraScript {
     void dma() {
         while(dmaSeen<machine.dmaLog.size()) {
             String event=machine.dmaLog.get(dmaSeen++);
-            accesses.println(event);
+            accesses.println(event.substring(0,event.length()-1)+String.format(",\"decrement\":%s,\"banks\":[%d,%d,%d]}",(machine.ports[0x48]&0x40)!=0,machine.ports[0xc0],machine.ports[0xc2],machine.ports[0xc3]));
             if(event.contains("refused"))continue;
             Map<String,Integer> fields=new HashMap<>();
             java.util.regex.Matcher matcher=java.util.regex.Pattern.compile("\"([a-z_]+)\":([0-9]+)").matcher(event);
@@ -235,6 +235,7 @@ public class WSAssetTrace extends GhidraScript {
                 put(machine.ram,d,1,origin);
                 for(Call c:stack) {
                     for(long sourceOrigin:origin)if(sourceOrigin<IMMEDIATE)c.sources.add(sourceOrigin);
+                    if(ro>=0)c.banks.add(machine.ports[0xc0]+":"+machine.ports[0xc2]+":"+machine.ports[0xc3]);
                     c.destinations.add(d);c.cpuDestinations.put(d,cpuDest);
                 }
             }

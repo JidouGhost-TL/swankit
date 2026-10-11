@@ -16,7 +16,8 @@ return. Run it through your isolated headless runner with arguments
 `OUTPUT FRAMES INPUT_KEYS 0`; `INPUT_KEYS` contains `first last hexmask` rows.
 The optional fifth argument `self-test` runs byte-provenance regressions instead.
 `WSAssetTraceCarryChecks.java OUTPUT` adds cross-call, RAM alias and boundary
-regressions. Inherited RAM origins retain ROM file offsets but do not invent the
+regressions; DMA event logs retain transfer direction and current bank settings.
+Inherited RAM origins retain ROM file offsets but do not invent the
 bank settings of an earlier call.
 The collector targets the pinned Ghidra callback API; it never modifies the
 installed extension.

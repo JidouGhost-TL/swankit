@@ -35,7 +35,11 @@ public class WSAssetTraceCarryChecks extends WSAssetTrace {
   call.sources.clear();call.sources.addAll(Set.of(123L,2000L));call.regs="{}";
   put(machine.ram,8192,8,Set.of(123L));finishSpan(call,true,8192,8200);calls.flush();
   if(!captured.toString().contains("\"source_ranges\":[[123,124]]"))failures.add("witness lists only actual causal ROM ranges separately from read context");
-  Files.writeString(out.resolve("checks.json"),"{\"checks\":6,\"failures\":"+listStrings(failures)+"}");
+  machine.ports[0xc0]=4;machine.ports[0xc2]=2;machine.ports[0xc3]=3;machine.ports[0x48]=64;dmaSeen=0;
+  machine.dmaLog.add("{\"src\":131072,\"dst\":12288,\"words\":1}");
+  StringWriter dmaCaptured=new StringWriter();accesses=new PrintWriter(dmaCaptured);call.banks.clear();dma();accesses.flush();
+  if(!call.banks.contains("4:2:3") || !dmaCaptured.toString().contains("\"decrement\":true"))failures.add("ROM DMA witnesses retain bank and transfer-direction settings");
+  Files.writeString(out.resolve("checks.json"),"{\"checks\":7,\"failures\":"+listStrings(failures)+"}");
   println("CARRY TESTS: "+failures);
   if(!failures.isEmpty())throw new IllegalStateException("carry tests failed");
  }
