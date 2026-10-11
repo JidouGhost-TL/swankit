@@ -66,6 +66,18 @@ class AssetStagingTests(unittest.TestCase):
             self.enroll([dict(self.row, rom=str(other))])
         self.assertFalse((self.output / "ws-assets").exists())
 
+    def test_later_map_revisions_enroll_beside_the_frozen_selection(self):
+        self.assertEqual(self.enroll(), 1)
+        frozen = (self.output / "ws-assets" / "spec.json").read_text()
+        self.manifest.write_text(json.dumps({"samples": [self.row]}))
+        self.assertEqual(STAGE.stage_assets(self.manifest, self.output, "ws-assets-m27"), 1)
+        self.assertTrue((self.output / "ws-assets-m27" / "maps" / "sample.json").is_file())
+        self.assertEqual((self.output / "ws-assets" / "spec.json").read_text(), frozen)
+        with self.assertRaises(ValueError):
+            STAGE.stage_assets(self.manifest, self.output, "ws-assets-m27")
+        with self.assertRaises(ValueError):
+            STAGE.stage_assets(self.manifest, self.output, "../elsewhere")
+
     def test_staging_inside_the_repository_is_refused(self):
         self.manifest.write_text(json.dumps({"samples": [self.row]}))
         with self.assertRaises(ValueError):

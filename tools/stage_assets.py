@@ -2,6 +2,7 @@
 import fcntl
 import hashlib
 import json
+import re
 from pathlib import Path
 
 
@@ -9,7 +10,10 @@ def _hash(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def stage_assets(manifest_path, output):
+def stage_assets(manifest_path, output, selection="ws-assets"):
+    """Write the NEW selection `ws-assets` or `ws-assets-<suffix>` (later map revisions)."""
+    if not re.fullmatch(r"ws-assets(-[a-z0-9]+)?", selection):
+        raise ValueError("asset selections are named ws-assets or ws-assets-<suffix>")
     repository = Path(__file__).resolve().parents[1]
     output = output.resolve()
     if output == repository or repository in output.parents:
@@ -51,7 +55,7 @@ def stage_assets(manifest_path, output):
     output.mkdir(parents=True, exist_ok=True)
     with (output / ".staging.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        destination = output / "ws-assets"
+        destination = output / selection
         if destination.exists():
             raise ValueError("asset spec exists; frozen specs must never be overwritten")
         destination.mkdir()

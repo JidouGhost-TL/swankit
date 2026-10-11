@@ -9,6 +9,7 @@ use std::{
 use ws_assets::{decode_asset, verify, AssetMap, Charmaps};
 
 struct AssetDigest {
+    /// The selection directory (`ws-assets` or `ws-assets-<suffix>`).
     root: PathBuf,
     assets: Cell<usize>,
     references: Cell<usize>,
@@ -31,7 +32,7 @@ impl Digest for AssetDigest {
                 "asset map reference leaves its selection".into(),
             ));
         }
-        let document = std::fs::read(self.root.join("ws-assets").join(path))
+        let document = std::fs::read(self.root.join(path))
             .map_err(|error| Error::Malformed(format!("asset map: {error}")))?;
         let map = AssetMap::from_json(&document)?;
         let charmaps = Charmaps::load(&map, |_| {
@@ -73,17 +74,29 @@ fn corpus_asset_map_parity() {
     let Some(root) = corpus_root("asset map parity") else {
         return;
     };
-    let handler = AssetDigest {
-        root,
-        assets: Cell::new(0),
-        references: Cell::new(0),
-        independent: Cell::new(0),
-    };
-    let count = run_dir("ws-assets", &handler);
-    eprintln!(
-        "ws-assets corpus: {count} maps; {} assets and {} references verified; {} decodes equal independent extractor files",
-        handler.assets.get(),
-        handler.references.get(),
-        handler.independent.get()
-    );
+    // The first selection and every later map revision (ws-assets-<suffix>).
+    let mut selections: Vec<String> = std::fs::read_dir(&root)
+        .map(|entries| {
+            entries
+                .filter_map(|e| e.ok()?.file_name().into_string().ok())
+                .filter(|n| n == "ws-assets" || n.starts_with("ws-assets-"))
+                .collect()
+        })
+        .unwrap_or_default();
+    selections.sort();
+    for selection in selections {
+        let handler = AssetDigest {
+            root: root.join(&selection),
+            assets: Cell::new(0),
+            references: Cell::new(0),
+            independent: Cell::new(0),
+        };
+        let count = run_dir(&selection, &handler);
+        eprintln!(
+            "{selection} corpus: {count} maps; {} assets and {} references verified; {} decodes equal independent extractor files",
+            handler.assets.get(),
+            handler.references.get(),
+            handler.independent.get()
+        );
+    }
 }

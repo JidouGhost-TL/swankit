@@ -407,6 +407,8 @@ def main():
                            help="enroll per-ROM asset maps with independent decodes in a NEW ws-assets selection")
     selection.add_argument("--patch-manifest", type=Path,
                            help="enroll independent IPS/base/target evidence in a NEW ws-patch selection")
+    parser.add_argument("--assets-selection", default="ws-assets",
+                        help="new asset selection: ws-assets or ws-assets-<suffix> for a later map revision")
     parser.add_argument("--sound-spec-dir", choices=("ws-sound", "ws-sound-extra", "ws-sound-captures"), default="ws-sound",
                         help="new sound selection; never updates an existing selection")
     parser.add_argument("--output", type=Path, required=True)
@@ -457,7 +459,7 @@ def main():
             stage_text(args)
         elif args.assets_manifest:
             from stage_assets import stage_assets
-            count = stage_assets(args.assets_manifest, args.output)
+            count = stage_assets(args.assets_manifest, args.output, args.assets_selection)
             log(args.progress_log, "asset map staging", f"{count} maps, 1 frozen spec; existing specs unchanged", "run safe corpus gate")
         elif args.patch_manifest:
             from stage_patch import stage_patch
