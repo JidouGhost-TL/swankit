@@ -652,3 +652,80 @@ fn allocate_gives_differently_edited_shared_cells_free_tiles() {
     .unwrap_err();
     assert!(err.contains("free tile"), "{err}");
 }
+
+const BLOB: usize = 0x900;
+const BLOB_REF: usize = 0x520;
+const HMAP: usize = 0x980;
+
+/// A tile blob whose u16 tile count precedes the tiles, referenced by a
+/// 16-bit pointer at the count word, and a map with a u16 width/height header.
+fn header_map() -> (Vec<u8>, AssetMap) {
+    let mut rom = rom();
+    rom[BLOB..BLOB + 2].copy_from_slice(&2u16.to_le_bytes());
+    rom[BLOB + 2..BLOB + 18].copy_from_slice(&tile(1));
+    rom[BLOB + 18..BLOB + 34].copy_from_slice(&tile(2));
+    rom[BLOB_REF..BLOB_REF + 2].copy_from_slice(&(BLOB as u16).to_le_bytes());
+    rom[HMAP..HMAP + 8].copy_from_slice(&[2, 0, 1, 0, 1, 0, 0, 0]);
+    fix_checksum(&mut rom).unwrap();
+    let mut v = map_json(&rom);
+    let assets = v["assets"].as_array_mut().unwrap();
+    assets.push(
+        json!({"id": "blob", "kind": "tiles", "offset": BLOB, "length": 34,
+        "format": {"bpp": 2, "width": 2, "header": "u16-count", "palette_index": 0},
+        "relations": {"palette": "p"},
+        "references": [{"at": BLOB_REF, "width": 2}], "references_complete": true}),
+    );
+    assets.push(
+        json!({"id": "hm", "kind": "tilemap", "offset": HMAP, "length": 8,
+        "format": {"width": 2, "height": 1, "header": "u16-width-height"},
+        "relations": {"tiles": [{"id": "blob", "at": 0}], "palettes": ["p"]}}),
+    );
+    (rom, load(&v))
+}
+
+#[test]
+fn header_counts_belong_to_the_asset_and_tiles_can_grow() {
+    let (rom, map) = header_map();
+    let cm = charmaps(&map);
+    // The decoded payload is the tiles only; the header is checked against it.
+    assert_eq!(
+        decode_asset(&map, &cm, &rom, "blob").unwrap().decoded.len(),
+        32
+    );
+    let image = ws_assets::render_tilemap(&map, &cm, &rom, "hm").unwrap();
+    assert_eq!((image.width, image.height), (16, 8));
+    // A sheet one row taller adds a third (non-blank) tile: the count word
+    // becomes 3, the blob outgrows its slot and moves to free space.
+    let mut sheet = Image::try_new(16, 16, [0, 0, 0, 255].repeat(256)).unwrap();
+    let old = ws_assets::render_tiles(&map, &cm, &rom, "blob").unwrap();
+    sheet.rgba[..old.rgba.len()].copy_from_slice(&old.rgba);
+    for p in sheet.rgba[16 * 8 * 4..16 * 8 * 4 + 8 * 4].chunks_exact_mut(4) {
+        p.copy_from_slice(&[0, 0, 255, 255]);
+    }
+    let out = replace(
+        &map,
+        &cm,
+        &rom,
+        &Replacement {
+            id: "blob".into(),
+            input: ReplaceInput::Image(sheet),
+        },
+    )
+    .unwrap();
+    let moved = out.map.asset("blob").unwrap().offset.usize().unwrap();
+    assert_eq!(moved, FREE);
+    assert_eq!(out.rom[BLOB_REF..BLOB_REF + 2], (FREE as u16).to_le_bytes());
+    assert_eq!(out.rom[FREE..FREE + 2], 3u16.to_le_bytes());
+    let cm2 = charmaps(&out.map);
+    let grown = decode_asset(&out.map, &cm2, &out.rom, "blob").unwrap();
+    assert_eq!(grown.decoded.len(), 48);
+    assert_eq!(grown.decoded[..32], rom[BLOB + 2..BLOB + 34]);
+    // A header that disagrees with the declared length is refused.
+    let mut bad = rom.clone();
+    bad[BLOB] = 5;
+    fix_checksum(&mut bad).unwrap();
+    let mut v = serde_json::to_value(&map).unwrap();
+    v["rom"]["sha256"] = json!(sha256_hex(&bad));
+    let bad_map = load(&v);
+    assert!(decode_asset(&bad_map, &cm, &bad, "blob").is_err());
+}

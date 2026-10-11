@@ -1,5 +1,5 @@
 //! Stored ranges and codecs. Codec grammars belong to `ws-compress`.
-use crate::map::{Asset, Codec, Kind};
+use crate::map::{Asset, Codec, Kind, Num};
 use crate::text::Charmaps;
 use crate::{malformed, AssetMap};
 use formatkit_core::{bytes_at, Result};
@@ -82,6 +82,7 @@ pub fn decode_asset(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -
     if decoded.len() > MAX_ASSET_BYTES {
         return Err(malformed(format!("{id}: decoded asset too large")));
     }
+    let decoded = strip_header(asset, decoded)?;
     Ok(Stored {
         offset,
         length,
@@ -100,8 +101,118 @@ pub fn stored_range(
     Ok((s.offset, s.length))
 }
 
-/// Encode a decoded payload with the asset's codec.
+fn u16_at(bytes: &[u8], at: usize) -> usize {
+    usize::from(u16::from_le_bytes([bytes[at], bytes[at + 1]]))
+}
+
+/// Bytes per payload unit counted by a header: one tile, or one map cell.
+fn header_unit(asset: &Asset) -> Result<usize> {
+    match asset.format.header.as_deref() {
+        Some("u16-count") if asset.kind == Kind::Tiles => {
+            Ok(crate::gfx::tile_format(asset)?.bytes_per_tile())
+        }
+        Some("u16-width-height") if asset.kind == Kind::Tilemap => {
+            Ok(if asset.format.entry.as_deref() == Some("byte") {
+                1
+            } else {
+                2
+            })
+        }
+        Some(other) => Err(malformed(format!(
+            "{}: header {other:?} does not apply to a {} asset",
+            asset.id,
+            asset.kind.name()
+        ))),
+        None => Ok(0),
+    }
+}
+
+/// Check and remove the size header: the payload must be exactly what it counts.
+fn strip_header(asset: &Asset, mut bytes: Vec<u8>) -> Result<Vec<u8>> {
+    let unit = header_unit(asset)?;
+    let Some(kind) = asset.format.header.as_deref() else {
+        return Ok(bytes);
+    };
+    let (size, counted) = match kind {
+        "u16-count" if bytes.len() >= 2 => (2, u16_at(&bytes, 0)),
+        "u16-width-height" if bytes.len() >= 4 => {
+            let (w, h) = (u16_at(&bytes, 0), u16_at(&bytes, 2));
+            let f = &asset.format;
+            let declared = |n: Option<Num>| n.map(|n| n.usize()).transpose();
+            if declared(f.width)?.is_some_and(|d| d != w)
+                || declared(f.height)?.is_some_and(|d| d != h)
+            {
+                return Err(malformed(format!(
+                    "{}: header says {w}x{h}, the map declares {:?}x{:?}",
+                    asset.id, f.width, f.height
+                )));
+            }
+            (4, w * h)
+        }
+        _ => {
+            return Err(malformed(format!(
+                "{}: payload shorter than its header",
+                asset.id
+            )))
+        }
+    };
+    if bytes.len() - size != counted * unit {
+        return Err(malformed(format!(
+            "{}: header counts {counted} units of {unit} bytes but {} payload bytes follow",
+            asset.id,
+            bytes.len() - size
+        )));
+    }
+    bytes.drain(..size);
+    Ok(bytes)
+}
+
+/// Prefix a payload with its size header.
+fn add_header(asset: &Asset, decoded: &[u8]) -> Result<Vec<u8>> {
+    let unit = header_unit(asset)?;
+    let header: Vec<u8> = match asset.format.header.as_deref() {
+        None => return Ok(decoded.to_vec()),
+        Some("u16-count") => {
+            if !decoded.len().is_multiple_of(unit) {
+                return Err(malformed(format!(
+                    "{}: not a whole number of tiles",
+                    asset.id
+                )));
+            }
+            let count = u16::try_from(decoded.len() / unit)
+                .map_err(|_| malformed(format!("{}: tile count exceeds 16 bits", asset.id)))?;
+            count.to_le_bytes().to_vec()
+        }
+        Some(_) => {
+            let f = &asset.format;
+            let w = f
+                .width
+                .ok_or_else(|| malformed(format!("{}: tilemap width", asset.id)))?
+                .usize()?;
+            let h = f
+                .height
+                .ok_or_else(|| malformed(format!("{}: tilemap height", asset.id)))?
+                .usize()?;
+            if decoded.len() != w * h * unit {
+                return Err(malformed(format!(
+                    "{}: a {w}x{h} map needs {} payload bytes",
+                    asset.id,
+                    w * h * unit
+                )));
+            }
+            let dim =
+                |n: usize| u16::try_from(n).map_err(|_| malformed("map dimension exceeds 16 bits"));
+            [dim(w)?.to_le_bytes(), dim(h)?.to_le_bytes()].concat()
+        }
+    };
+    Ok([header, decoded.to_vec()].concat())
+}
+
+/// Encode a decoded payload (with its size header, when declared) with the
+/// asset's codec.
 pub fn encode_payload(asset: &Asset, decoded: &[u8]) -> Result<Vec<u8>> {
+    let with_header = add_header(asset, decoded)?;
+    let decoded = with_header.as_slice();
     match asset.codec {
         Codec::Raw => Ok(decoded.to_vec()),
         Codec::LzRle7f => lz_rle_7f::encode(decoded),

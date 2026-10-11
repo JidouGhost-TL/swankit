@@ -189,11 +189,12 @@ fn get(image: &Image, x: usize, y: usize) -> Rgba {
     ]
 }
 
-/// Tiles as a sheet (`format.width` columns, default 16) in the preview palette.
+/// Tiles as a sheet (`format.width` columns, default 16) in the preview
+/// palette; cells past the last tile are transparent.
 pub fn render_tiles(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -> Result<Image> {
     let sheet = tile_sheet(map, charmaps, rom, map.asset(id)?)?;
     let rows = sheet.tiles.len().div_ceil(sheet.columns);
-    let mut image = blank(sheet.columns * 8, rows * 8, [0, 0, 0, 255])?;
+    let mut image = blank(sheet.columns * 8, rows * 8, [0, 0, 0, 0])?;
     for (i, tile) in sheet.tiles.iter().enumerate() {
         let (tx, ty) = (i % sheet.columns * 8, i / sheet.columns * 8);
         for (p, &v) in tile.iter().enumerate() {
@@ -616,17 +617,45 @@ pub fn unrender_tiles(
     let asset = map.asset(id)?;
     let sheet = tile_sheet(map, charmaps, rom, asset)?;
     let rows = sheet.tiles.len().div_ceil(sheet.columns);
-    if image.width as usize != sheet.columns * 8 || image.height as usize != rows * 8 {
+    // A counted tile set may change size: any whole number of sheet rows.
+    let counted = asset.format.header.as_deref() == Some("u16-count");
+    let width_ok = image.width as usize == sheet.columns * 8;
+    let rows_ok = if counted {
+        image.height.is_multiple_of(8)
+    } else {
+        image.height as usize == rows * 8
+    };
+    if !(width_ok && rows_ok) {
         return Err(malformed(format!(
-            "{id}: image must be {}x{} like the extracted sheet",
+            "{id}: image must be {}x{} like the extracted sheet{}",
             sheet.columns * 8,
-            rows * 8
+            rows * 8,
+            if counted {
+                " (or any whole number of rows)"
+            } else {
+                ""
+            }
         )));
     }
+    // A counted set reads every cell; others keep their tile count.
+    let cells = if counted {
+        image.height as usize / 8 * sheet.columns
+    } else {
+        sheet.tiles.len()
+    };
+    let blank = [0u8; 64];
     let mut approx = 0;
     let mut out = Vec::new();
-    for (i, tile) in sheet.tiles.iter().enumerate() {
+    let mut kept = 0;
+    for i in 0..cells {
+        let tile = sheet.tiles.get(i).unwrap_or(&blank);
         let (tx, ty) = (i % sheet.columns * 8, i / sheet.columns * 8);
+        let padding =
+            i >= sheet.tiles.len() && (0..64).all(|p| get(image, tx + p % 8, ty + p / 8)[3] == 0);
+        if padding {
+            out.extend(encode_tile(&blank, sheet.format));
+            continue;
+        }
         let mut indices = [0u8; 64];
         for (p, slot) in indices.iter_mut().enumerate() {
             let (v, exact) = nearest(
@@ -638,8 +667,13 @@ pub fn unrender_tiles(
             approx += usize::from(!exact);
             *slot = v;
         }
+        // Blank cells past the original tiles only pad the last sheet row.
+        if i < sheet.tiles.len() || indices != blank {
+            kept = i + 1;
+        }
         out.extend(encode_tile(&indices, sheet.format));
     }
+    out.truncate(kept * sheet.format.bytes_per_tile());
     Ok((BTreeMap::from([(id.to_owned(), out)]), approx))
 }
 

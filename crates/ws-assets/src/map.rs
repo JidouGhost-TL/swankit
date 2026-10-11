@@ -440,6 +440,12 @@ pub struct Format {
     /// Font: pixels a glyph advances (default `tiles_wide` * 8).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub advance: Option<u32>,
+    /// Tiles / tilemap: a size header stored before the payload and part of
+    /// the asset: `u16-count` (little-endian tile count) or
+    /// `u16-width-height` (little-endian cells wide, cells high). Decoding
+    /// checks it; replacement rewrites it, so tiles may change count.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub header: Option<String>,
     /// Tiles: tile indices of the decoded payload the game never draws
     /// (declared with evidence); `replace --allocate` fills them with new tiles.
     #[serde(default, skip_serializing_if = "Option::is_none")]

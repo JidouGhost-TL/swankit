@@ -51,12 +51,19 @@ Format parameters by kind:
 - `tiles`: `bpp` 2 or 4, `layout` `planar`/`packed`, preview `width` (columns)
   and `palette_index` with `relations.palette`. `free_tiles` (`first`,
   `count` runs of tile indices) declares tiles the game never draws, with
-  evidence; `replace --allocate` fills them.
+  evidence; `replace --allocate` fills them. `header` `u16-count` declares a
+  little-endian tile count stored before the tiles: the asset's range starts
+  at the count, the decoded payload is the tiles, decoding checks the count
+  and replacement rewrites it, so the set may grow or shrink (a sheet with
+  any number of rows; transparent padding cells and blank cells past the old
+  count are not tiles).
 - `tilemap`: `width`, `height` in cells; `entry` `ws-word` (the hardware screen
   word: tile 0-8, palette 9-12, bank 13, flips 14-15; `color` false ignores the
   bank bit), `byte` (tile number plus `tile_base`, `attributes` OR-ed), or
   `index12-flip` (an engine's ROM map: 12-bit index into its own tile blob,
-  flips 14-15, palette from `palette_index`). `relations.tiles` places tile
+  flips 14-15, palette from `palette_index`). `header` `u16-width-height`
+  declares little-endian width and height stored before the cells (checked
+  against `width`/`height`, rewritten on replacement). `relations.tiles` places tile
   assets at VRAM slots in load order (later loads own a slot);
   `relations.palettes` places palette assets at their `palette_index`.
 - `palette`: `palette_format` `rgb444` (32-byte colour RAM records) or
