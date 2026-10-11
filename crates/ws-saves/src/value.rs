@@ -164,38 +164,141 @@ impl Value {
             _ => Err(bad("expected bytes")),
         }
     }
-    pub fn equal(&self, other: &Self) -> bool {
-        match (self, other) {
+    pub fn equal(&self, other: &Self) -> Result<bool> {
+        self.equal_with_budget(other, 0, &mut 50_000_000)
+    }
+    pub(crate) fn equal_with_budget(
+        &self,
+        other: &Self,
+        depth: usize,
+        fuel: &mut usize,
+    ) -> Result<bool> {
+        *fuel = fuel
+            .checked_sub(1)
+            .ok_or_else(|| bad("save comparison work limit"))?;
+        if depth >= 64 {
+            return Err(bad("save comparison nesting limit"));
+        }
+        let next = depth + 1;
+        Ok(match (self, other) {
             (Self::Big(_), Self::Big(_))
             | (Self::Big(_), Self::Int(_))
-            | (Self::Int(_), Self::Big(_)) => self.big().ok() == other.big().ok(),
-            (Self::Set(a), Self::Set(b)) => {
-                let a = a.borrow();
-                let b = b.borrow();
-                a.len() == b.len() && a.iter().all(|a| b.iter().any(|b| a.equal(b)))
-            }
+            | (Self::Int(_), Self::Big(_)) => self.big()? == other.big()?,
             (Self::None, Self::None) => true,
             (Self::Json(a), Self::Json(b)) => a == b,
             (Self::Int(a), Self::Int(b)) => a == b,
             (Self::Bool(a), Self::Bool(b)) => a == b,
             (Self::Bool(_), Self::Int(_)) | (Self::Int(_), Self::Bool(_)) => {
-                self.integer().ok() == other.integer().ok()
+                self.integer()? == other.integer()?
             }
             (Self::Float(_), Self::Int(_))
             | (Self::Int(_), Self::Float(_))
-            | (Self::Float(_), Self::Float(_)) => self.number().ok() == other.number().ok(),
-            (Self::Text(a), Self::Text(b)) => a == b,
-            (Self::Bytes(a), Self::Bytes(b)) => *a.borrow() == *b.borrow(),
-            (Self::List(a), Self::List(b)) => {
+            | (Self::Float(_), Self::Float(_)) => self.number()? == other.number()?,
+            (Self::Text(a), Self::Text(b)) => {
+                *fuel = fuel
+                    .checked_sub(a.len().min(b.len()))
+                    .ok_or_else(|| bad("save comparison work limit"))?;
+                a == b
+            }
+            (Self::Bytes(a), Self::Bytes(b)) => {
+                *fuel = fuel
+                    .checked_sub(a.borrow().len().min(b.borrow().len()))
+                    .ok_or_else(|| bad("save comparison work limit"))?;
+                *a.borrow() == *b.borrow()
+            }
+            (Self::Function(a), Self::Function(b)) => Rc::ptr_eq(a, b),
+            (Self::Native(a), Self::Native(b)) => a == b,
+            (Self::List(a), Self::List(b)) | (Self::Set(a), Self::Set(b)) => {
+                if Rc::ptr_eq(a, b) {
+                    return Ok(true);
+                }
                 let a = a.borrow();
                 let b = b.borrow();
-                a.len() == b.len() && a.iter().zip(b.iter()).all(|(a, b)| a.equal(b))
+                if a.len() != b.len() {
+                    return Ok(false);
+                }
+                if matches!(self, Self::Set(_)) {
+                    for item in a.iter() {
+                        let mut found = false;
+                        for candidate in b.iter() {
+                            if item.equal_with_budget(candidate, next, fuel)? {
+                                found = true;
+                                break;
+                            }
+                        }
+                        if !found {
+                            return Ok(false);
+                        }
+                    }
+                } else {
+                    for (a, b) in a.iter().zip(b.iter()) {
+                        if !a.equal_with_budget(b, next, fuel)? {
+                            return Ok(false);
+                        }
+                    }
+                }
+                true
             }
-            (Self::Map(_), Self::Map(_)) => self.to_json().ok() == other.to_json().ok(),
+            (Self::Map(a), Self::Map(b)) => {
+                if Rc::ptr_eq(a, b) {
+                    return Ok(true);
+                }
+                let a = a.borrow();
+                let b = b.borrow();
+                if a.len() != b.len() {
+                    return Ok(false);
+                }
+                for (key, value) in a.iter() {
+                    let mut found = false;
+                    for (candidate, other) in b.iter() {
+                        if key.equal_with_budget(candidate, next, fuel)? {
+                            if !value.equal_with_budget(other, next, fuel)? {
+                                return Ok(false);
+                            }
+                            found = true;
+                            break;
+                        }
+                    }
+                    if !found {
+                        return Ok(false);
+                    }
+                }
+                true
+            }
             _ => false,
+        })
+    }
+    pub fn find_equal(values: &[Self], value: &Self) -> Result<Option<usize>> {
+        for (index, candidate) in values.iter().enumerate() {
+            if candidate.equal(value)? {
+                return Ok(Some(index));
+            }
         }
+        Ok(None)
+    }
+    pub fn map_index(values: &[(Self, Self)], key: &Self) -> Result<Option<usize>> {
+        for (index, (candidate, _)) in values.iter().enumerate() {
+            if candidate.equal(key)? {
+                return Ok(Some(index));
+            }
+        }
+        Ok(None)
     }
     pub fn to_json(&self) -> Result<Json> {
+        let mut nodes = MAX_ITEMS;
+        let mut bytes = 64 * 1024 * 1024;
+        self.to_json_inner(0, &mut nodes, &mut bytes)
+    }
+    fn to_json_inner(&self, depth: usize, nodes: &mut usize, bytes: &mut usize) -> Result<Json> {
+        if depth >= 64 {
+            return Err(bad("save JSON nesting limit"));
+        }
+        *nodes = nodes
+            .checked_sub(1)
+            .ok_or_else(|| bad("save JSON node limit"))?;
+        *bytes = bytes
+            .checked_sub(std::mem::size_of::<Json>())
+            .ok_or_else(|| bad("save JSON allocation limit"))?;
         Ok(match self {
             Self::None => Json::Null,
             Self::Bool(v) => json!(v),
@@ -218,18 +321,27 @@ impl Value {
                 }
             }
             Self::Float(v) => json!(v),
-            Self::Text(v) => json!(v),
+            Self::Text(v) => {
+                *bytes = bytes
+                    .checked_sub(v.len())
+                    .ok_or_else(|| bad("save JSON allocation limit"))?;
+                json!(v)
+            }
             Self::Json(v) => v.clone(),
             Self::List(v) => Json::Array(
                 v.borrow()
                     .iter()
-                    .map(Self::to_json)
+                    .map(|v| v.to_json_inner(depth + 1, nodes, bytes))
                     .collect::<Result<_>>()?,
             ),
             Self::Map(v) => {
                 let mut out = serde_json::Map::new();
                 for (k, v) in v.borrow().iter() {
-                    out.insert(k.text(), v.to_json()?);
+                    let key = k.text();
+                    *bytes = bytes
+                        .checked_sub(key.len())
+                        .ok_or_else(|| bad("save JSON allocation limit"))?;
+                    out.insert(key, v.to_json_inner(depth + 1, nodes, bytes)?);
                 }
                 Json::Object(out)
             }

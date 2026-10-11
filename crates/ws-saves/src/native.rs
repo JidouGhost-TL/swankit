@@ -307,7 +307,7 @@ impl Engine {
                 if name == "set" {
                     let mut unique = vec![];
                     for v in seq {
-                        if !unique.iter().any(|x: &Value| x.equal(&v)) {
+                        if Value::find_equal(&unique, &v)?.is_none() {
                             unique.push(v);
                         }
                     }
@@ -452,23 +452,42 @@ impl Engine {
                     };
                     values.push((key, v));
                 }
-                let mut error = None;
-                values.sort_by(|(a, _), (b, _)| {
-                    match (Self::compare("Lt", a, b), Self::compare("Gt", a, b)) {
-                        (Ok(true), _) => std::cmp::Ordering::Less,
-                        (_, Ok(true)) => std::cmp::Ordering::Greater,
-                        (Err(e), _) | (_, Err(e)) => {
-                            error = Some(e);
-                            std::cmp::Ordering::Equal
+                // Merge with fallible comparisons: mapping errors to Equal can
+                // violate the total-order contract required by slice sorting.
+                let reverse = kw.get("reverse").is_some_and(Value::truth);
+                let mut scratch = values.clone();
+                let mut width = 1;
+                while width < values.len() {
+                    for start in (0..values.len()).step_by(width * 2) {
+                        let middle = (start + width).min(values.len());
+                        let end = (middle + width).min(values.len());
+                        let (mut left, mut right) = (start, middle);
+                        for destination in &mut scratch[start..end] {
+                            let take_left = if left == middle {
+                                false
+                            } else if right == end {
+                                true
+                            } else {
+                                !Self::compare(
+                                    if reverse { "Lt" } else { "Gt" },
+                                    &values[left].0,
+                                    &values[right].0,
+                                )?
+                            };
+                            let index = if take_left {
+                                let index = left;
+                                left += 1;
+                                index
+                            } else {
+                                let index = right;
+                                right += 1;
+                                index
+                            };
+                            *destination = values[index].clone();
                         }
-                        _ => std::cmp::Ordering::Equal,
                     }
-                });
-                if let Some(e) = error {
-                    return Err(e);
-                }
-                if kw.get("reverse").is_some_and(Value::truth) {
-                    values.reverse();
+                    std::mem::swap(&mut values, &mut scratch);
+                    width *= 2;
                 }
                 Ok(Value::list(values.into_iter().map(|(_, v)| v).collect()))
             }
@@ -567,7 +586,9 @@ impl Engine {
             }
             "json.dumps" => Ok(Value::Json(arg(&a, 0)?.to_json()?)),
             "json.dump" => {
-                self.output.push(arg(&a, 0)?.to_json()?);
+                let value = arg(&a, 0)?.to_json()?;
+
+                self.output.push(value);
                 Ok(Value::None)
             }
             "sys.exit" => {
@@ -651,6 +672,9 @@ impl Engine {
                 {
                     v |= u128::MAX << (b.len() * 8);
                 }
+                if !signed && v > i128::MAX as u128 {
+                    return Err(bad("unsigned integer exceeds signed 128-bit range"));
+                }
                 Ok(Value::Int(v as i128))
             }
             "str.maketrans" => {
@@ -713,6 +737,7 @@ impl Engine {
                 if name == "struct.pack" {
                     Ok(Value::bytes(pack(&fmt, &a[1..])?))
                 } else {
+                    arg(&a, 2)?;
                     let data = pack(&fmt, &a[3..])?;
                     let offset = arg(&a, 2)?.index()?;
                     if let Value::Bytes(b) = arg(&a, 1)? {
@@ -810,7 +835,11 @@ impl Engine {
                     .map(Value::text)
                     .or_else(|| kw.get("errors").map(Value::text))
                     .unwrap_or_else(|| "strict".into());
-                let text = if codec == "ascii" {
+                let text = if codec == "shift_jis" || codec == "sjis" {
+                    crate::jis0208::decode(&raw, &errors)?
+                } else if codec == "cp932" {
+                    crate::cp932::decode(&raw, &errors)?
+                } else if codec == "ascii" {
                     if errors == "strict" && raw.iter().any(|b| *b > 127) {
                         return Err(bad("ASCII text"));
                     }
@@ -829,7 +858,6 @@ impl Engine {
                     raw.iter().map(|&b| char::from(b)).collect()
                 } else {
                     let label = match codec.as_str() {
-                        "shift_jis" | "sjis" | "cp932" => "shift_jis",
                         "euc_jp" => "euc-jp",
                         "utf-16le" | "utf-16-le" => "utf-16le",
                         x => x,
@@ -849,12 +877,11 @@ impl Engine {
                 Ok(Value::Text(text))
             }
             "get" => {
+                let key = arg(&a, 0)?;
                 if let Value::Map(m) = obj {
-                    Ok(m.borrow()
-                        .iter()
-                        .rev()
-                        .find(|(k, _)| k.equal(&a[0]))
-                        .map(|(_, v)| v.clone())
+                    let m = m.borrow();
+                    Ok(Value::map_index(&m, key)?
+                        .map(|index| m[index].1.clone())
                         .or_else(|| a.get(1).cloned())
                         .unwrap_or(Value::None))
                 } else {
@@ -882,7 +909,7 @@ impl Engine {
                     let seq = arg(&a, 0)?.sequence()?;
                     let mut l = l.borrow_mut();
                     for v in seq {
-                        if !l.iter().any(|x| x.equal(&v)) {
+                        if Value::find_equal(&l, &v)?.is_none() {
                             l.push(v);
                             checked_count(l.len())?;
                         }
@@ -943,7 +970,8 @@ impl Engine {
                     if l.len() >= MAX_ITEMS {
                         return Err(bad("list append limit"));
                     }
-                    if name == "append" || !l.iter().any(|x| x.equal(&v)) {
+
+                    if name == "append" || Value::find_equal(&l, &v)?.is_none() {
                         l.push(v);
                     }
                     Ok(Value::None)
@@ -956,12 +984,14 @@ impl Engine {
                     let raw = arg(&a, 0)?.raw()?;
                     let mut b = b.borrow_mut();
                     checked_count(b.len() + raw.len())?;
+
                     b.extend(raw);
                     Ok(Value::None)
                 } else if let Value::List(l) = obj {
                     let seq = arg(&a, 0)?.sequence()?;
                     let mut l = l.borrow_mut();
                     checked_count(l.len() + seq.len())?;
+
                     l.extend(seq);
                     Ok(Value::None)
                 } else {
@@ -995,7 +1025,7 @@ impl Engine {
                         b.borrow().windows(needle.len()).position(|v| v == needle)
                     }
                 } else {
-                    obj.sequence()?.iter().position(|v| v.equal(needle))
+                    Value::find_equal(&obj.sequence()?, needle)?
                 };
                 match index {
                     Some(i) => Ok(Value::Int(i as i128)),
@@ -1009,7 +1039,11 @@ impl Engine {
                     Ok(Value::Int(t.matches(&needle.text()).count() as i128))
                 } else {
                     Ok(Value::Int(
-                        obj.sequence()?.iter().filter(|v| v.equal(needle)).count() as i128,
+                        obj.sequence()?
+                            .iter()
+                            .try_fold(0i128, |count, v| -> Result<i128> {
+                                Ok(count + i128::from(v.equal(needle)?))
+                            })?,
                     ))
                 }
             }
@@ -1464,7 +1498,8 @@ mod tests {
                 empty()
             )
             .unwrap()
-            .equal(&Value::Int(1)));
+            .equal(&Value::Int(1))
+            .unwrap());
         assert_eq!(format_value(&Value::Float(2.5), "05.2f").unwrap(), "02.50");
     }
 }

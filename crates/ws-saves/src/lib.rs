@@ -1,6 +1,8 @@
 //! Generated WonderSwan game save grammars, with bounded semantic interpretation.
 #![forbid(unsafe_code)]
+mod cp932;
 mod engine;
+mod jis0208;
 mod native;
 #[path = "generated/records.rs"]
 mod records;
@@ -315,7 +317,8 @@ impl Format {
                 vec![Value::bytes(bytes.to_vec()), Value::Text(name.into())],
                 HashMap::new(),
             )?;
-            engine.output.push(value.to_json()?);
+            let json = value.to_json()?;
+            engine.output.push(json);
             Value::None
         } else {
             let args = match self.entry["mode"].as_str() {
@@ -386,7 +389,10 @@ impl Format {
                 ])],
                 _ => vec![argv],
             };
-            engine.call(main, args, HashMap::new())?;
+            let result = engine.call(main, args, HashMap::new())?;
+            if result.truth() {
+                return Err(bad(format!("save repair returned {}", result.text())));
+            }
         }
         let fixed = engine
             .files
@@ -415,19 +421,8 @@ impl Format {
 }
 /// Normalize transport metadata; semantic keys, values, arrays and validity are exact.
 pub fn normalize(value: &mut Json) {
-    match value {
-        Json::Object(map) => {
-            map.remove("file");
-            for v in map.values_mut() {
-                normalize(v);
-            }
-        }
-        Json::Array(values) => {
-            for v in values {
-                normalize(v);
-            }
-        }
-        _ => {}
+    if let Json::Object(map) = value {
+        map.remove("file");
     }
 }
 

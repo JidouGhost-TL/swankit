@@ -60,6 +60,29 @@ impl Format {
             })
         })
     }
+    /// Cartridge images are primary when present. Internal EEPROM is a
+    /// companion in those definitions; standalone console definitions may
+    /// recognize it directly. Physical size declarations remain available via
+    /// accepts_size for explicit field operations.
+    pub fn accepts_primary_size(&self, length: usize) -> bool {
+        let Some(media) = self.definition()["media"].as_array() else {
+            return false;
+        };
+        let cartridge = media.iter().any(|m| {
+            matches!(
+                m["kind"].as_str(),
+                Some("cartridge-sram" | "cartridge-eeprom")
+            )
+        });
+        media
+            .iter()
+            .filter(|m| !cartridge || m["kind"] != "internal-eeprom")
+            .any(|m| {
+                m["sizes"]
+                    .as_array()
+                    .is_some_and(|sizes| sizes.iter().any(|n| n.as_u64() == Some(length as u64)))
+            })
+    }
     /// A match requires positive semantic evidence, not just a successful parse.
     /// Empty/invalid redundant records may coexist with a usable stored record.
     /// This is a candidate predicate, never a unique title identity guarantee.
@@ -69,7 +92,7 @@ impl Format {
         name: &str,
         context: &DecodeContext,
     ) -> Result<Option<ValidityEvidence>> {
-        if !self.accepts_size(bytes.len()) {
+        if !self.accepts_primary_size(bytes.len()) {
             return Ok(None);
         }
         let policy = &self.definition()["validity"];

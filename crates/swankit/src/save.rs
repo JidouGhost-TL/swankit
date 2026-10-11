@@ -30,7 +30,7 @@ impl Toolkit {
     ) -> Result<Vec<DefinitionCandidate>> {
         let mut out = Vec::new();
         for f in saves::formats()? {
-            if f.accepts_size(bytes.len()) {
+            if f.accepts_primary_size(bytes.len()) {
                 if let Ok(Some(evidence)) = f.recognize_with_context(bytes, name, context) {
                     out.push(DefinitionCandidate {
                         id: f.id.clone(),

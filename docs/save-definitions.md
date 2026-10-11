@@ -38,6 +38,10 @@ program determines which are accepted as a primary input. A listed internal
 EEPROM may be a companion or unused console image; its presence does not imply
 that the cartridge decoder accepts it. Supply companions through `DecodeContext`
 when requested, and use `ws-save` to read the console owner profile separately.
+Automatic recognition considers cartridge media when a definition declares
+them; internal EEPROM sizes are eligible only for standalone console
+definitions. `accepts_size` still describes all physical media for explicit
+field access, while `accepts_primary_size` describes recognition eligibility.
 
 ### Fixed fields and records
 
@@ -244,7 +248,7 @@ After module initialization, invoke the decode entry. `program` mode calls
 that vector; `arguments` calls `main([name])`; `direct` invokes `entry.decode`
 with `(image_bytes, name)` and emits the returned tree. Require exactly one
 JSON result and a false/null/zero main return. Unwrap a singleton outer result
-list and remove transport keys named `file` recursively; retain semantic keys,
+list and remove only the top-level transport key `file`; retain semantic keys,
 values and order, including filename-derived keys and `source` values.
 
 Repair uses `["save", "--fix", name, "repaired"]`, with `arguments` omitting
@@ -254,8 +258,11 @@ length before replacing the candidate. Application filesystem paths are not
 part of the library's capabilities.
 
 Apply limits before allocation: at most 1,048,576 items per image/container,
-4 MiB definition text, 50,000,000 semantic operations per invocation and
-128 nested calls. Check record multiplication/addition for overflow. Unsupported
+4 MiB definition text, 50,000,000 AST execution ticks per invocation and
+16 nested calls. Context cloning and bulk operations do not yet have complete
+aggregate allocation/work accounting. The call cap also protects debug
+builds on ordinary test-thread stacks. Check record multiplication/addition
+for overflow. Unsupported
 native names cannot acquire host capabilities. A failed repair leaves its
 input unchanged.
 

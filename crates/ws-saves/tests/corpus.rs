@@ -119,7 +119,12 @@ fn corpus_saves() {
     };
     let mut count = 0;
     let mut by_title = std::collections::BTreeMap::<String, [usize; 3]>::new();
-    for namespace in ["ws-saves", "ws-saves-parity", "ws-saves-play"] {
+    for namespace in [
+        "ws-saves",
+        "ws-saves-parity",
+        "ws-saves-play",
+        "ws-saves-natural",
+    ] {
         if root.join(namespace).join("spec.json").is_file() {
             count += run_dir(namespace, &SaveDigest::load(&root, namespace));
             let spec = Spec::load(&root.join(namespace).join("spec.json")).unwrap();

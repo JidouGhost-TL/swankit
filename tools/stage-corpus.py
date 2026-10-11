@@ -332,7 +332,7 @@ def stage_saves(args):
     manifest_path = args.save_manifest.resolve(strict=True)
     manifest = json.loads(manifest_path.read_bytes())
     namespace = args.save_namespace
-    if namespace not in ("ws-saves", "ws-saves-parity", "ws-saves-play"):
+    if namespace not in ("ws-saves", "ws-saves-parity", "ws-saves-play", "ws-saves-natural"):
         raise ValueError("unknown save namespace")
     sample_dir = output / namespace
     enrollment = output / (namespace + "-enrollment.json")

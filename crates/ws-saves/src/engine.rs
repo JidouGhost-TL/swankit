@@ -76,7 +76,12 @@ impl Engine {
             "AugAssign" => {
                 let a = self.eval(&n["target"], s)?;
                 let b = self.eval(&n["value"], s)?;
-                let v = self.binary(tag(&n["op"]), a, b)?;
+                let v = if tag(&n["op"]) == "Add" && matches!(a, Value::List(_) | Value::Bytes(_)) {
+                    self.method("extend", a.clone(), vec![b], HashMap::new())?;
+                    a
+                } else {
+                    self.binary(tag(&n["op"]), a, b)?
+                };
                 self.assign(&n["target"], v, s)?;
             }
             "Expr" => {
@@ -94,7 +99,8 @@ impl Engine {
                 return self.block(array(&n[if test { "body" } else { "orelse" }])?, s);
             }
             "For" => {
-                let seq = self.eval(&n["iter"], s)?.sequence()?;
+                let iterable = self.eval(&n["iter"], s)?;
+                let seq = iterable.sequence()?;
                 for v in seq {
                     self.tick()?;
                     self.assign(&n["target"], v, s)?;
@@ -244,7 +250,8 @@ impl Engine {
                 let mut values = vec![];
                 for n in array(&n["elts"])? {
                     let v = self.eval(n, s)?;
-                    if !values.iter().any(|x: &Value| x.equal(&v)) {
+
+                    if Value::find_equal(&values, &v)?.is_none() {
                         values.push(v);
                     }
                 }
@@ -256,12 +263,15 @@ impl Engine {
                     let v = self.eval(v, s)?;
                     if k.is_null() {
                         if let Value::Map(m) = v {
-                            out.extend(m.borrow().clone());
+                            for (key, value) in m.borrow().iter() {
+                                Self::dict_insert(&mut out, key.clone(), value.clone())?;
+                            }
                         } else {
                             return Err(bad("dictionary spread"));
                         }
                     } else {
-                        out.push((self.eval(k, s)?, v));
+                        let key = self.eval(k, s)?;
+                        Self::dict_insert(&mut out, key, v)?;
                     }
                 }
                 Ok(Value::map(out))
@@ -292,7 +302,8 @@ impl Engine {
                 let mut args = vec![];
                 for a in array(&n["args"])? {
                     if tag(a) == "Starred" {
-                        args.extend(self.eval(&a["value"], s)?.sequence()?);
+                        let iterable = self.eval(&a["value"], s)?;
+                        args.extend(iterable.sequence()?);
                     } else {
                         args.push(self.eval(a, s)?);
                     }
@@ -391,7 +402,7 @@ impl Engine {
                     if tag(n) == "SetComp" {
                         let mut unique = vec![];
                         for v in out {
-                            if !unique.iter().any(|u: &Value| u.equal(&v)) {
+                            if Value::find_equal(&unique, &v)?.is_none() {
                                 unique.push(v);
                             }
                         }
@@ -437,7 +448,8 @@ impl Engine {
             return Ok(());
         }
         let g = &gens[i];
-        let seq = self.eval(&g["iter"], s)?.sequence()?;
+        let iterable = self.eval(&g["iter"], s)?;
+        let seq = iterable.sequence()?;
         for v in seq {
             self.assign(&g["target"], v, s)?;
             let mut accept = true;
@@ -467,7 +479,7 @@ impl Engine {
                 if let Some(result) = self.checksum_native(&f.name, &args) {
                     return result;
                 }
-                if self.depth >= 128 {
+                if self.depth >= 16 {
                     return Err(bad("save call depth"));
                 }
                 let parent = f
@@ -566,13 +578,12 @@ impl Engine {
     }
     pub fn get(obj: &Value, key: &Value) -> Result<Value> {
         match obj {
-            Value::Map(m) => m
-                .borrow()
-                .iter()
-                .rev()
-                .find(|(k, _)| k.equal(key))
-                .map(|(_, v)| v.clone())
-                .ok_or_else(|| bad(format!("missing key {}", key.text()))),
+            Value::Map(m) => {
+                let m = m.borrow();
+                Value::map_index(&m, key)?
+                    .map(|index| m[index].1.clone())
+                    .ok_or_else(|| bad(format!("missing key {}", key.text())))
+            }
             Value::Bytes(b) => {
                 let b = b.borrow();
                 let i = Self::normalize_index(key.integer()?, b.len())?;
@@ -597,8 +608,8 @@ impl Engine {
         match obj {
             Value::Map(m) => {
                 let mut m = m.borrow_mut();
-                if let Some((_, old)) = m.iter_mut().find(|(k, _)| k.equal(&key)) {
-                    *old = v;
+                if let Some(index) = Value::map_index(&m, &key)? {
+                    m[index].1 = v;
                 } else {
                     if m.len() >= MAX_ITEMS {
                         return Err(bad("map limit"));
@@ -626,10 +637,7 @@ impl Engine {
         match obj {
             Value::Map(m) => {
                 let mut m = m.borrow_mut();
-                let i = m
-                    .iter()
-                    .position(|(k, _)| k.equal(key))
-                    .ok_or_else(|| bad("map remove key"))?;
+                let i = Value::map_index(&m, key)?.ok_or_else(|| bad("map remove key"))?;
                 Ok(m.remove(i).1)
             }
             Value::List(l) => {
@@ -708,12 +716,12 @@ impl Engine {
     }
     pub fn compare(op: &str, a: &Value, b: &Value) -> Result<bool> {
         Ok(match op {
-            "Eq" | "Is" => a.equal(b),
-            "NotEq" | "IsNot" => !a.equal(b),
+            "Eq" | "Is" => a.equal(b)?,
+            "NotEq" | "IsNot" => !a.equal(b)?,
             "In" | "NotIn" => {
                 let yes = match (a, b) {
                     (Value::Text(a), Value::Text(b)) => b.contains(a),
-                    _ => b.sequence()?.iter().any(|x| x.equal(a)),
+                    _ => Value::find_equal(&b.sequence()?, a)?.is_some(),
                 };
                 if op == "In" {
                     yes
@@ -772,7 +780,7 @@ impl Engine {
         if op == "BitOr" && matches!(a, Value::Set(_)) && matches!(b, Value::Set(_)) {
             let mut seq = a.sequence()?;
             for v in b.sequence()? {
-                if !seq.iter().any(|x| x.equal(&v)) {
+                if Value::find_equal(&seq, &v)?.is_none() {
                     seq.push(v);
                     checked_limit(seq.len())?;
                 }
@@ -836,7 +844,7 @@ impl Engine {
         }
         if op == "Mult" && matches!(a, Value::List(_) | Value::Bytes(_) | Value::Text(_)) {
             let n = b.index()?;
-            let len = a.sequence()?.len();
+            let len = a.len()?;
             if len.checked_mul(n).is_none_or(|v| v > MAX_ITEMS) {
                 return Err(bad("repeat limit"));
             }
@@ -881,10 +889,10 @@ impl Engine {
             "BitAnd" => Some(a & b),
             "BitOr" => Some(a | b),
             "BitXor" => Some(a ^ b),
-            "LShift" => u32::try_from(b)
-                .ok()
-                .filter(|n| *n < 128)
-                .and_then(|n| a.checked_shl(n)),
+            "LShift" => u32::try_from(b).ok().filter(|n| *n < 128).and_then(|n| {
+                let shifted = a.checked_shl(n)?;
+                (shifted >> n == a).then_some(shifted)
+            }),
             "RShift" => u32::try_from(b)
                 .ok()
                 .filter(|n| *n < 128)
@@ -893,6 +901,14 @@ impl Engine {
         }
         .ok_or_else(|| bad("integer operation overflow or zero divisor"))?;
         Ok(Value::Int(v))
+    }
+    fn dict_insert(out: &mut Vec<(Value, Value)>, key: Value, value: Value) -> Result<()> {
+        if let Some(index) = Value::map_index(out, &key)? {
+            out[index].1 = value;
+        } else {
+            out.push((key, value));
+        }
+        Ok(())
     }
 }
 
