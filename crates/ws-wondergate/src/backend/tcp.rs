@@ -134,6 +134,14 @@ impl Connection for TcpConnection {
                 data.truncate(n);
                 Recv::Data(data)
             }
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+                ) =>
+            {
+                Recv::Timeout
+            }
             Err(_) => Recv::Error,
         }
     }

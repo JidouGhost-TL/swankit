@@ -28,27 +28,32 @@ pub fn serve<N: Network>(
     mut output: impl Write,
     mut tap: Tap<impl Write>,
 ) -> io::Result<()> {
-    let mut bytes = [0; 4096];
-    loop {
-        let n = match input.read(&mut bytes) {
-            Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
-            other => other?,
-        };
-        if n == 0 {
-            return match adapter.finish() {
-                Some(e) => Err(io::Error::new(io::ErrorKind::InvalidData, e)),
-                None => Ok(()),
+    tap.start_session()?;
+    let result = (|| {
+        let mut bytes = [0; 4096];
+        loop {
+            let n = match input.read(&mut bytes) {
+                Err(e) if e.kind() == io::ErrorKind::Interrupted => continue,
+                other => other?,
             };
+            if n == 0 {
+                return match adapter.finish() {
+                    Some(e) => Err(io::Error::new(io::ErrorKind::InvalidData, e)),
+                    None => Ok(()),
+                };
+            }
+            tap.record(Direction::ToAdapter, &bytes[..n])?;
+            let mut reply = Vec::new();
+            adapter.push(&bytes[..n], &mut reply, &mut |_| {});
+            if !reply.is_empty() {
+                output.write_all(&reply)?;
+                output.flush()?;
+                tap.record(Direction::FromAdapter, &reply)?;
+            }
         }
-        tap.record(Direction::ToAdapter, &bytes[..n])?;
-        let mut reply = Vec::new();
-        adapter.push(&bytes[..n], &mut reply, &mut |_| {});
-        if !reply.is_empty() {
-            output.write_all(&reply)?;
-            output.flush()?;
-            tap.record(Direction::FromAdapter, &reply)?;
-        }
-    }
+    })();
+    let ended = tap.end_session(result.is_ok());
+    result.and(ended)
 }
 
 pub fn serve_tcp(

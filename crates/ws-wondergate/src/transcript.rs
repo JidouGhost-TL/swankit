@@ -47,11 +47,19 @@ pub struct Record {
     /// Range in the corresponding joined stream, avoiding duplicate retention.
     pub range: Range<usize>,
 }
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Session {
+    pub input: Range<usize>,
+    pub output: Range<usize>,
+    /// True when an explicit end marker was present (including error exits).
+    pub ended: bool,
+}
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Streams {
     pub input: Vec<u8>,
     pub output: Vec<u8>,
     pub records: Vec<Record>,
+    pub sessions: Vec<Session>,
 }
 impl Streams {
     pub fn bytes(&self, record: &Record) -> Option<&[u8]> {
@@ -120,6 +128,8 @@ pub fn parse(text: &str) -> Result<Streams> {
 pub fn parse_with_limits(text: &str, limits: TranscriptLimits) -> Result<Streams> {
     bound("text bytes", text.len(), limits.max_text.min(MAX_TEXT))?;
     let mut streams = Streams::default();
+    let mut session_start = None;
+    let mut marked = false;
     for (index, raw) in text.lines().enumerate() {
         let line = index + 1;
         let raw = raw.trim();
@@ -140,11 +150,44 @@ pub fn parse_with_limits(text: &str, limits: TranscriptLimits) -> Result<Streams
             .parse::<u64>()
             .map_err(|_| line_error(line, "timestamp overflow"))?;
         let direction = match fields.next() {
-            Some("#") => continue, // wrapper start/end metadata
+            Some("#") => {
+                let words: Vec<_> = fields.collect();
+                if words.starts_with(&["tap", "start"]) {
+                    bound("sessions", streams.sessions.len() + 1, limits.max_records)?;
+                    let (input, output) = session_start.take().unwrap_or_else(|| {
+                        streams
+                            .sessions
+                            .last()
+                            .map_or((0, 0), |last| (last.input.end, last.output.end))
+                    });
+                    if streams.input.len() > input || streams.output.len() > output {
+                        streams.sessions.push(Session {
+                            input: input..streams.input.len(),
+                            output: output..streams.output.len(),
+                            ended: false,
+                        });
+                    }
+                    session_start = Some((streams.input.len(), streams.output.len()));
+                    marked = true;
+                } else if words.starts_with(&["tap", "end"]) {
+                    if let Some((input, output)) = session_start.take() {
+                        bound("sessions", streams.sessions.len() + 1, limits.max_records)?;
+                        streams.sessions.push(Session {
+                            input: input..streams.input.len(),
+                            output: output..streams.output.len(),
+                            ended: true,
+                        });
+                    }
+                }
+                continue;
+            }
             Some(">") => Direction::ToAdapter,
             Some("<") => Direction::FromAdapter,
             _ => return Err(line_error(line, "invalid direction")),
         };
+        if marked && session_start.is_none() {
+            session_start = Some((streams.input.len(), streams.output.len()));
+        }
         let hex = fields.next().unwrap_or("");
         if fields.next().is_some()
             || hex.len() % 2 != 0
@@ -184,6 +227,20 @@ pub fn parse_with_limits(text: &str, limits: TranscriptLimits) -> Result<Streams
             ms,
             direction,
             range: start..end,
+        });
+    }
+    if let Some((input, output)) = session_start {
+        bound("sessions", streams.sessions.len() + 1, limits.max_records)?;
+        streams.sessions.push(Session {
+            input: input..streams.input.len(),
+            output: output..streams.output.len(),
+            ended: false,
+        });
+    } else if !marked {
+        streams.sessions.push(Session {
+            input: 0..streams.input.len(),
+            output: 0..streams.output.len(),
+            ended: true,
         });
     }
     Ok(streams)
@@ -255,6 +312,19 @@ impl<W: Write> Tap<W> {
             writer,
             start: Instant::now(),
         }
+    }
+    pub fn start_session(&mut self) -> io::Result<()> {
+        writeln!(self.writer, "T 00000000 # tap start")?;
+        self.writer.flush()
+    }
+    pub fn end_session(&mut self, success: bool) -> io::Result<()> {
+        writeln!(
+            self.writer,
+            "T {:08} # tap end rc={}",
+            self.start.elapsed().as_millis(),
+            if success { 0 } else { 1 }
+        )?;
+        self.writer.flush()
     }
     pub fn write_at(&mut self, ms: u64, direction: Direction, bytes: &[u8]) -> io::Result<()> {
         write!(self.writer, "T {ms:08} {} ", direction.marker())?;

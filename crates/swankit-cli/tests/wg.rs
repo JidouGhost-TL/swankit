@@ -171,3 +171,39 @@ fn product_raw_command_and_argument_errors() {
         assert!(!invoke(command, &[]).status.success());
     }
 }
+
+#[test]
+fn appended_adapter_taps_preserve_sessions_after_a_partial_frame() {
+    let scratch = Scratch::new();
+    let tap = scratch.0.join("sessions.log");
+    let mut first = adapter();
+    first.env("WG_SERIAL_LOG", &tap);
+    assert!(!invoke(first, &[1, 0, 1]).status.success());
+    let mut second = adapter();
+    second.env("WG_SERIAL_LOG", &tap);
+    assert!(invoke(second, &[1, 0, 1, 2]).status.success());
+    let text = fs::read_to_string(&tap).unwrap();
+    assert_eq!(
+        text.matches("# tap start").count(),
+        2,
+        "each appended session needs a start marker"
+    );
+    assert_eq!(
+        text.matches("# tap end").count(),
+        2,
+        "even malformed input needs an end marker"
+    );
+    let decoded = Command::new(env!("CARGO_BIN_EXE_wg-decode"))
+        .arg(&tap)
+        .args(["--session", "2"])
+        .output()
+        .unwrap();
+    assert!(
+        decoded.status.success(),
+        "{}",
+        String::from_utf8_lossy(&decoded.stderr)
+    );
+    assert!(String::from_utf8(decoded.stdout)
+        .unwrap()
+        .contains("01:02 init/poweron"));
+}

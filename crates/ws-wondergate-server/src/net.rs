@@ -24,9 +24,16 @@ fn digest(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
 
+pub const MAX_WIRE_RECORDS: usize = 256;
+pub const MAX_WIRE_BYTES: u64 = 16 * 1024 * 1024;
+pub const MAX_BPL_MESSAGES: usize = 32;
+pub const MAX_PEER_CONNECTIONS: usize = 4;
 struct Log {
     file: File,
     next_id: u64,
+    records: usize,
+    bytes: u64,
+    refused: bool,
 }
 pub struct WireLog {
     directory: PathBuf,
@@ -40,9 +47,23 @@ impl WireLog {
             .create(true)
             .open(directory.as_ref().join("wire.jsonl"))?;
         file.try_lock().map_err(io::Error::other)?;
+        let records = fs::read_dir(directory.as_ref())?
+            .filter_map(Result::ok)
+            .filter(|e| e.file_name().to_string_lossy().ends_with(".request.bin"))
+            .count();
+        let bytes = fs::read_dir(directory.as_ref())?
+            .filter_map(Result::ok)
+            .map(|e| e.metadata().map(|m| m.len()).unwrap_or(0))
+            .sum();
         Ok(Self {
             directory: directory.as_ref().into(),
-            log: Mutex::new(Log { file, next_id: 0 }),
+            log: Mutex::new(Log {
+                file,
+                next_id: 0,
+                records,
+                bytes,
+                refused: false,
+            }),
         })
     }
     pub fn directory(&self) -> &Path {
@@ -50,6 +71,8 @@ impl WireLog {
     }
     /// Files are exclusive-created, so restarts never overwrite evidence.
     /// The timestamp is injected by the server, making wire times testable.
+    /// At the cumulative quota logging is refused, with one diagnostic per
+    /// open log. Serving continues and normal shutdown remains successful.
     pub fn record(
         &self,
         protocol: &str,
@@ -63,6 +86,20 @@ impl WireLog {
             .log
             .lock()
             .map_err(|_| other("wire log lock poisoned"))?;
+        let reservation = (request.len() as u64)
+            .saturating_add(response.len() as u64)
+            .saturating_add(4096);
+        if log.records >= MAX_WIRE_RECORDS || log.bytes.saturating_add(reservation) > MAX_WIRE_BYTES
+        {
+            if !log.refused {
+                eprintln!("wire logging refused: cumulative record or byte capacity reached");
+                log.refused = true;
+            }
+            return Ok(());
+        }
+        // Reserve before creating any file, including when later I/O fails.
+        log.records += 1;
+        log.bytes += reservation;
         let (id, mut req) = loop {
             let id = format!("{:016x}{:016x}", std::process::id(), log.next_id);
             log.next_id = log
@@ -118,7 +155,8 @@ impl Default for Config {
 }
 struct Shared {
     stopped: AtomicBool,
-    active: AtomicUsize,
+    active: [AtomicUsize; 2],
+    peers: Mutex<std::collections::BTreeMap<std::net::IpAddr, usize>>,
     workers: Mutex<Vec<JoinHandle<()>>>,
     errors: Mutex<Vec<String>>,
 }
@@ -145,10 +183,18 @@ impl Shared {
         }
     }
 }
-struct Active(Arc<Shared>);
+struct Active(Arc<Shared>, usize, std::net::IpAddr);
 impl Drop for Active {
     fn drop(&mut self) {
-        self.0.active.fetch_sub(1, Ordering::AcqRel);
+        self.0.active[self.1].fetch_sub(1, Ordering::AcqRel);
+        if let Ok(mut peers) = self.0.peers.lock() {
+            if let Some(n) = peers.get_mut(&self.2) {
+                *n -= 1;
+                if *n == 0 {
+                    peers.remove(&self.2);
+                }
+            }
+        }
     }
 }
 pub struct TcpServer {
@@ -178,7 +224,8 @@ impl TcpServer {
         let bpl_address = bpl.local_addr()?;
         let shared = Arc::new(Shared {
             stopped: AtomicBool::new(false),
-            active: AtomicUsize::new(0),
+            active: std::array::from_fn(|_| AtomicUsize::new(0)),
+            peers: Mutex::new(std::collections::BTreeMap::new()),
             workers: Mutex::new(Vec::new()),
             errors: Mutex::new(Vec::new()),
         });
@@ -188,7 +235,9 @@ impl TcpServer {
             shared,
             listeners: Vec::new(),
         };
-        for (listener, protocol) in [(http, "HTTP"), (bpl, "BPL")] {
+        for (protocol_index, (listener, protocol)) in
+            [(http, "HTTP"), (bpl, "BPL")].into_iter().enumerate()
+        {
             let app = server.clone();
             let log = wire.clone();
             let control = result.shared.clone();
@@ -200,8 +249,7 @@ impl TcpServer {
                         control.reap();
                         match listener.accept() {
                             Ok((stream, peer)) => {
-                                if control
-                                    .active
+                                if control.active[protocol_index]
                                     .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| {
                                         (n < config.max_connections).then_some(n + 1)
                                     })
@@ -210,12 +258,29 @@ impl TcpServer {
                                     drop(stream);
                                     continue;
                                 }
+                                let peer_allowed = match control.peers.lock() {
+                                    Ok(mut peers) => {
+                                        let n = peers.entry(peer.ip()).or_default();
+                                        if *n >= MAX_PEER_CONNECTIONS {
+                                            false
+                                        } else {
+                                            *n += 1;
+                                            true
+                                        }
+                                    }
+                                    Err(_) => false,
+                                };
+                                if !peer_allowed {
+                                    control.active[protocol_index].fetch_sub(1, Ordering::AcqRel);
+                                    drop(stream);
+                                    continue;
+                                }
                                 let worker_app = app.clone();
                                 let worker_log = log.clone();
                                 let worker_control = control.clone();
                                 let timeout = config.timeout;
                                 // The guard is captured before spawn, including spawn failure.
-                                let guard = Active(control.clone());
+                                let guard = Active(control.clone(), protocol_index, peer.ip());
                                 let worker = thread::Builder::new()
                                     .name(format!("wg-{protocol}-connection"))
                                     .spawn(move || {
@@ -384,6 +449,8 @@ fn serve(
     timeout: Duration,
     control: &Shared,
 ) -> io::Result<()> {
+    // Accepted streams inherit nonblocking mode on some platforms.
+    stream.set_nonblocking(false)?;
     stream.set_read_timeout(Some(timeout))?;
     stream.set_write_timeout(Some(timeout))?;
     if protocol == "HTTP" {
@@ -407,10 +474,16 @@ fn serve(
             server.clock().now_utc(),
         )?;
     } else {
-        while !control.stopped.load(Ordering::Acquire) {
+        let total_deadline = Instant::now() + timeout * 4;
+        let mut messages = 0;
+        while !control.stopped.load(Ordering::Acquire)
+            && Instant::now() < total_deadline
+            && messages < MAX_BPL_MESSAGES
+        {
+            messages += 1;
             let mut raw = Vec::new();
             let mut reply = Vec::new();
-            let deadline = Instant::now() + timeout;
+            let deadline = (Instant::now() + timeout).min(total_deadline);
             let result: io::Result<()> = (|| {
                 read_window(&stream, deadline, timeout)?;
                 let mut first = [0];
@@ -442,3 +515,7 @@ fn serve(
     let _ = stream.shutdown(Shutdown::Both);
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "review_portability.rs"]
+mod review_portability;

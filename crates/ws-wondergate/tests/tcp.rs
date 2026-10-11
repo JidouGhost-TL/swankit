@@ -144,7 +144,7 @@ fn recv_timeout_close_and_failed_connect_are_bounded() {
     let mut conn = tcp.connect([127, 0, 0, 1], port).unwrap();
     assert!(matches!(conn.recv(0), Recv::Data(v) if v.is_empty()));
     let start = Instant::now();
-    assert!(matches!(conn.recv(usize::MAX), Recv::Error));
+    assert!(matches!(conn.recv(usize::MAX), Recv::Timeout));
     assert!(start.elapsed() < Duration::from_secs(2));
     conn.close();
     conn.close();
@@ -180,4 +180,33 @@ fn tcp_send_reaches_peer() {
         n += sent;
     }
     assert_eq!(worker.join().unwrap(), *data);
+}
+
+#[test]
+fn adapter_receives_late_data_after_a_tcp_timeout() {
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let (send, receive) = mpsc::channel();
+    let worker = thread::spawn(move || {
+        let (mut peer, _) = listener.accept().unwrap();
+        receive.recv().unwrap();
+        peer.write_all(b"late\nbody").unwrap();
+        peer.shutdown(Shutdown::Write).unwrap();
+    });
+    let options = TcpOptions {
+        recv_timeout: Duration::from_millis(60),
+        ..Default::default()
+    };
+    let mut adapter = Adapter::new(Config::default(), Tcp::new(options).unwrap());
+    assert_eq!(command(&mut adapter, 1, &[0]), [0]);
+    let mut address = vec![0, 0, 2];
+    address.extend_from_slice(&port.to_le_bytes());
+    address.extend_from_slice(&[127, 0, 0, 1]);
+    address.extend_from_slice(&[0; 8]);
+    assert_eq!(command(&mut adapter, 3, &address), [0, 1]);
+    assert_eq!(command(&mut adapter, 0xf, &[0, 20, 0]), [0, 255]);
+    send.send(()).unwrap();
+    worker.join().unwrap();
+    assert_eq!(command(&mut adapter, 0xd, &[0, 20, 0]), b"\0\x05late\n");
+    assert_eq!(command(&mut adapter, 0xf, &[0, 20, 0]), b"\0\x04body");
 }

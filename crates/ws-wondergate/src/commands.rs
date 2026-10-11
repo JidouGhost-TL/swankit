@@ -328,6 +328,7 @@ impl<N: Network> Adapter<N> {
             return vec![0, 0];
         }
         let mut bytes = Vec::new();
+        let mut timed_out = false;
         if slot.terminal.is_none() {
             loop {
                 let request = if line { 1 } else { count };
@@ -338,6 +339,10 @@ impl<N: Network> Adapter<N> {
                         if !line || at_lf || bytes.len() == count {
                             break;
                         }
+                    }
+                    Recv::Timeout => {
+                        timed_out = true;
+                        break;
                     }
                     Recv::Eof => {
                         if !slot.builtin_bpl {
@@ -353,7 +358,7 @@ impl<N: Network> Adapter<N> {
             }
         }
         let result = if bytes.is_empty() {
-            if slot.terminal == Some(false) || self.config.profile.eof == Eof::Ff {
+            if timed_out || slot.terminal == Some(false) || self.config.profile.eof == Eof::Ff {
                 255
             } else {
                 0

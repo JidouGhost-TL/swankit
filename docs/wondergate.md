@@ -294,7 +294,8 @@ The library adds no public service, publishing or hardware-fidelity claim.
 
 ## Shared server core
 
-The server's BPL responder implements the 24-byte policy above. It bounds the
+The server's BPL responder accepts opaque incoming version/header-size metadata, checks the declared total
+length, and emits a standardized version-1, 24-byte reply header. It bounds the
 LE32 total to 24..65536, waits for the entire declared message, copies bytes
 8..23, and writes the allow header at 0..7. Commands and URL records are opaque.
 Malformed lengths and partial EOF return errors; TCP closes the connection.
@@ -320,3 +321,9 @@ envelopes preserve each client lineage's wire contract. Histories and static
 selections carry new provenance. The [definition read/write guide](wondergate-title-definitions.md)
 explains load-time validation, client response limits and the empty plugin ledger.
 Golden native HTTP bytes remain external; ordinary tests use synthetic requests.
+
+TCP receive timeouts return the current read error reply while allowing the
+next read to retry the same socket. EOF and fatal receive errors retain their
+terminal behavior. Appended raw taps carry start/end markers; `wg-decode
+--session N` selects a one-based session so earlier incomplete frames do not
+merge into its input.

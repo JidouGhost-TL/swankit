@@ -15,8 +15,9 @@ ASDF is Mednafen's ignored sentinel. WG_SERIAL_LOG appends a tap; --tap creates
 a new file. Taps retain all wire bytes, including credentials.
 The TCP resolver denies unlisted names by default; configure redirects or
 explicit mappings in the INI. --version credits the MIT WonderFence core.";
-pub const DECODE_HELP: &str = "wg-decode SERIAL.log [--header len16be|zero-then-len8]
-Print joined directional byte counts, offsets, Type:Cmd, names and parameters.
+pub const DECODE_HELP: &str = "wg-decode SERIAL.log [--header len16be|zero-then-len8] [--session N]
+Print directional byte counts, offsets, Type:Cmd, names and parameters.
+Session N is one-based; frame parsing restarts at each tap start marker.
 The default header is 16-bit big-endian; interframe zero padding is skipped.
 Malformed taps or incomplete frames fail with a diagnostic.";
 
@@ -116,9 +117,16 @@ pub fn decode(words: Vec<String>) -> Result<()> {
         return Ok(());
     }
     let mut words = words.into_iter();
-    let (mut path, mut header) = (None, None);
+    let (mut path, mut header, mut session) = (None, None, None);
     while let Some(word) = words.next() {
         match word.as_str() {
+            "--session" if session.is_none() => {
+                let number: usize = value(&mut words, "--session")?.parse()?;
+                if number == 0 {
+                    return Err("session numbers start at one".into());
+                }
+                session = Some(number);
+            }
             "--header" if header.is_none() => {
                 header = Some(match value(&mut words, "--header")?.as_str() {
                     "len16be" => HeaderMode::Len16Be,
@@ -140,9 +148,27 @@ pub fn decode(words: Vec<String>) -> Result<()> {
         max_frame: header.max_length(),
         ..Limits::default()
     };
-    // Validate both directions before emitting a partial listing.
-    let input = transcript::frames(&streams.input, header, true, limits)?;
-    let output = transcript::frames(&streams.output, header, true, limits)?;
+    let selected: Vec<_> = match session {
+        Some(number) => vec![streams
+            .sessions
+            .get(number - 1)
+            .ok_or("session number is out of range")?],
+        None => streams.sessions.iter().collect(),
+    };
+    // Validate each session independently before emitting a partial listing.
+    let mut input = Vec::new();
+    let mut output = Vec::new();
+    for selected in &selected {
+        for (bytes, range, listing) in [
+            (&streams.input, &selected.input, &mut input),
+            (&streams.output, &selected.output, &mut output),
+        ] {
+            for mut frame in transcript::frames(&bytes[range.clone()], header, true, limits)? {
+                frame.offset += range.start;
+                listing.push(frame);
+            }
+        }
+    }
     let mut out = io::stdout().lock();
     for (who, bytes, frames) in [
         ("EMU->ADAPTER", &streams.input, input),

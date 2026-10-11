@@ -13,6 +13,13 @@ use std::{
 };
 pub type Result<T> = io::Result<T>;
 const MAX_RECORD: usize = 128 * 1024;
+/// Refusal limits preserve durable history and prevent unbounded growth.
+pub const MAX_TOKENS: usize = 1024;
+pub const MAX_HOST_TOKENS: usize = 256;
+pub const MAX_SUBMISSIONS: usize = 4096;
+pub const MAX_BOARD_SUBMISSIONS: usize = 2048;
+pub const MAX_IDENTITY_SUBMISSIONS: usize = 64;
+pub const MAX_JOURNAL_BYTES: u64 = 16 * 1024 * 1024;
 fn invalid(message: impl Into<String>) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message.into())
 }
@@ -124,6 +131,7 @@ fn validate_token(host: &str, sid: &str, aid: &str) -> Result<()> {
 }
 impl Index {
     fn record(&self, data: RecordData) -> Result<Record> {
+        self.capacity(&data)?;
         Ok(Record {
             schema: "swankit-wondergate-journal/1".into(),
             id: self
@@ -134,6 +142,33 @@ impl Index {
             data,
         })
     }
+    fn capacity(&self, data: &RecordData) -> Result<()> {
+        match data {
+            RecordData::Token { host, .. } => {
+                if self.tokens.len() >= MAX_TOKENS
+                    || self.tokens.keys().filter(|(h, _)| h == host).count() >= MAX_HOST_TOKENS
+                {
+                    return Err(invalid("token capacity reached"));
+                }
+            }
+            RecordData::Submission { submission } => {
+                let rows = self.submissions.get(&submission.scope);
+                if self.submissions.values().map(Vec::len).sum::<usize>() >= MAX_SUBMISSIONS
+                    || rows.is_some_and(|rows| {
+                        rows.len() >= MAX_BOARD_SUBMISSIONS
+                            || rows
+                                .iter()
+                                .filter(|r| r.submission.identity == submission.identity)
+                                .count()
+                                >= MAX_IDENTITY_SUBMISSIONS
+                    })
+                {
+                    return Err(invalid("submission capacity reached"));
+                }
+            }
+        }
+        Ok(())
+    }
     fn validate(&self, record: &Record) -> Result<()> {
         if record.schema != "swankit-wondergate-journal/1"
             || record.provenance != "new"
@@ -141,6 +176,7 @@ impl Index {
         {
             return Err(invalid("invalid journal schema, provenance or sequence"));
         }
+        self.capacity(&record.data)?;
         match &record.data {
             RecordData::Submission { submission } => submission.validate(),
             RecordData::Token { host, sid, aid, .. } => {
@@ -236,6 +272,9 @@ impl JournalStore {
             .create(true)
             .open(path)?;
         file.try_lock().map_err(io::Error::other)?;
+        if file.metadata()?.len() > MAX_JOURNAL_BYTES {
+            return Err(invalid("journal byte capacity reached"));
+        }
         let mut input = BufReader::new(&file);
         let mut index = Index::default();
         loop {
@@ -272,6 +311,15 @@ impl Journal {
         self.index.validate(&record)?;
         let mut line = serde_json::to_vec(&record).map_err(|e| invalid(e.to_string()))?;
         line.push(b'\n');
+        if self
+            .file
+            .metadata()?
+            .len()
+            .saturating_add(line.len() as u64)
+            > MAX_JOURNAL_BYTES
+        {
+            return Err(invalid("journal byte capacity reached"));
+        }
         if line.len() > MAX_RECORD {
             return Err(invalid("oversized journal record"));
         }

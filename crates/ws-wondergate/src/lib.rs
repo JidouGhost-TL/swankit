@@ -46,6 +46,8 @@ pub enum NetError {
 pub enum Recv {
     Data(Vec<u8>),
     Eof,
+    /// A bounded wait elapsed; retrying the same connection is permitted.
+    Timeout,
     Error,
 }
 

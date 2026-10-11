@@ -36,7 +36,13 @@ let mut session = server.session(80);
 file, rebuilds scoped indexes, and fsyncs each new submission or token before
 returning success. Every record has `provenance: "new"` and a monotonic id.
 Malformed, oversized, non-new or unterminated records fail without rewriting
-the journal. An append failure disables further writes until reopening.
+the journal. An append failure disables further writes until reopening. Capacity refusals do
+not poison the store. Both stores refuse new records at 1,024 tokens total,
+256 per host, 4,096 submissions total, 2,048 per board and 64 per identity
+within a board. Existing tokens remain reusable. The journal additionally
+refuses growth beyond 16 MiB, including at reopen. Refused HTTP writes return
+500 without adding history; a full store must be archived and a fresh store
+chosen explicitly. Records are never evicted or silently lost.
 Tokens remain stable for `(host, sid)` across retries and restarts. Binary
 identities and names serialize as byte arrays. No SQLite migration is provided.
 
@@ -60,10 +66,21 @@ Listeners default to loopback; bind addresses are numeric and never resolved.
 An overall request deadline also prevents trickled bytes from extending a
 transaction indefinitely. HTTP allows a 50 ms window for a separately segmented trailing NUL on an empty
 body. The sans-I/O assembler allows callers to choose that window themselves.
-Shutdown joins active workers after their socket timeout. Wire files are
+HTTP and BPL have separate connection pools, with at most four active
+connections per peer address across both. Excess connections are closed. BPL
+closes after 32 messages or four times the configured timeout in total; idle
+reads retain the configured timeout. Deadline and connection-cap refusals are
+normal shutdowns. Shutdown joins active workers after their socket timeout. Wire files are
 exclusive-created, and JSON entries use the Python `wire.jsonl` field names,
 lengths, SHA-256, UTC time, peer array and optional error. Restart never replaces
-existing request or response bytes.
+existing request or response bytes. Wire logging refuses further records at
+256 transactions or a conservative 16 MiB cumulative reservation (raw request
+plus response plus 4 KiB metadata per transaction). Counts include existing
+files on reopen. A single stderr diagnostic reports refusal; serving continues
+without further log growth, and shutdown remains successful. Actual filesystem
+failures remain worker errors. The bundled human-readable ranking pages show
+at most 256 rows to fit their 64 KiB body limit. The game ranking response
+retains its three leaders, submitter and fourth-place records.
 
 The complete ported service suite and additional synthetic schema, field, template, parser,
 journal, ranking and loopback tests run in ordinary CI. Independent Python
