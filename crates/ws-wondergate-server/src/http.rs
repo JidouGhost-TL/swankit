@@ -115,27 +115,31 @@ pub fn parse_with_aliases(raw: &[u8], limits: &Limits, aliases: &[[String; 2]]) 
         .trim_start_matches(|c: char| c <= ' ')
         .replace(['\r', '\n', '\t'], "");
     let target = target.split('#').next().unwrap_or("");
-    let after_scheme = if let Some((scheme, rest)) = target.split_once(':').filter(|(s, _)| {
-        s.starts_with(|c: char| c.is_ascii_alphabetic())
-            && s.bytes()
-                .all(|b| b.is_ascii_alphanumeric() || b"+-.".contains(&b))
-    }) {
+    let (after_scheme, absolute) = if let Some((scheme, rest)) =
+        target.split_once(':').filter(|(s, _)| {
+            s.starts_with(|c: char| c.is_ascii_alphabetic())
+                && s.bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b"+-.".contains(&b))
+        }) {
         if !scheme.eq_ignore_ascii_case("http") {
             return Err(malformed("only plain HTTP is supported"));
         }
-        rest
+        (rest, true)
     } else {
         if !target.starts_with('/') {
             return Err(malformed("invalid request target"));
         }
-        target
+        (target, false)
     };
-    let (authority, resource) = if let Some(rest) = after_scheme.strip_prefix("//") {
-        let stop = rest.find(['/', '?']).unwrap_or(rest.len());
-        (&rest[..stop], &rest[stop..])
-    } else {
-        ("", after_scheme)
-    };
+    // RFC 9112 origin-form contains an absolute-path, including empty segments.
+    // Only an explicit URI scheme makes the leading // an authority delimiter.
+    let (authority, resource) =
+        if let Some(rest) = after_scheme.strip_prefix("//").filter(|_| absolute) {
+            let stop = rest.find(['/', '?']).unwrap_or(rest.len());
+            (&rest[..stop], &rest[stop..])
+        } else {
+            ("", after_scheme)
+        };
     let host = normalize_host(
         headers
             .get("host")
@@ -173,6 +177,14 @@ pub fn parse_with_aliases(raw: &[u8], limits: &Limits, aliases: &[[String; 2]]) 
 }
 /// Content-Length, Connection, Content-Type (if supplied), then extra fields.
 pub fn response(status: u16, headers: &[(&str, &str)], body: &[u8]) -> Result<Vec<u8>> {
+    response_with_connection(status, headers, body, false)
+}
+pub(crate) fn response_with_connection(
+    status: u16,
+    headers: &[(&str, &str)],
+    body: &[u8],
+    keep_alive: bool,
+) -> Result<Vec<u8>> {
     let reason = match status {
         200 => "OK",
         400 => "Bad Request",
@@ -185,8 +197,9 @@ pub fn response(status: u16, headers: &[(&str, &str)], body: &[u8]) -> Result<Ve
     if body.len() > 65536 {
         return Err(malformed("oversized HTTP response body"));
     }
+    let connection = if keep_alive { "keep-alive" } else { "close" };
     let mut head = format!(
-        "HTTP/1.1 {status} {reason}\r\nContent-Length: {}\r\nConnection: close\r\n",
+        "HTTP/1.1 {status} {reason}\r\nContent-Length: {}\r\nConnection: {connection}\r\n",
         body.len()
     );
     for (key, value) in headers

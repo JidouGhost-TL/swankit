@@ -260,6 +260,8 @@ pub(crate) struct Condition {
     pub equals: BTreeMap<String, Vec<u8>>,
     #[serde(default)]
     pub absent: Vec<String>,
+    #[serde(default)]
+    pub submitted: Vec<String>,
 }
 #[derive(Clone, Copy, Debug, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -316,6 +318,8 @@ impl Action {
 #[serde(deny_unknown_fields)]
 pub(crate) struct Respond {
     pub status: u16,
+    #[serde(default)]
+    pub keep_alive: bool,
     pub content_type: Option<String>,
     #[serde(default)]
     pub headers: Vec<[String; 2]>,
@@ -684,7 +688,13 @@ impl Spec {
                         .map(|v| ("Content-Type", v)),
                 )
                 .collect();
-            let header_size = http::response(route.respond.status, &headers, &[])?.len();
+            let header_size = http::response_with_connection(
+                route.respond.status,
+                &headers,
+                &[],
+                route.respond.keep_alive,
+            )?
+            .len();
             if minimum > self.limits.max_body
                 || header_size + minimum + minimum.to_string().len() - 1 > self.limits.max_response
             {
@@ -778,7 +788,8 @@ impl Spec {
                 }
                 Segment::When { when, segments } => {
                     if in_record
-                        || when.equals.len() + when.absent.len() == 0
+                        || when.equals.len() + when.absent.len() + when.submitted.len() == 0
+                        || when.submitted.iter().any(|b| !self.boards.contains_key(b))
                         || !route.is_some_and(|r| {
                             when.equals
                                 .keys()
@@ -928,7 +939,7 @@ impl Respond {
                 return Err(malformed("invalid or reserved response header"));
             }
         }
-        let response = http::response(self.status, &headers, &[])?;
+        let response = http::response_with_connection(self.status, &headers, &[], self.keep_alive)?;
         let lines = response.windows(2).filter(|p| *p == b"\r\n").count();
         if self.expect_lines.is_some_and(|expected| expected != lines) {
             return Err(malformed(

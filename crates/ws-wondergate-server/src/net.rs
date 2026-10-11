@@ -27,6 +27,7 @@ fn digest(bytes: &[u8]) -> String {
 pub const MAX_WIRE_RECORDS: usize = 256;
 pub const MAX_WIRE_BYTES: u64 = 16 * 1024 * 1024;
 pub const MAX_BPL_MESSAGES: usize = 32;
+pub const MAX_HTTP_MESSAGES: usize = 128;
 pub const MAX_PEER_CONNECTIONS: usize = 4;
 struct Log {
     file: File,
@@ -454,25 +455,39 @@ fn serve(
     stream.set_read_timeout(Some(timeout))?;
     stream.set_write_timeout(Some(timeout))?;
     if protocol == "HTTP" {
-        let mut raw = Vec::new();
-        let (reply, mut error) = match read_http(&mut stream, &mut raw, server, timeout) {
-            Ok(()) => match server.try_dispatch_http(&raw) {
-                Ok(reply) => (reply, None),
-                Err(e) => (http::empty_response(500), Some(e.to_string())),
-            },
-            Err(e) => (http::empty_response(400), Some(e.to_string())),
-        };
-        if let Err(e) = stream.write_all(&reply) {
-            error = Some(e.to_string());
+        // Sequential reuse is opt-in per response; pipelining remains rejected.
+        for transaction in 0..MAX_HTTP_MESSAGES {
+            if control.stopped.load(Ordering::Acquire) {
+                break;
+            }
+            let mut raw = Vec::new();
+            let (reply, mut error) = match read_http(&mut stream, &mut raw, server, timeout) {
+                Ok(()) => match server.try_dispatch_http(&raw) {
+                    Ok(reply) => (reply, None),
+                    Err(e) => (http::empty_response(500), Some(e.to_string())),
+                },
+                Err(_) if transaction > 0 && raw.is_empty() => break,
+                Err(e) => (http::empty_response(400), Some(e.to_string())),
+            };
+            if let Err(e) = stream.write_all(&reply) {
+                error = Some(e.to_string());
+            }
+            wire.record(
+                protocol,
+                peer,
+                &raw,
+                &reply,
+                error.as_deref(),
+                server.clock().now_utc(),
+            )?;
+            let persistent = reply
+                .split(|b| *b == b'\n')
+                .take_while(|line| *line != b"\r")
+                .any(|line| line == b"Connection: keep-alive\r");
+            if error.is_some() || !persistent {
+                break;
+            }
         }
-        wire.record(
-            protocol,
-            peer,
-            &raw,
-            &reply,
-            error.as_deref(),
-            server.clock().now_utc(),
-        )?;
     } else {
         let total_deadline = Instant::now() + timeout * 4;
         let mut messages = 0;

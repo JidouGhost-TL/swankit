@@ -3,9 +3,10 @@
 use serde::Deserialize;
 use std::io::{self, BufRead, Write};
 use ws_wondergate_server::{
-    store::{MemoryStore, Store, Submission},
-    Definition, FixedClock, SeededRng, Server, Timestamp,
+    store::Submission, Definition, FixedClock, SeededRng, Server, Timestamp,
 };
+#[path = "support/history.rs"]
+mod history;
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Case {
@@ -23,10 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .iter()
             .map(|s| Definition::from_json(s))
             .collect::<Result<Vec<_>, _>>()?;
-        let store = MemoryStore::new();
-        for submission in case.submissions {
-            store.submit(submission)?;
-        }
+        let store = history::FixtureStore::new(case.submissions)?;
         let app = Server::from_definitions(
             definitions,
             Box::new(store),

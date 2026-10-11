@@ -1,0 +1,463 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "raku-jongg-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "New local three-class ranking policy from native submissions and ROM parser. The client reuses one socket, overwrites the response buffer for each class, then parses the final aggregate course position, rakujang row count and rank|six-digit-score|name|two-digit-extra records. The final list request includes trailing CRLF. Best score per identity, descending order and one structural blank row for an empty board are revival policy; no original records or assets."
+  },
+  "hosts": [
+    "rakujang.wgg.channel.or.jp"
+  ],
+  "boards": {
+    "course-1": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "1"
+    },
+    "course-2": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "2"
+    },
+    "course-3": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "3"
+    }
+  },
+  "records": {
+    "row": [
+      {
+        "field": "rank",
+        "fmt": "dec"
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "score",
+        "fmt": "dec",
+        "width": 6,
+        "zero_pad": true
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "name",
+        "fmt": "raw",
+        "empty_bytes": [
+          32
+        ]
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "extra",
+        "fmt": "dec",
+        "width": 2,
+        "zero_pad": true
+      },
+      {
+        "text": "\r\n"
+      }
+    ]
+  },
+  "routes": [
+    {
+      "id": "class-ranking",
+      "method": "POST",
+      "match": {
+        "path": "/swan-ranking"
+      },
+      "source": "form",
+      "request": {
+        "*": {
+          "bytes": [
+            6,
+            6
+          ],
+          "alphabet": "0123456789ABCDEF"
+        },
+        "owner": {
+          "bytes": [
+            0,
+            8
+          ],
+          "min_byte": 32,
+          "deny": [
+            124,
+            127
+          ],
+          "trim_end": 32
+        },
+        "list": {
+          "optional": true,
+          "equals": [
+            114,
+            97,
+            107,
+            117,
+            106,
+            97,
+            110,
+            103,
+            124,
+            49,
+            124,
+            50,
+            48
+          ]
+        }
+      },
+      "tables": {
+        "score": {
+          "delimiter": 124,
+          "tag_decimal_width": [
+            1,
+            1
+          ],
+          "rows": {
+            "1": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{6,6}$",
+                "max_number": 999999
+              },
+              {
+                "as": "u64",
+                "regex": "^[0-9]{2,2}$",
+                "max_number": 99
+              }
+            ],
+            "2": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{6,6}$",
+                "max_number": 999999
+              },
+              {
+                "as": "u64",
+                "regex": "^[0-9]{2,2}$",
+                "max_number": 99
+              }
+            ],
+            "3": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{6,6}$",
+                "max_number": 999999
+              },
+              {
+                "as": "u64",
+                "regex": "^[0-9]{2,2}$",
+                "max_number": 99
+              }
+            ]
+          }
+        }
+      },
+      "table_actions": [
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "extra": 1,
+          "boards": {
+            "1": "course-1",
+            "2": "course-2",
+            "3": "course-3"
+          }
+        }
+      ],
+      "respond": {
+        "status": 200,
+        "keep_alive": true,
+        "content_type": "application/x-swan-ranking-response",
+        "body": [
+          {
+            "when": {
+              "submitted": [
+                "course-1"
+              ],
+              "absent": [
+                "list"
+              ]
+            },
+            "segments": [
+              {
+                "text": "course=1|1|0|0|0|"
+              },
+              {
+                "board": "course-1",
+                "metric": "position",
+                "identity": "*",
+                "fmt": "dec",
+                "max": 99,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nrakujang="
+              },
+              {
+                "board": "course-1",
+                "metric": "length",
+                "limit": 20,
+                "pad_to": 1,
+                "fmt": "dec"
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "each": {
+                  "leaders": {
+                    "board": "course-1",
+                    "limit": 20,
+                    "pad_to": 1
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          },
+          {
+            "when": {
+              "submitted": [
+                "course-2"
+              ],
+              "absent": [
+                "list"
+              ]
+            },
+            "segments": [
+              {
+                "text": "course=1|2|0|0|0|"
+              },
+              {
+                "board": "course-2",
+                "metric": "position",
+                "identity": "*",
+                "fmt": "dec",
+                "max": 99,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nrakujang="
+              },
+              {
+                "board": "course-2",
+                "metric": "length",
+                "limit": 20,
+                "pad_to": 1,
+                "fmt": "dec"
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "each": {
+                  "leaders": {
+                    "board": "course-2",
+                    "limit": 20,
+                    "pad_to": 1
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          },
+          {
+            "when": {
+              "submitted": [
+                "course-3"
+              ],
+              "absent": [
+                "list"
+              ]
+            },
+            "segments": [
+              {
+                "text": "course=1|3|0|0|0|"
+              },
+              {
+                "board": "course-3",
+                "metric": "position",
+                "identity": "*",
+                "fmt": "dec",
+                "max": 99,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nrakujang="
+              },
+              {
+                "board": "course-3",
+                "metric": "length",
+                "limit": 20,
+                "pad_to": 1,
+                "fmt": "dec"
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "each": {
+                  "leaders": {
+                    "board": "course-3",
+                    "limit": 20,
+                    "pad_to": 1
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          },
+          {
+            "when": {
+              "equals": {
+                "list": [
+                  114,
+                  97,
+                  107,
+                  117,
+                  106,
+                  97,
+                  110,
+                  103,
+                  124,
+                  49,
+                  124,
+                  50,
+                  48
+                ]
+              }
+            },
+            "segments": [
+              {
+                "text": "course=1|1|0|0|0|"
+              },
+              {
+                "board": "course-1",
+                "metric": "position",
+                "identity": "*",
+                "fmt": "dec",
+                "max": 99,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nrakujang="
+              },
+              {
+                "board": "course-1",
+                "metric": "length",
+                "limit": 20,
+                "pad_to": 1,
+                "fmt": "dec"
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "each": {
+                  "leaders": {
+                    "board": "course-1",
+                    "limit": 20,
+                    "pad_to": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|2|0|0|0|"
+              },
+              {
+                "board": "course-2",
+                "metric": "position",
+                "identity": "*",
+                "fmt": "dec",
+                "max": 99,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nrakujang="
+              },
+              {
+                "board": "course-2",
+                "metric": "length",
+                "limit": 20,
+                "pad_to": 1,
+                "fmt": "dec"
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "each": {
+                  "leaders": {
+                    "board": "course-2",
+                    "limit": 20,
+                    "pad_to": 1
+                  }
+                },
+                "record": "row"
+              },
+              {
+                "text": "course=1|3|0|0|0|"
+              },
+              {
+                "board": "course-3",
+                "metric": "position",
+                "identity": "*",
+                "fmt": "dec",
+                "max": 99,
+                "overflow_zero": true
+              },
+              {
+                "text": "\r\nrakujang="
+              },
+              {
+                "board": "course-3",
+                "metric": "length",
+                "limit": 20,
+                "pad_to": 1,
+                "fmt": "dec"
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "each": {
+                  "leaders": {
+                    "board": "course-3",
+                    "limit": 20,
+                    "pad_to": 1
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          }
+        ]
+      },
+      "form_trim_end": [
+        13,
+        10
+      ]
+    }
+  ],
+  "limits": {
+    "max_body": 4096,
+    "max_response": 2047
+  },
+  "errors": {
+    "invalid": 400,
+    "method": 405,
+    "method_first": true
+  }
+}
