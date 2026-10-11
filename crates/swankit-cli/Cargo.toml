@@ -4,7 +4,7 @@ default-run = "swankit"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
-license.workspace = true
+license = "MIT AND (MIT OR Apache-2.0)"
 publish.workspace = true
 
 [features]
@@ -39,3 +39,6 @@ path = "src/bin/wg-adapter.rs"
 [[bin]]
 name = "wg-decode"
 path = "src/bin/wg-decode.rs"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"

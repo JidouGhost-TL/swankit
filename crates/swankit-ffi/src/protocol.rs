@@ -19,8 +19,22 @@ pub fn response(line: &[u8]) -> Value {
         if request.version != 1 {
             return Err("unsupported protocol version".into());
         }
-        let file = std::fs::File::open(request.path)?;
-        if file.metadata()?.len() > super::MAX_INPUT as u64 {
+        if !std::fs::metadata(&request.path)?.is_file() {
+            return Err("input is not a regular file".into());
+        }
+        let mut options = std::fs::OpenOptions::new();
+        options.read(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.custom_flags(libc::O_NONBLOCK);
+        }
+        let file = options.open(request.path)?;
+        let metadata = file.metadata()?;
+        if !metadata.is_file() {
+            return Err("input is not a regular file".into());
+        }
+        if metadata.len() > super::MAX_INPUT as u64 {
             return Err("input exceeds interop bound".into());
         }
         let mut input = Vec::new();

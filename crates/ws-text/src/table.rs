@@ -290,6 +290,8 @@ impl StringTableDefinition {
 
 /// Encode and fit completely before modifying the resident slot. The caller
 /// owns pointer relocation/checksums; this primitive never relocates a table.
+/// Maps with ending controls require a terminated encoding; visible ending
+/// tokens must be supplied explicitly when no invisible end can be appended.
 pub fn insert_text(
     bytes: &mut [u8],
     offset: usize,
@@ -300,6 +302,21 @@ pub fn insert_text(
 ) -> Result<usize> {
     bytes_at(bytes, offset, slot_bytes)?;
     let encoded = map.encode(text, slot_bytes)?;
+    if map.definition().controls.iter().any(|control| control.ends)
+        && !map
+            .decode(
+                &encoded,
+                TextLimits {
+                    input_bytes: slot_bytes,
+                    ..TextLimits::default()
+                },
+            )?
+            .terminated
+    {
+        return Err(malformed(
+            "insertion requires an explicit visible ending control",
+        ));
+    }
     let target = bytes_at_mut(bytes, offset, slot_bytes)?;
     target.fill(padding);
     target[..encoded.len()].copy_from_slice(&encoded);

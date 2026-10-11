@@ -15,6 +15,16 @@ No host package or toolchain installation is needed.
 SWANKIT_PYTHON_ARTIFACTS="$ARTIFACT_DIR" tools/python-container.sh
 ```
 
+`tools/ci.sh` invokes this container with `--ci` or `--ci-corpus` and includes
+the wheel tests in its required gates. Corpus workers import the freshly tested
+wheel; host wheel installation is unnecessary.
+
+Corpus data directories are discovered from staged symlinks and JSON paths.
+If the container daemon cannot traverse private descendants on shared storage,
+set `SWANKIT_CORPUS_DATA_ROOTS` to colon-separated enclosing directories that
+the daemon can mount. These roots replace their discovered descendant binds
+and are mounted read-only.
+
 Choose an external artifact directory. The command builds a release wheel,
 installs it inside an ephemeral container directory and runs synthetic pytest
 cases against that installed wheel. It uses one Cargo job and a 4 GiB container

@@ -1,6 +1,6 @@
 //! External Java oracles and frozen adapter expectations, run only by the safe runner.
 use formatkit_core::{Error, Result};
-use formatkit_corpus_test::{corpus_root, hash_bytes, run_dir, Args, Digest};
+use formatkit_corpus_test::{corpus_root, hash_bytes, required_mode, run_dir, Args, Digest};
 use serde_json::{json, Value};
 
 struct InteropDigest;
@@ -25,6 +25,13 @@ fn corpus_interop() {
         Ok("1"),
         "never regenerate expectations"
     );
+    if required_mode() {
+        assert_ne!(
+            std::env::var("SWANKIT_INTEROP_BOOTSTRAP").as_deref(),
+            Ok("1"),
+            "interop bootstrap is forbidden in required acceptance mode"
+        );
+    }
     let Some(_) = corpus_root("Java interop") else {
         return;
     };

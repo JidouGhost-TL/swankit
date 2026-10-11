@@ -21,7 +21,6 @@ formatkit-corpus-test = "=0.1.0"
 
 # Sibling checkout overrides: remove this table to use the pinned registry release.
 [patch.crates-io]
-formatkit = { path = "../formatkit/crates/formatkit" }
 formatkit-core = { path = "../formatkit/crates/formatkit-core" }
 formatkit-layout = { path = "../formatkit/crates/formatkit-layout" }
 formatkit-catalog = { path = "../formatkit/crates/formatkit-catalog" }

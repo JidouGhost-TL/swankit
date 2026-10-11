@@ -1,7 +1,8 @@
 # Contributing
 
 This workspace uses Rust 1.94.1, edition 2021 and resolver 2. Contributions
-are licensed MIT OR Apache-2.0. All crates are private and unpublishable until
+are licensed MIT OR Apache-2.0 unless an existing MIT-only port requires MIT;
+packages containing or linking those ports declare MIT AND (MIT OR Apache-2.0). All crates are private and unpublishable until
 the owner approves a release. No remote, push or publication is authorized.
 Use the repo-local identity and stage explicit paths; omit authorship trailers.
 

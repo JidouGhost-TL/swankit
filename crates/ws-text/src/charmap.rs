@@ -291,6 +291,7 @@ impl CharacterMap {
             ));
         }
         let mut seen = BTreeSet::new();
+        let mut code_pages = BTreeMap::<Vec<u8>, bool>::new();
         let mut entries = Vec::new();
         let mut by_first: BTreeMap<u8, Vec<usize>> = BTreeMap::new();
         let mut by_text_first: BTreeMap<char, Vec<usize>> = BTreeMap::new();
@@ -304,14 +305,15 @@ impl CharacterMap {
             if !seen.insert((e.page, bytes.clone())) {
                 return Err(malformed("duplicate character code/page"));
             }
-            if entries
-                .iter()
-                .any(|q: &Entry| q.bytes == bytes && (q.page.is_none() || e.page.is_none()))
+            if code_pages
+                .get(&bytes)
+                .is_some_and(|global| *global || e.page.is_none())
             {
                 return Err(malformed(
                     "global and page-specific character codes overlap",
                 ));
             }
+            code_pages.insert(bytes.clone(), e.page.is_none());
             limit("glyph aliases", e.aliases.len(), 32)?;
             for alias in &e.aliases {
                 limit("glyph alias bytes", alias.len(), 1024)?;
@@ -795,7 +797,7 @@ fn resolve_dash(text: &str, rules: &Normalization) -> String {
             'ー'
         } else if kanji(next) && (kanji(prev) || ['\n', '「', '　', '（'].contains(&prev)) {
             '一'
-        } else if (prev.is_alphanumeric() && prev < '\u{3000}')
+        } else if crate::java_categories::java_letter_or_digit_below_3000(prev)
             || ('０'..='９').contains(&prev)
             || ('Ａ'..='ｚ').contains(&prev)
         {

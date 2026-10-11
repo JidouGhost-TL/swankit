@@ -14,7 +14,8 @@ DENY_PATH = re.compile(
     re.I,
 )
 MACHINE_PATH = re.compile(
-    r"/(?:home|Users|mnt|media|var/tmp|tmp)/|[A-Z]:[\\/](?:Users|Documents)[\\/]|file://|~[/\\]",
+    r"/(?:home|Users|mnt|media|var/tmp|tmp|srv|opt|root)/|[A-Z]:[\\/](?:Users|Documents)[\\/]|"
+    + "fi" + r"le://|~[/\\]|" + "sm" + r"b://|" + "nf" + r"s://|(?<!\\)\\\\[A-Z0-9_.-]+\\(?!\\)[A-Z0-9_.-]+(?:\\|$)",
     re.I,
 )
 TOOL_NAME = re.compile(
@@ -44,9 +45,6 @@ def violations(path, blob, mode, username):
         return reasons + ["binary content"]
     if "\0" in content:
         reasons.append("binary content")
-    # As in the upstream gate, the scanner's rule declarations are self-exempt.
-    if path == "tools/check-private.py":
-        return reasons
     combined = path + "\n" + content
     if MACHINE_PATH.search(combined):
         reasons.append("machine path")

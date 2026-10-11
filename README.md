@@ -14,8 +14,14 @@ See [hardware rules](docs/hardware.md) and
 Requires the existing Rust 1.94.1 toolchain with rustfmt and Clippy.
 
 ```sh
-tools/ci.sh
+SWANKIT_PYTHON_ARTIFACTS="$ARTIFACT_DIR" tools/ci.sh
 ```
+
+CI delegates host invocations to the pinned Python container. It includes
+no-default-features compilation, the CLI without saves, and installed-wheel
+tests; the same wheel is used for Python corpus checks. Artifact directories
+stay external, and staged symlinks/reference files are mounted read-only.
+Interop bootstrap mode is forbidden during CI and required corpus validation.
 
 Formatkit packages are requested from crates.io at exactly `=0.1.0`. During
 development, `[patch.crates-io]` redirects them to the sibling `../formatkit`
@@ -30,7 +36,7 @@ staging root with:
 
 ```sh
 python3 tools/stage-corpus.py --titles "$TITLES_DIR" --output "$STAGING_DIR"
-FORMATKIT_CORPUS_DIR="$STAGING_DIR" tools/ci.sh --corpus
+SWANKIT_PYTHON_ARTIFACTS="$ARTIFACT_DIR" FORMATKIT_CORPUS_DIR="$STAGING_DIR" tools/ci.sh --corpus
 ```
 
 The script creates symlinks and frozen JSON expectations from existing facts,
@@ -59,7 +65,7 @@ Graphics enrollment adds a new `ws-gfx` spec directory to an external root:
 
 ```sh
 python3 tools/stage-corpus.py --gfx-manifest "$GFX_MANIFEST" --output "$STAGING_DIR"
-FORMATKIT_CORPUS_DIR="$STAGING_DIR" tools/ci.sh --corpus
+SWANKIT_PYTHON_ARTIFACTS="$ARTIFACT_DIR" FORMATKIT_CORPUS_DIR="$STAGING_DIR" tools/ci.sh --corpus
 ```
 
 The manifest supplies independent Java expectations, source paths and oracle
@@ -72,7 +78,7 @@ Text enrollment accepts independent string dumps and glyph image manifests:
 python3 tools/stage-corpus.py --text-manifest "$TEXT_MANIFEST" --output "$STAGING_DIR"
 python3 tools/stage-corpus.py --text-manifest "$EXTRA_MANIFEST" \
   --text-spec-dir ws-text-extra --output "$STAGING_DIR"
-FORMATKIT_CORPUS_DIR="$STAGING_DIR" tools/ci.sh --corpus
+SWANKIT_PYTHON_ARTIFACTS="$ARTIFACT_DIR" FORMATKIT_CORPUS_DIR="$STAGING_DIR" tools/ci.sh --corpus
 ```
 
 Both new text selections preserve existing frozen specs and version ledgers.

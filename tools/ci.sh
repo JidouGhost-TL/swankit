@@ -30,6 +30,20 @@ gate() {
         return "$status"
     fi
 }
+if [[ ${SWANKIT_INTEROP_BOOTSTRAP:-0} != 0 ]]; then
+    echo 'error: interop bootstrap is forbidden in CI' >&2
+    exit 64
+fi
+# Python binding gates use the pinned container; host invocations delegate all
+# gates so the corpus worker always imports the freshly tested wheel.
+if [[ ${SWANKIT_CI_CONTAINER:-0} != 1 ]]; then
+    artifacts=${SWANKIT_PYTHON_ARTIFACTS:?set an external wheel and build artifact directory}
+    if ((corpus)); then
+        export FORMATKIT_CORPUS_DIR="$corpus_dir"
+        exec "$root/tools/python-container.sh" --ci-corpus
+    fi
+    exec "$root/tools/python-container.sh" --ci
+fi
 export CARGO_BUILD_JOBS=1
 unset FORMATKIT_CORPUS_DIR FORMATKIT_CORPUS_REQUIRED FORMATKIT_CORPUS_WRITE FORMATKIT_CORPUS_RUNNER_LOCKED
 gate privacy python3 tools/check-private.py --worktree
@@ -37,6 +51,9 @@ gate privacy-tests python3 -m unittest discover -s tools/tests -v
 gate fmt cargo fmt --all -- --check
 gate clippy cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 gate synthetic cargo test --workspace --all-features --locked
+gate no-default-features cargo build --workspace --no-default-features --locked
+gate cli-non-saves cargo test -p swankit-cli --no-default-features --locked --test smoke
+gate python-wheel source tools/python-wheel.sh
 if ((corpus)); then
     if [[ -z $corpus_dir || ! -d $corpus_dir ]]; then
         log_phase corpus '0 samples; invalid explicit root' 'set FORMATKIT_CORPUS_DIR'

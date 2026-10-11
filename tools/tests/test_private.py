@@ -66,6 +66,18 @@ class Rules(unittest.TestCase):
             accepted = subprocess.run(["python3", "tools/check-private.py"], cwd=root, capture_output=True, text=True)
             self.assertEqual(accepted.returncode, 0, accepted.stderr)
 
+class ReviewPrivacyGaps(unittest.TestCase):
+    def test_scanner_source_is_not_exempt_from_content_rules(self):
+        leaked = b"# contact " + b"someone" + b"@" + b"example.net"
+        self.assertIn("non-repository email",module.violations("tools/check-private.py",SCANNER.read_bytes()+leaked,"100644","sample-user"))
+
+    def test_additional_storage_paths_are_rejected(self):
+        paths = ["/"+base+"/private/data" for base in ("srv","opt","root")]
+        paths += ["\\"*2+"nas"+"\\share\\roms", "sm"+"b://nas/share", "nf"+"s://nas/share"]
+        for path in paths:
+            with self.subTest(path=path):
+                self.assertIn("machine path",module.violations("notes.md",path.encode(),"100644","sample-user"))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -4,6 +4,7 @@
 pub mod catalog;
 mod charmap;
 mod font;
+mod java_categories;
 mod table;
 
 pub use charmap::*;

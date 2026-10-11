@@ -22,7 +22,7 @@ def test_facts_and_detection():
     assert isinstance(facts, ws.RomFacts)
     assert facts.size_bytes == 131072 and facts.color and facts.checksum_ok
     assert facts.game_id == 7 and facts.publisher_id == 1
-    assert facts.declared_rom_bytes == 131072 and facts.save_bytes == 8192
+    assert facts.declared_rom_bytes == 131072 and facts.save_bytes == 32768
     assert facts.to_dict()["rom_speed_cycles"] == 2
     detected = ws.detect(data, "wsc")
     assert detected.selected == "ws-rom"
@@ -269,7 +269,7 @@ def test_stubs_and_public_surface_are_packaged():
 
 def test_unsupported_and_contextual_errors():
     with pytest.raises(ws.UnsupportedError, match="IPS creation target exceeds 24-bit size"):
-        ws.ips_create(b"", bytes(0x1000000))
+        ws.ips_create(b"", bytes(0x1000001))
     with pytest.raises(ws.SwankitError) as caught:
         ws.ips_apply(b"", b"PATCH\0\0\0")
     assert str(caught.value) == "record 0: unexpected end of input: needed 2 byte(s) at offset 8, 0 available"

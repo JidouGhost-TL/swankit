@@ -1,12 +1,24 @@
 use crate::Result;
 use std::{
-    fs::{File, OpenOptions},
+    fs::OpenOptions,
     io::{Read, Write},
     path::Path,
 };
 
 pub fn read(path: &str, maximum: usize) -> Result<Vec<u8>> {
-    let file = File::open(path).map_err(|e| format!("read {path}: {e}"))?;
+    if !std::fs::metadata(path)?.is_file() {
+        return Err(format!("input is not a regular file: {path}").into());
+    }
+    let mut options = OpenOptions::new();
+    options.read(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.custom_flags(libc::O_NONBLOCK);
+    }
+    let file = options
+        .open(path)
+        .map_err(|e| format!("read {path}: {e}"))?;
     let metadata = file.metadata()?;
     if !metadata.is_file() {
         return Err(format!("input is not a regular file: {path}").into());

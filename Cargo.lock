@@ -476,6 +476,7 @@ dependencies = [
  "formatkit-core",
  "formatkit-corpus-test",
  "formatkit-runtime",
+ "libc",
  "miniz_oxide",
  "serde",
  "serde_json",
@@ -492,6 +493,7 @@ version = "0.1.0"
 dependencies = [
  "formatkit-core",
  "formatkit-corpus-test",
+ "libc",
  "serde",
  "serde_json",
  "ws-gfx",
@@ -750,7 +752,3 @@ name = "zmij"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
-
-[[patch.unused]]
-name = "formatkit"
-version = "0.1.0"
