@@ -96,3 +96,10 @@ Corpus replay preserves every baseline asset, relation, reference, map field and
 overlap declaration; it permits additional verified assets and overlap links.
 The original evidence and baseline files are never overwritten as recognition
 improves. Independent decoded-output hashes remain separate corpus expectations.
+
+New reference candidates remain incomplete; reviewed closure supplied in a
+profile is retained. An arithmetic match checks stored values, while routine
+entry/exit evidence establishes execution context. Decoder destination
+parameters denote the original segment offset. Segmented observations must
+distinguish that offset from linear RAM placement; bank aliases and DMA origins
+need explicit evidence rather than an inferred history buffer.
