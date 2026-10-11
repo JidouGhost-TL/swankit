@@ -151,3 +151,39 @@ register evidence disables the legacy aligned fallback and is retained in the
 map codec parameters. The instruction adapter infers it only when entry DI and
 DS or ES reproduce the captured span's CPU start before physical RAM aliasing. Other register conventions
 require a reviewed profile, rather than a guessed DI.
+
+## Instruction witnesses and scene evidence
+
+Run `tools/ghidra/WSAssetTrace.java` through the required headless wrapper on a
+private project copy, with arguments `OUTPUT FRAMES INPUT_SCRIPT_OR_DASH 0`.
+It uses the installed extension's emulator and delegates its original hardware
+callbacks. `calls.jsonl` records returned call spans; `dma.jsonl` records general
+DMA settings; `status.json` reports runtime failures. Keep the collector source
+hash with each capture. `tools/discover-assets.py --instruction-flow CALLS`
+imports returned spans instead of deriving source associations from timing.
+
+`source`/`source_end` bound the call's ROM-read context, which may include data
+unrelated to its output. `source_ranges` contains the union of causal ROM byte
+origins retained for that output span. `complete_return` means the call returned;
+it does not mean every output byte has provenance. Check `explained_bytes`
+against `length`, and retain `opaque_operations`. Unsupported operations and
+origin sets exceeding the collector's bound lose provenance. Control dependence,
+unrecorded interrupt effects, SRAM and sound DMA are not covered. Payload origins
+cover ROM data reads; encoded instruction immediates remain a separate address
+candidate kind. A returned span is evidence of data movement, not a reviewed loader classification. Codec
+recognition additionally requires the whole captured output to equal decoding.
+
+Entry registers, bank windows, CPU destinations and physical RAM destinations
+remain distinct evidence. Pointer-origin fields are candidates until stored
+values, address arithmetic, ownership, bounds and pointer closure are reviewed.
+Static maps permit witness agreement and distinct-asset recall measurements;
+they cannot provide executed call-instance recall or exhaustive false positives.
+
+`tools/capture-scenes.lua` captures synchronized RAM, ports and screenshots.
+`tools/discover-scenes.py ROM CAPTURES --binary SWANKIT -o OUTPUT` builds a
+separate map for each capture and reports their unions. Classify visible screens
+from screenshots: a saved-state identifier or changed saved memory does not
+establish title, menu, gameplay, dialogue or save/status semantics. Reusing an
+immutable ROM decoder proof across scenes does not prove that routine executed
+in each scene. RAM/OAM composition remains separate from a complete ROM-backed
+sprite, animation or resource map.
