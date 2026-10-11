@@ -117,18 +117,31 @@ impl Server {
             return Err(malformed("too many definitions"));
         }
         let mut ids = std::collections::BTreeSet::new();
-        let mut hosts: std::collections::BTreeSet<_> =
-            services.hosts().map(str::to_owned).collect();
-        for definition in &definitions {
-            if !ids.insert(definition.id())
-                || definition
-                    .hosts()
-                    .iter()
-                    .any(|host| !hosts.insert(host.clone()))
+        for (index, definition) in definitions.iter().enumerate() {
+            if !ids.insert(definition.id()) {
+                return Err(malformed("duplicate definition identity"));
+            }
+            for other in &definitions[..index] {
+                if definition.hosts().iter().any(|h| other.hosts().contains(h)) {
+                    for route in &definition.spec.routes {
+                        for prior in &other.spec.routes {
+                            if route.matcher.path == prior.matcher.path {
+                                return Err(malformed("conflicting shared-host path ownership"));
+                            }
+                        }
+                    }
+                }
+            }
+            if definition
+                .hosts()
+                .iter()
+                .any(|h| services.hosts().any(|s| s == h))
+                && definition.spec.routes.iter().any(|r| {
+                    r.matcher.path.starts_with("/service/charge/")
+                        || r.matcher.path == "/cgi-bin/kakin.cgi"
+                })
             {
-                return Err(malformed(
-                    "duplicate definition identity or conflicting host ownership",
-                ));
+                return Err(malformed("title route conflicts with shared service"));
             }
         }
         Ok(Self {
@@ -180,7 +193,20 @@ impl Server {
         )? {
             return Ok(reply);
         }
+        let matching = self.inner.definitions.iter().any(|d| {
+            d.hosts().contains(&request.host)
+                && d.spec.routes.iter().any(|r| r.matcher.path == request.path)
+        });
         for definition in &self.inner.definitions {
+            if matching
+                && !definition
+                    .spec
+                    .routes
+                    .iter()
+                    .any(|r| r.matcher.path == request.path)
+            {
+                continue;
+            }
             if let Some(reply) = engine::handle(
                 definition,
                 &request,

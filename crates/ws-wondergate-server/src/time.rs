@@ -127,6 +127,10 @@ impl Timestamp {
         let (y, m, d, h, n, s) = self.parts(0);
         format!("{y:04}-{m:02}-{d:02}T{h:02}:{n:02}:{s:02}+00:00")
     }
+    pub fn utc_digits(self) -> String {
+        let (y, m, d, h, n, s) = self.parts(0);
+        format!("{y:04}{m:02}{d:02}{h:02}{n:02}{s:02}")
+    }
     pub fn jst_digits(self) -> String {
         let (y, m, d, h, n, s) = self.parts(9 * 3600);
         format!("{y:04}{m:02}{d:02}{h:02}{n:02}{s:02}")

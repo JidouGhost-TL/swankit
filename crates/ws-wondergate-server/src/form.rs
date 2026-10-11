@@ -28,7 +28,7 @@ pub fn fields(bytes: &[u8]) -> Result<Fields> {
             .ok_or_else(|| malformed("missing field equals"))?;
         let key =
             std::str::from_utf8(&pair[..split]).map_err(|_| malformed("non-ASCII field key"))?;
-        if !crate::definition::identifier(key) {
+        if !crate::definition::field_key(key) {
             return Err(malformed("invalid field key"));
         }
         result
@@ -119,71 +119,148 @@ pub(crate) fn validate(
     fields: &Fields,
     specs: &BTreeMap<String, FieldSpec>,
 ) -> Result<BTreeMap<String, Field>> {
-    if fields.keys().ne(specs.keys()) {
-        return Err(malformed("unexpected or missing request fields"));
+    if fields.keys().any(|key| !specs.contains_key(key)) {
+        return Err(malformed("unexpected request fields"));
     }
     let mut values = BTreeMap::new();
     for (key, spec) in specs {
-        let raw = match spec.repeats {
-            Repeats::One => one(fields, key)?,
-            Repeats::First => fields[key]
-                .first()
-                .ok_or_else(|| malformed("missing field"))?,
-            Repeats::Last => fields[key]
-                .last()
-                .ok_or_else(|| malformed("missing field"))?,
+        let Some(entries) = fields.get(key) else {
+            if let Some(default) = &spec.default {
+                values.insert(key.clone(), validate_value(default, spec)?);
+            } else if !spec.optional {
+                return Err(malformed("missing request field"));
+            }
+            continue;
         };
-        // All occurrences must be well-formed, even when first/last wins.
-        let mut chosen = None;
-        for entry in &fields[key] {
-            let bytes = match spec.decode {
-                Decode::Raw => entry.clone(),
-                Decode::PercentPlus => percent_plus(entry)?,
-            };
-            let [min, max] = spec.bytes.unwrap_or([0, 512]);
-            name(&bytes, min, max, &spec.deny, spec.min_byte.unwrap_or(0))?;
-            if spec
-                .equals
-                .as_ref()
-                .is_some_and(|expected| expected != &bytes)
-            {
-                return Err(malformed("unexpected field value"));
-            }
-            match spec.charset {
-                Charset::Ascii if !bytes.is_ascii() => return Err(malformed("non-ASCII field")),
-                Charset::ShiftJis if shift_jis(&bytes, false).is_err() => {
-                    return Err(malformed("invalid Shift-JIS field"))
-                }
-                _ => {}
-            }
-            let mut numeric = None;
-            if spec.regex.is_some() || spec.number.is_some() {
-                let (lo, hi) = spec
-                    .regex
-                    .as_deref()
-                    .map(decimal_width)
-                    .transpose()?
-                    .unwrap_or((1, 20));
-                let max = if matches!(spec.number, Some(Number::U32)) {
-                    u64::from(u32::MAX)
-                } else {
-                    u64::MAX
-                };
-                numeric = Some(number(&bytes, lo, hi, max)?);
-            }
-            if entry.as_slice() == raw {
-                chosen = Some(Field {
-                    bytes,
-                    number: numeric,
-                });
-            }
+        if entries.is_empty() || (matches!(spec.repeats, Repeats::One) && entries.len() != 1) {
+            return Err(malformed("missing or repeated request field"));
         }
-        values.insert(
-            key.clone(),
-            chosen.ok_or_else(|| malformed("missing chosen field"))?,
-        );
+        let mut parsed = entries
+            .iter()
+            .map(|raw| validate_value(raw, spec))
+            .collect::<Result<Vec<_>>>()?;
+        let chosen = match spec.repeats {
+            Repeats::One | Repeats::First => parsed.remove(0),
+            Repeats::Last => parsed.pop().ok_or_else(|| malformed("missing field"))?,
+        };
+        values.insert(key.clone(), chosen);
     }
     Ok(values)
+}
+pub(crate) fn validate_value(raw: &[u8], spec: &FieldSpec) -> Result<Field> {
+    let mut bytes = match spec.decode {
+        Decode::Raw => raw.to_vec(),
+        Decode::PercentPlus => percent_plus(raw)?,
+    };
+    let [min, max] = spec.bytes.unwrap_or([0, 512]);
+    name(&bytes, min, max, &spec.deny, spec.min_byte.unwrap_or(0))?;
+    if spec
+        .equals
+        .as_ref()
+        .is_some_and(|expected| expected != &bytes)
+        || spec
+            .choices
+            .as_ref()
+            .is_some_and(|choices| !choices.contains(&bytes))
+        || spec
+            .last_bytes
+            .as_ref()
+            .is_some_and(|allowed| bytes.last().is_none_or(|b| !allowed.contains(b)))
+        || spec
+            .alphabet
+            .as_ref()
+            .is_some_and(|a| bytes.iter().any(|b| !a.as_bytes().contains(b)))
+        || spec
+            .prefix
+            .as_ref()
+            .is_some_and(|p| !bytes.starts_with(p.as_bytes()))
+        || spec
+            .suffix
+            .as_ref()
+            .is_some_and(|p| !bytes.ends_with(p.as_bytes()))
+    {
+        return Err(malformed("unexpected field value"));
+    }
+    match spec.charset {
+        Charset::Ascii if !bytes.is_ascii() => return Err(malformed("non-ASCII field")),
+        Charset::ShiftJis if shift_jis(&bytes, false).is_err() => {
+            return Err(malformed("invalid Shift-JIS field"))
+        }
+        _ => {}
+    }
+    let numeric = if spec.regex.is_some() || spec.number.is_some() {
+        let (lo, hi) = spec
+            .regex
+            .as_deref()
+            .map(decimal_width)
+            .transpose()?
+            .unwrap_or((1, 20));
+        let maximum = if matches!(spec.number, Some(Number::U32)) {
+            u64::from(u32::MAX)
+        } else {
+            u64::MAX
+        };
+        Some(number(
+            &bytes,
+            lo,
+            hi,
+            maximum.min(spec.max_number.unwrap_or(u64::MAX)),
+        )?)
+    } else {
+        None
+    };
+    if let Some(byte) = spec.trim_end {
+        while bytes.last() == Some(&byte) {
+            bytes.pop();
+        }
+    }
+    Ok(Field {
+        bytes,
+        number: numeric,
+    })
+}
+pub(crate) type Tables = BTreeMap<String, BTreeMap<String, Vec<Field>>>;
+/// Repeated delimited rows are validated completely before any store action.
+pub(crate) fn tables(
+    fields: &mut Fields,
+    specs: &BTreeMap<String, crate::definition::TableSpec>,
+) -> Result<Tables> {
+    let mut result = Tables::new();
+    for (key, spec) in specs {
+        let entries = fields.remove(key).unwrap_or_default();
+        if entries.is_empty() && !spec.optional {
+            return Err(malformed("missing table field"));
+        }
+        let mut rows = BTreeMap::new();
+        for raw in entries {
+            let bytes = percent_plus(&raw)?;
+            let mut parts = bytes.split(|b| *b == spec.delimiter);
+            let raw_tag = parts.next().ok_or_else(|| malformed("missing row tag"))?;
+            let tag = if let Some([lo, hi]) = spec.tag_decimal_width {
+                number(raw_tag, lo, hi, u64::MAX)?.to_string()
+            } else {
+                std::str::from_utf8(raw_tag)
+                    .map_err(|_| malformed("non-ASCII row tag"))?
+                    .to_owned()
+            };
+            let columns = spec
+                .rows
+                .get(&tag)
+                .ok_or_else(|| malformed("unknown row tag"))?;
+            let parts: Vec<_> = parts.collect();
+            if parts.len() != columns.len() || rows.contains_key(&tag) {
+                return Err(malformed("duplicate row or wrong column count"));
+            }
+            let row = parts
+                .into_iter()
+                .zip(columns)
+                .map(|(raw, spec)| validate_value(raw, spec))
+                .collect::<Result<Vec<_>>>()?;
+            rows.insert(tag, row);
+        }
+        result.insert(key.clone(), rows);
+    }
+    Ok(result)
 }
 
 /// The Python oracle uses standard Shift-JIS, without Windows extensions.

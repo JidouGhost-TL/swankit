@@ -1,0 +1,586 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "gunpey-ex-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "Clean-room request and response grammar from the private wave-2 ROM probes. Empty histories, best-per-identity ordering, dates, score conversion and structural blank slots are newly authored revival policy; no original server data or assets."
+  },
+  "hosts": [
+    "gunpeyex.wgg.channel.or.jp"
+  ],
+  "boards": {
+    "course-1": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "1"
+    },
+    "course-2": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "2"
+    },
+    "course-3": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "3"
+    },
+    "course-4": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "4"
+    },
+    "course-5": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "5"
+    }
+  },
+  "records": {
+    "row-1": [
+      {
+        "field": "rank",
+        "fmt": "dec"
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "score",
+        "fmt": "dec",
+        "divide": 10
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "name",
+        "fmt": "raw"
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "extra",
+        "fmt": "dec",
+        "zero_pad": true,
+        "width": 4
+      },
+      {
+        "text": "\r\n"
+      }
+    ],
+    "row-2": [
+      {
+        "field": "rank",
+        "fmt": "dec"
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "score",
+        "fmt": "dec",
+        "divide": 10
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "name",
+        "fmt": "raw"
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "extra",
+        "fmt": "dec",
+        "zero_pad": true,
+        "width": 4
+      },
+      {
+        "text": "\r\n"
+      }
+    ],
+    "row-3": [
+      {
+        "field": "rank",
+        "fmt": "dec"
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "score",
+        "fmt": "dec",
+        "zero_pad": true,
+        "width": 8
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "name",
+        "fmt": "raw"
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "extra",
+        "fmt": "dec",
+        "zero_pad": true,
+        "width": 4
+      },
+      {
+        "text": "\r\n"
+      }
+    ],
+    "row-4": [
+      {
+        "field": "rank",
+        "fmt": "dec"
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "score",
+        "fmt": "dec",
+        "divide": 10
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "name",
+        "fmt": "raw"
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "extra",
+        "fmt": "dec",
+        "zero_pad": true,
+        "width": 4
+      },
+      {
+        "text": "\r\n"
+      }
+    ],
+    "row-5": [
+      {
+        "field": "rank",
+        "fmt": "dec"
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "score",
+        "fmt": "dec",
+        "divide": 10
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "name",
+        "fmt": "raw"
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "extra",
+        "fmt": "dec",
+        "zero_pad": true,
+        "width": 4
+      },
+      {
+        "text": "\r\n"
+      }
+    ]
+  },
+  "routes": [
+    {
+      "id": "ranking",
+      "method": "POST",
+      "match": {
+        "path": "/swan-ranking"
+      },
+      "source": "form",
+      "request": {
+        "*": {
+          "decode": "percent-plus",
+          "bytes": [
+            6,
+            6
+          ],
+          "alphabet": "0123456789ABCDEF"
+        },
+        "owner": {
+          "decode": "percent-plus",
+          "bytes": [
+            0,
+            16
+          ],
+          "min_byte": 32,
+          "deny": [
+            124,
+            127
+          ],
+          "trim_end": 32
+        },
+        "list": {
+          "decode": "percent-plus",
+          "equals": [
+            82,
+            65,
+            78,
+            75,
+            124,
+            49,
+            124,
+            51
+          ]
+        },
+        "group": {
+          "decode": "percent-plus",
+          "default": [
+            49
+          ],
+          "equals": [
+            49
+          ]
+        }
+      },
+      "tables": {
+        "score": {
+          "delimiter": 124,
+          "optional": true,
+          "rows": {
+            "1": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{10,10}$",
+                "prefix": "000",
+                "suffix": "0"
+              },
+              {
+                "as": "u64",
+                "regex": "^[0-9]{1,4}$",
+                "max_number": 9999
+              }
+            ],
+            "2": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{10,10}$",
+                "prefix": "000",
+                "suffix": "0"
+              },
+              {
+                "as": "u64",
+                "regex": "^[0-9]{1,4}$",
+                "max_number": 9999
+              }
+            ],
+            "3": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{8,8}$"
+              }
+            ],
+            "4": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{10,10}$",
+                "prefix": "000",
+                "suffix": "0"
+              },
+              {
+                "as": "u64",
+                "regex": "^[0-9]{1,4}$",
+                "max_number": 9999
+              }
+            ],
+            "5": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{10,10}$",
+                "prefix": "000",
+                "suffix": "0"
+              },
+              {
+                "as": "u64",
+                "regex": "^[0-9]{1,4}$",
+                "max_number": 9999
+              }
+            ]
+          },
+          "tag_decimal_width": [
+            1,
+            2
+          ]
+        }
+      },
+      "table_actions": [
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "1": "course-1"
+          },
+          "extra": 1
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "2": "course-2"
+          },
+          "extra": 1
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "3": "course-3"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "4": "course-4"
+          },
+          "extra": 1
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "5": "course-5"
+          },
+          "extra": 1
+        }
+      ],
+      "respond": {
+        "status": 200,
+        "content_type": "application/x-swan-ranking-response",
+        "body": [
+          {
+            "text": "course=1|1|"
+          },
+          {
+            "board": "course-1",
+            "metric": "count",
+            "fmt": "dec",
+            "width": 2,
+            "zero_pad": true,
+            "max": 99
+          },
+          {
+            "text": "|0|0|"
+          },
+          {
+            "board": "course-1",
+            "metric": "position",
+            "fmt": "dec",
+            "identity": "*",
+            "width": 2,
+            "zero_pad": true,
+            "max": 99,
+            "overflow_zero": true
+          },
+          {
+            "text": "\r\nRANK=3\r\n"
+          },
+          {
+            "each": {
+              "leaders": {
+                "board": "course-1",
+                "limit": 3,
+                "pad_to": 3
+              }
+            },
+            "record": "row-1"
+          },
+          {
+            "text": "course=1|2|"
+          },
+          {
+            "board": "course-2",
+            "metric": "count",
+            "fmt": "dec",
+            "width": 2,
+            "zero_pad": true,
+            "max": 99
+          },
+          {
+            "text": "|0|0|"
+          },
+          {
+            "board": "course-2",
+            "metric": "position",
+            "fmt": "dec",
+            "identity": "*",
+            "width": 2,
+            "zero_pad": true,
+            "max": 99,
+            "overflow_zero": true
+          },
+          {
+            "text": "\r\nRANK=3\r\n"
+          },
+          {
+            "each": {
+              "leaders": {
+                "board": "course-2",
+                "limit": 3,
+                "pad_to": 3
+              }
+            },
+            "record": "row-2"
+          },
+          {
+            "text": "course=1|3|"
+          },
+          {
+            "board": "course-3",
+            "metric": "count",
+            "fmt": "dec",
+            "width": 2,
+            "zero_pad": true,
+            "max": 99
+          },
+          {
+            "text": "|0|0|"
+          },
+          {
+            "board": "course-3",
+            "metric": "position",
+            "fmt": "dec",
+            "identity": "*",
+            "width": 2,
+            "zero_pad": true,
+            "max": 99,
+            "overflow_zero": true
+          },
+          {
+            "text": "\r\nRANK=3\r\n"
+          },
+          {
+            "each": {
+              "leaders": {
+                "board": "course-3",
+                "limit": 3,
+                "pad_to": 3
+              }
+            },
+            "record": "row-3"
+          },
+          {
+            "text": "course=1|4|"
+          },
+          {
+            "board": "course-4",
+            "metric": "count",
+            "fmt": "dec",
+            "width": 2,
+            "zero_pad": true,
+            "max": 99
+          },
+          {
+            "text": "|0|0|"
+          },
+          {
+            "board": "course-4",
+            "metric": "position",
+            "fmt": "dec",
+            "identity": "*",
+            "width": 2,
+            "zero_pad": true,
+            "max": 99,
+            "overflow_zero": true
+          },
+          {
+            "text": "\r\nRANK=3\r\n"
+          },
+          {
+            "each": {
+              "leaders": {
+                "board": "course-4",
+                "limit": 3,
+                "pad_to": 3
+              }
+            },
+            "record": "row-4"
+          },
+          {
+            "text": "course=1|5|"
+          },
+          {
+            "board": "course-5",
+            "metric": "count",
+            "fmt": "dec",
+            "width": 2,
+            "zero_pad": true,
+            "max": 99
+          },
+          {
+            "text": "|0|0|"
+          },
+          {
+            "board": "course-5",
+            "metric": "position",
+            "fmt": "dec",
+            "identity": "*",
+            "width": 2,
+            "zero_pad": true,
+            "max": 99,
+            "overflow_zero": true
+          },
+          {
+            "text": "\r\nRANK=3\r\n"
+          },
+          {
+            "each": {
+              "leaders": {
+                "board": "course-5",
+                "limit": 3,
+                "pad_to": 3
+              }
+            },
+            "record": "row-5"
+          }
+        ]
+      }
+    }
+  ],
+  "limits": {
+    "max_body": 65536,
+    "max_response": 2047
+  },
+  "errors": {
+    "method": 405,
+    "method_first": false
+  }
+}
