@@ -1,14 +1,15 @@
 //! Rendering and its inverse for located graphics. Tile, map-word and palette
 //! grammars come from `ws-gfx` (WSdev Display/Tile_Data, Display/Palette,
-//! Display/Screen). The tile encoder here is the exact inverse of
-//! `ws_gfx::decode_tile` and is checked against it.
+//! Display/Screen); the tile encoder is `ws_gfx::encode_tile`.
 use crate::data::decode_asset;
 use crate::malformed;
 use crate::map::{parse_rgb, Asset, AssetMap, Kind};
 use crate::text::Charmaps;
 use formatkit_core::{Image, Result};
 use std::collections::BTreeMap;
-use ws_gfx::{decode_tile, transparent, ColorPalettes, MapEntry, TileFormat, HEIGHT, WIDTH};
+use ws_gfx::{
+    decode_tile, encode_tile, transparent, ColorPalettes, MapEntry, TileFormat, HEIGHT, WIDTH,
+};
 
 /// Largest rendered image.
 pub const MAX_IMAGE_BYTES: usize = 64 * 1024 * 1024;
@@ -32,26 +33,6 @@ pub(crate) fn tile_format(asset: &Asset) -> Result<TileFormat> {
             asset.id
         ))),
     }
-}
-
-/// Inverse of `ws_gfx::decode_tile`.
-pub fn encode_tile(indices: &[u8; 64], format: TileFormat) -> Vec<u8> {
-    let mut out = vec![0u8; format.bytes_per_tile()];
-    for y in 0..8 {
-        for x in 0..8 {
-            let v = indices[y * 8 + x];
-            match format {
-                TileFormat::Bpp4Packed => out[y * 4 + x / 2] |= (v & 15) << (4 * (1 - x % 2)),
-                TileFormat::Bpp2 | TileFormat::Bpp4Planar => {
-                    let planes = if format == TileFormat::Bpp2 { 2 } else { 4 };
-                    for p in 0..planes {
-                        out[y * planes + p] |= ((v >> p) & 1) << (7 - x);
-                    }
-                }
-            }
-        }
-    }
-    out
 }
 
 fn grayscale(colors: usize) -> [Rgba; 16] {

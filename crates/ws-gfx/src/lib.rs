@@ -10,7 +10,8 @@ mod tile;
 pub use palette::{transparent, ColorPalettes, MonoPalettes};
 pub use render::{MapEntry, RenderProfile, Snapshot, Sprite, HEIGHT, WIDTH};
 pub use tile::{
-    decode_tile, render_atlas, render_tile, Arrangement, AtlasLayout, Order, TileFormat,
+    decode_tile, encode_tile, render_atlas, render_tile, Arrangement, AtlasLayout, Order,
+    TileFormat,
 };
 
 use formatkit_core::{Error, Image, Result};

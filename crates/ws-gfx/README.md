@@ -9,7 +9,8 @@ they do not claim content-only detection from arbitrary bytes.
 `TileFormat` supports 16-byte 2bpp interleaved planar tiles and 32-byte 4bpp
 planar or packed tiles. Planes increase from the low index bit; planar rows
 read leftmost pixels from bit 7. Packed tiles read the high nibble first.
-`decode_tile` returns 64 row-major indices, and `render_tile` applies an RGBA
+`decode_tile` returns 64 row-major indices; `encode_tile` is its exact
+inverse (index bits above the format depth are dropped), and `render_tile` applies an RGBA
 palette with checked lookup. `render_atlas` supports plain tiles, stacked
 8x16 cells, row/column 16x16 cells and custom arrangements with integer scale.
 Callers supply an explicit allocation limit. Incomplete tile data is an error.

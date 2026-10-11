@@ -2,10 +2,10 @@
 use formatkit_core::Image;
 use serde_json::{json, Value};
 use ws_assets::{
-    decode_asset, encode_tile, extract, fix_checksum, replace, sha256_hex, verify, AssetMap,
-    Charmaps, ExtractedFile, ReplaceInput, Replacement,
+    decode_asset, extract, fix_checksum, replace, sha256_hex, verify, AssetMap, Charmaps,
+    ExtractedFile, ReplaceInput, Replacement,
 };
-use ws_gfx::{decode_tile, TileFormat};
+use ws_gfx::{decode_tile, encode_tile, TileFormat};
 
 const TILES: usize = 0x100;
 const MAP: usize = 0x200;
@@ -401,4 +401,36 @@ fn published_schema_lists_the_same_kinds_and_codecs() {
         let parsed: ws_assets::map::Codec = serde_json::from_value(codec.clone()).unwrap();
         assert_eq!(serde_json::to_value(parsed).unwrap(), *codec);
     }
+}
+
+#[test]
+fn text_edits_keep_hidden_attribute_bits_in_the_edited_span() {
+    let mut rom = rom();
+    // Word glyphs A B C with attribute bits 0x1800 on B, then end ffff.
+    rom[TEXT..TEXT + 8].copy_from_slice(&[0x01, 0x00, 0x02, 0x18, 0x03, 0x00, 0xff, 0xff]);
+    fix_checksum(&mut rom).unwrap();
+    let mut v = map_json(&rom);
+    v["charmaps"]["masked"] = json!({"inline": {
+        "schema": "swankit-charmap/1", "unit": "word-le",
+        "glyph_mask": {"below": 32768, "mask": 2047},
+        "entries": [{"bytes": "0100", "text": "A"}, {"bytes": "0200", "text": "B"}, {"bytes": "0300", "text": "C"}],
+        "controls": [{"code": 65535, "ends": true}]
+    }});
+    v["assets"][3]["length"] = json!(8);
+    v["assets"][3]["relations"]["charmap"] = json!("masked");
+    let map = load(&v);
+    let out = replace(
+        &map,
+        &charmaps(&map),
+        &rom,
+        &Replacement {
+            id: "s".into(),
+            input: ReplaceInput::Text("ACC".into()),
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        out.rom[TEXT..TEXT + 8],
+        [0x01, 0x00, 0x03, 0x18, 0x03, 0x00, 0xff, 0xff]
+    );
 }

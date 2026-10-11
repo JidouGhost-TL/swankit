@@ -107,9 +107,11 @@ spelling, or any other file as decoded bytes. Pixels map to the cell's palette
 (exact colour first, otherwise nearest; the count of nearest matches is
 reported). A tilemap edit rewrites the tiles it draws and leaves the map words
 alone; a tile drawn by several cells must receive identical pixels or the
-command refuses. Text keeps every unchanged source token byte for byte (hidden
-control operands, attribute bits, aliases) and canonically encodes only the
-edited span.
+command refuses. Text edits use `ws_text::CharacterMap::encode_edit`: every
+unchanged source token is kept byte for byte (hidden control operands,
+attribute bits, aliases), only the edited span is canonically encoded, and
+inside that span each glyph keeps the hidden attribute bits (the bits a
+`glyph_mask` ignores) of the source glyph at the same position.
 
 Placement: the payload is re-encoded with the asset's codec. When it fits
 the stored range it is written in place (the tail is filled with `pad` when

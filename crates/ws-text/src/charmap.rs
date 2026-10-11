@@ -568,6 +568,112 @@ impl CharacterMap {
         Ok(bytes)
     }
 
+    /// Hidden attribute bits of a single-unit glyph token: the bits a
+    /// `glyph_mask` ignores when choosing the glyph (`None` for controls,
+    /// multi-unit entries or maps without a mask).
+    fn attribute_bits(&self, token: &TextToken) -> Option<u16> {
+        let d = &self.definition;
+        let mask = d.glyph_mask.as_ref()?;
+        if token.bytes.len() != d.unit.width() {
+            return None;
+        }
+        let code = d.unit.read(&mut Reader::new(&token.bytes)).ok()?;
+        if code >= mask.below || d.controls.iter().any(|c| code & c.mask == c.code) {
+            return None;
+        }
+        Some(code & !mask.mask)
+    }
+
+    /// Bytes for an edited text that keep the source exactly where it is
+    /// unchanged: the longest unchanged token prefix and suffix are copied
+    /// (hidden control operands, aliases, attribute bits). Inside the edited
+    /// span a token equal to the source token at the same span position keeps
+    /// its bytes, and every other glyph takes the hidden attribute bits of the
+    /// source glyph at that position (the last source glyph past its end, the
+    /// neighbouring glyph for a pure insertion). The result must re-decode to
+    /// `text` and end where the source ended.
+    pub fn encode_edit(&self, original: &[u8], text: &str, limits: TextLimits) -> Result<Vec<u8>> {
+        let old = self.decode(original, limits)?;
+        let tokens = &old.tokens;
+        // The terminating control never joins the copied prefix.
+        let limit = tokens.len() - usize::from(old.terminated && !tokens.is_empty());
+        let mut head = 0;
+        let mut used = 0;
+        while head < limit && text[used..].starts_with(tokens[head].text.as_str()) {
+            used += tokens[head].text.len();
+            head += 1;
+        }
+        let mut tail = tokens.len();
+        let mut rest = text.len();
+        while tail > head
+            && rest >= used + tokens[tail - 1].text.len()
+            && text[..rest].ends_with(tokens[tail - 1].text.as_str())
+        {
+            rest -= tokens[tail - 1].text.len();
+            tail -= 1;
+        }
+        let middle = &text[used..rest];
+        let mut bytes: Vec<u8> = tokens[..head]
+            .iter()
+            .flat_map(|t| t.bytes.iter().copied())
+            .collect();
+        if !middle.is_empty() {
+            let encoded = self.encode(middle, limits.input_bytes)?;
+            let mut fresh = self.decode(&encoded, limits)?.tokens;
+            if tail < tokens.len() && fresh.last().is_some_and(|t| t.text.is_empty()) {
+                // Drop the canonical end appended to the fragment; the source suffix ends it.
+                fresh.pop();
+            }
+            let span = &tokens[head..tail];
+            let glyph_attributes: Vec<Option<u16>> =
+                span.iter().map(|t| self.attribute_bits(t)).collect();
+            let neighbour = head
+                .checked_sub(1)
+                .and_then(|i| self.attribute_bits(&tokens[i]))
+                .or_else(|| tokens.get(tail).and_then(|t| self.attribute_bits(t)));
+            let d = &self.definition;
+            for (k, token) in fresh.iter().enumerate() {
+                if let Some(source) = span.get(k).filter(|s| s.text == token.text) {
+                    bytes.extend_from_slice(&source.bytes);
+                    continue;
+                }
+                let inherited = if span.is_empty() {
+                    neighbour
+                } else {
+                    // The nearest source glyph at or before this position, else after it.
+                    let at = k.min(span.len() - 1);
+                    glyph_attributes[..=at]
+                        .iter()
+                        .rev()
+                        .chain(glyph_attributes[at + 1..].iter())
+                        .find_map(|a| *a)
+                };
+                let attributed = match (inherited, self.attribute_bits(token)) {
+                    (Some(bits), Some(0)) if bits != 0 => {
+                        let code = d.unit.read(&mut Reader::new(&token.bytes))? | bits;
+                        let candidate = d.unit.bytes(code);
+                        let check = self.decode(&candidate, limits)?;
+                        (check.text == token.text && check.consumed == candidate.len())
+                            .then_some(candidate)
+                    }
+                    _ => None,
+                };
+                bytes.extend_from_slice(attributed.as_deref().unwrap_or(&token.bytes));
+            }
+        }
+        bytes.extend(tokens[tail..].iter().flat_map(|t| t.bytes.iter().copied()));
+        let check = self.decode(&bytes, limits)?;
+        if check.text != text
+            || check.consumed != bytes.len()
+            || (old.terminated && !check.terminated)
+        {
+            return Err(malformed(
+                "edited text does not re-decode to the requested text",
+            ));
+        }
+        Ok(bytes)
+    }
+
     /// Encode readable cell text canonically. Ambiguous glyphs use definition
     /// order; token encoding retains the original bytes. Append a canonical end
     /// when the definition has one. Validation catches context/alias changes.

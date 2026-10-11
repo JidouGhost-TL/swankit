@@ -10,7 +10,10 @@ Load an external `swankit-text-def/1` JSON definition with
 `DecodedText` contains raw cell text, normalized text, consumed bytes,
 termination status and source tokens. `encode_tokens` preserves original
 aliases, attributes and invisible page changes. `encode` creates a canonical
-encoding of raw cell text and validates it by decoding again. `insert_text`
+encoding of raw cell text and validates it by decoding again. `encode_edit`
+re-encodes an edited string against its source: unchanged prefix and suffix
+tokens are copied, and glyphs inside the edited span keep the source glyph's
+hidden attribute bits (bits outside `glyph_mask.mask`). `insert_text`
 checks the complete encoding and slot before changing any resident bytes.
 
 `StringTableDefinition` supports explicit offsets, fixed records, integer

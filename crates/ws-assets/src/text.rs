@@ -121,56 +121,12 @@ impl Charmaps {
         self.for_asset(asset)?.encode(text, MAX_TEXT_BYTES)
     }
 
-    /// Bytes for an edited text that keep every unchanged source token
-    /// exactly (hidden control operands, aliases, attribute bits): the
-    /// longest unchanged token prefix and suffix are copied, and only the
-    /// edited span between them is canonically encoded.
+    /// Bytes for an edited text: `ws_text::CharacterMap::encode_edit` keeps
+    /// unchanged tokens and the edited span's hidden attribute bits.
     pub fn encode_edit(&self, asset: &Asset, original: &[u8], text: &str) -> Result<Vec<u8>> {
-        let map = self.for_asset(asset)?;
         let old = self.decode(asset, original)?;
-        let tokens = &old.tokens;
-        // The terminating control never joins the copied prefix.
-        let limit = tokens.len() - usize::from(old.terminated && !tokens.is_empty());
-        let mut head = 0;
-        let mut used = 0;
-        while head < limit && text[used..].starts_with(tokens[head].text.as_str()) {
-            used += tokens[head].text.len();
-            head += 1;
-        }
-        let mut tail = tokens.len();
-        let mut rest = text.len();
-        while tail > head
-            && rest >= used + tokens[tail - 1].text.len()
-            && text[..rest].ends_with(tokens[tail - 1].text.as_str())
-        {
-            rest -= tokens[tail - 1].text.len();
-            tail -= 1;
-        }
-        let middle = &text[used..rest];
-        let mut bytes: Vec<u8> = tokens[..head]
-            .iter()
-            .flat_map(|t| t.bytes.clone())
-            .collect();
-        if !middle.is_empty() {
-            let encoded = map.encode(middle, MAX_TEXT_BYTES)?;
-            let decoded = map.decode(&encoded, Self::limits())?;
-            let mut keep = encoded.len();
-            if decoded.terminated && tail < tokens.len() {
-                // Drop the canonical end appended to the fragment; the source suffix ends it.
-                if let Some(last) = decoded.tokens.last().filter(|t| t.text.is_empty()) {
-                    keep -= last.bytes.len();
-                }
-            }
-            bytes.extend_from_slice(&encoded[..keep]);
-        }
-        bytes.extend(tokens[tail..].iter().flat_map(|t| t.bytes.clone()));
-        let check = map.decode(&bytes, Self::limits())?;
-        if check.text != text || check.consumed != bytes.len() || !check.terminated {
-            return Err(malformed(format!(
-                "{}: edited text does not re-decode to the requested text",
-                asset.id
-            )));
-        }
-        Ok(bytes)
+        self.for_asset(asset)?
+            .encode_edit(&original[..old.consumed], text, Self::limits())
+            .map_err(|e| malformed(format!("{}: {e}", asset.id)))
     }
 }

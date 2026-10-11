@@ -539,3 +539,49 @@ fn documented_definition_dumps_edits_and_renders_a_synthetic_source() {
     assert_eq!((glyph.image.width, glyph.image.height), (8, 8));
     assert_eq!(&glyph.image.rgba[..4], &[0, 0, 0, 255]);
 }
+
+fn masked() -> CharacterMap {
+    map(
+        json!({"unit":"word-le","glyph_mask":{"below":32768,"mask":2047},
+        "entries":[{"bytes":"0100","text":"カ"},{"bytes":"0200","text":"キ"},
+        {"bytes":"0300","text":"人"},{"bytes":"0400","text":"A","aliases":["Ａ"]}],
+        "controls":[{"code":65535,"ends":true},
+        {"code":65024,"mask":65280,"display":"|"}]}),
+    )
+}
+
+#[test]
+fn edits_keep_unchanged_tokens_exactly() {
+    let m = masked();
+    // カ, hidden-operand control fe07, キ, end.
+    let original = [1, 0, 7, 0xfe, 2, 0, 0xff, 0xff];
+    let out = m
+        .encode_edit(&original, "カ|人", TextLimits::default())
+        .unwrap();
+    assert_eq!(out, [1, 0, 7, 0xfe, 3, 0, 0xff, 0xff]);
+}
+
+#[test]
+fn edits_keep_hidden_attribute_bits_inside_the_edited_span() {
+    let m = masked();
+    // カ キ 人 with attribute bits 0x1800 on キ and 人 (colour), then end.
+    let original = [1, 0, 2, 0x18, 3, 0x18, 0xff, 0xff];
+    // Replace the attributed middle: each new glyph inherits the attributes
+    // of the source glyph at the same span position.
+    let out = m
+        .encode_edit(&original, "カ人キ", TextLimits::default())
+        .unwrap();
+    assert_eq!(out, [1, 0, 3, 0x18, 2, 0x18, 0xff, 0xff]);
+    // A longer span continues with the last source glyph's attributes.
+    let out = m
+        .encode_edit(&original, "カ人キAA", TextLimits::default())
+        .unwrap();
+    assert_eq!(out, [1, 0, 3, 0x18, 2, 0x18, 4, 0x18, 4, 0x18, 0xff, 0xff]);
+    // An unchanged token at its span position keeps its exact bytes (alias).
+    let aliased = [4, 0x20, 2, 0x18, 0xff, 0xff];
+    let out = m
+        .encode_edit(&aliased, "Aカ", TextLimits::default())
+        .unwrap();
+    assert_eq!(out, [4, 0x20, 1, 0x18, 0xff, 0xff]);
+    assert_eq!(m.decode(&out, TextLimits::default()).unwrap().text, "Aカ");
+}

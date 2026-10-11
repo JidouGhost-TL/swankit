@@ -56,6 +56,26 @@ pub fn decode_tile(data: &[u8], offset: usize, format: TileFormat) -> Result<[u8
     Ok(indices)
 }
 
+/// Encode one 8x8 tile of palette indices: the exact inverse of
+/// [`decode_tile`] (index bits above the format's depth are dropped).
+pub fn encode_tile(indices: &[u8; 64], format: TileFormat) -> Vec<u8> {
+    let mut out = vec![0u8; format.bytes_per_tile()];
+    let planes = if format == TileFormat::Bpp2 { 2 } else { 4 };
+    for y in 0..8 {
+        for x in 0..8 {
+            let v = indices[y * 8 + x];
+            if format == TileFormat::Bpp4Packed {
+                out[y * 4 + x / 2] |= (v & 15) << (4 * (1 - x % 2));
+            } else {
+                for p in 0..planes {
+                    out[y * planes + p] |= ((v >> p) & 1) << (7 - x);
+                }
+            }
+        }
+    }
+    out
+}
+
 /// Render an individual tile through an owner-selected RGBA palette.
 pub fn render_tile(indices: &[u8; 64], palette: &[[u8; 4]]) -> Result<Image> {
     let mut rgba = Image::try_rgba_buffer(8, 8, 256, "tile RGBA bytes")?;
