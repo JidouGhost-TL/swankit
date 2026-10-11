@@ -19,6 +19,10 @@ The optional fifth argument `self-test` runs byte-provenance regressions instead
 regressions; DMA event logs retain transfer direction and current bank settings.
 Inherited RAM origins retain ROM file offsets but do not invent the
 bank settings of an earlier call.
+`WSAssetTraceReturnChecks.java OUTPUT` executes synthetic RAM programs through
+the extension scheduler, checking ordinary near returns and near/far callee
+argument cleanup. Observed RET/RETF instructions can pair a return after SP
+cleanup; arbitrary stack switching and nonlocal exits are still unsupported.
 The collector targets the pinned Ghidra callback API; it never modifies the
 installed extension.
 

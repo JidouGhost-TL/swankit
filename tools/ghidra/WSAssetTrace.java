@@ -25,7 +25,7 @@ public class WSAssetTrace extends GhidraScript {
     int frame, nextId;
     long pc, ops, loads, stores, opaque;
     int dmaSeen;
-    boolean pendingCall;
+    boolean pendingCall, returned;
     long pendingReturn;
     int pendingSp;
     Instruction instruction;
@@ -155,11 +155,13 @@ public class WSAssetTrace extends GhidraScript {
     void before(Instruction ins) throws Exception {
         instruction=ins;pc=ins.getAddress().getOffset();
         int sp=(int)machine.reg(machine.lang.getRegister("SP"));
-        while(!stack.isEmpty()) {
+        if(!stack.isEmpty()) {
             Call c=stack.get(stack.size()-1);
-            if(pc!=c.ret || sp!=c.sp) break;
-            finish(c,true);stack.remove(stack.size()-1);
+            if(pc==c.ret && (sp==c.sp || returned)) {
+                finish(c,true);stack.remove(stack.size()-1);
+            }
         }
+        returned=false;
         if(pendingCall) {
             if(stack.size()<128) {
                 Call c=new Call();c.id=nextId++;c.entry=pc;c.ret=pendingReturn;c.sp=pendingSp;c.regs=regs();c.frame=frame;c.opaque=opaque;stack.add(c);
@@ -275,12 +277,7 @@ public class WSAssetTrace extends GhidraScript {
         if(lo>=0)ranges.add("["+lo+","+hi+"]");return ranges.toString();
     }
     static String listStrings(Collection<String> s) {StringJoiner j=new StringJoiner(",","[","]");for(String x:s)j.add("\""+x+"\"");return j.toString();}
-    @Override public void run() throws Exception {
-        String[] args=getScriptArgs();Path out=Paths.get(args[0]);Files.createDirectories(out);int frames=Integer.parseInt(args[1]);
-        machine=new WSMachine(currentProgram,currentProgram.getOptions("WonderSwan").getBoolean("Color",true));
-        if(args.length>4 && args[4].equals("self-test")) {selfTest(out);return;}
-        machine.cycleTiming=args.length>3 && args[3].equals("1");machine.traceLimit=0;
-        calls=new PrintWriter(out.resolve("calls.jsonl").toFile());accesses=new PrintWriter(out.resolve("dma.jsonl").toFile());
+    void installCallbacks() throws Exception {
         // Preserve every hardware callback. Only this private instance's callback
         // field is wrapped; no installed extension or shared state is modified.
         Field field=AbstractPcodeMachine.class.getDeclaredField("cb");field.setAccessible(true);
@@ -294,7 +291,9 @@ public class WSAssetTrace extends GhidraScript {
                 case "afterLoad" -> loaded((PcodeOp)a[1],(AddressSpace)a[2],(byte[])a[3],(int)a[4]);
                 case "beforeStore" -> stored((PcodeOp)a[1],(AddressSpace)a[2],(byte[])a[3],(int)a[4],(byte[])a[5]);
                 case "afterExecuteInstruction" -> {
-                    dma(); Instruction ins=(Instruction)a[1];if(ins.getFlowType().isCall()) {
+                    dma(); Instruction ins=(Instruction)a[1];
+                    returned=ins.getMnemonicString().startsWith("RET");
+                    if(ins.getFlowType().isCall()) {
                         pendingCall=true;pendingReturn=ins.getAddress().getOffset()+ins.getLength();
                         int bytes=ins.getMnemonicString().equals("CALLF")?4:2;
                         pendingSp=((int)machine.reg(machine.lang.getRegister("SP"))+bytes)&65535;
@@ -303,6 +302,14 @@ public class WSAssetTrace extends GhidraScript {
             }
             return result;
         });field.set(machine.emu,wrapper);
+    }
+    @Override public void run() throws Exception {
+        String[] args=getScriptArgs();Path out=Paths.get(args[0]);Files.createDirectories(out);int frames=Integer.parseInt(args[1]);
+        machine=new WSMachine(currentProgram,currentProgram.getOptions("WonderSwan").getBoolean("Color",true));
+        if(args.length>4 && args[4].equals("self-test")) {selfTest(out);return;}
+        machine.cycleTiming=args.length>3 && args[3].equals("1");machine.traceLimit=0;
+        calls=new PrintWriter(out.resolve("calls.jsonl").toFile());accesses=new PrintWriter(out.resolve("dma.jsonl").toFile());
+        installCallbacks();
         List<int[]> keys=new ArrayList<>();if(!args[2].equals("-"))for(String line:Files.readAllLines(Paths.get(args[2]))) {
             line=line.replaceAll("#.*","").trim();if(line.isEmpty())continue;String[] k=line.split("\\s+");keys.add(new int[]{Integer.parseInt(k[0]),Integer.parseInt(k[1]),Integer.parseInt(k[2],16)});
         }
