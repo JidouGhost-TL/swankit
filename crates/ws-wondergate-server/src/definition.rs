@@ -183,6 +183,12 @@ pub(crate) struct Route {
     #[serde(default)]
     pub actions: Vec<Action>,
     #[serde(default)]
+    pub tables: BTreeMap<String, TableSpec>,
+    #[serde(default)]
+    pub table_actions: Vec<TableAction>,
+    #[serde(default)]
+    pub form_trim_end: Vec<u8>,
+    #[serde(default)]
     pub errors: Errors,
     pub respond: Respond,
 }
@@ -205,6 +211,16 @@ pub(crate) struct Match {
 pub(crate) struct FieldSpec {
     pub equals: Option<Vec<u8>>,
     #[serde(default)]
+    pub optional: bool,
+    pub default: Option<Vec<u8>>,
+    pub choices: Option<Vec<Vec<u8>>>,
+    pub alphabet: Option<String>,
+    pub prefix: Option<String>,
+    pub suffix: Option<String>,
+    pub trim_end: Option<u8>,
+    pub max_number: Option<u64>,
+    pub last_bytes: Option<Vec<u8>>,
+    #[serde(default)]
     pub decode: Decode,
     pub bytes: Option<[usize; 2]>,
     #[serde(default)]
@@ -217,6 +233,33 @@ pub(crate) struct FieldSpec {
     pub number: Option<Number>,
     #[serde(default)]
     pub repeats: Repeats,
+}
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct TableSpec {
+    pub delimiter: u8,
+    pub tag_decimal_width: Option<[usize; 2]>,
+    #[serde(default)]
+    pub optional: bool,
+    pub rows: BTreeMap<String, Vec<FieldSpec>>,
+}
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct TableAction {
+    pub field: String,
+    pub identity: String,
+    pub name: String,
+    pub score: usize,
+    pub extra: Option<usize>,
+    pub boards: BTreeMap<String, String>,
+}
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Condition {
+    #[serde(default)]
+    pub equals: BTreeMap<String, Vec<u8>>,
+    #[serde(default)]
+    pub absent: Vec<String>,
 }
 #[derive(Clone, Copy, Debug, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -312,6 +355,27 @@ pub(crate) enum HexCase {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(untagged, deny_unknown_fields)]
 pub(crate) enum Segment {
+    Date {
+        date: usize,
+    },
+    Board {
+        board: String,
+        metric: Metric,
+        identity: Option<String>,
+        limit: Option<usize>,
+        pad_to: Option<usize>,
+        fmt: Format,
+        width: Option<usize>,
+        max: Option<u64>,
+        #[serde(default)]
+        overflow_zero: bool,
+        #[serde(default)]
+        zero_pad: bool,
+    },
+    When {
+        when: Condition,
+        segments: Vec<Segment>,
+    },
     Text {
         text: String,
     },
@@ -333,6 +397,8 @@ pub(crate) enum Segment {
         min: Option<u64>,
         max: Option<u64>,
         empty: Option<u64>,
+        empty_bytes: Option<Vec<u8>>,
+        divide: Option<u64>,
         #[serde(default)]
         zero_pad: bool,
     },
@@ -344,6 +410,13 @@ pub(crate) enum Segment {
         row: Row,
         record: String,
     },
+}
+#[derive(Clone, Copy, Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub(crate) enum Metric {
+    Count,
+    Position,
+    Length,
 }
 #[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -420,7 +493,7 @@ impl Spec {
             }
         }
         for (id, board) in &self.boards {
-            if !identifier(id) || !identifier(&board.identity) || !identifier(&board.course) {
+            if !identifier(id) || !field_key(&board.identity) || !identifier(&board.course) {
                 return Err(malformed("invalid board declaration"));
             }
         }
@@ -453,7 +526,7 @@ impl Spec {
             if !identifier(id) {
                 return Err(malformed("invalid record id"));
             }
-            self.segments(record, None, true)?;
+            self.segments(record, None, true, 0)?;
         }
         let mut ids = BTreeSet::new();
         self.errors.validate()?;
@@ -475,11 +548,82 @@ impl Spec {
             }
             route.errors.validate()?;
             for (name, field) in &route.request {
-                if !identifier(name) || field.bytes.is_some_and(|[lo, hi]| lo > hi || hi > 512) {
+                if !field_key(name) || field.bytes.is_some_and(|[lo, hi]| lo > hi || hi > 512) {
                     return Err(malformed("invalid request field bounds"));
                 }
-                if let Some(regex) = &field.regex {
-                    decimal_width(regex)?;
+                validate_field(field)?;
+            }
+            for (key, table) in &route.tables {
+                if !field_key(key)
+                    || route.request.contains_key(key)
+                    || table.rows.is_empty()
+                    || table.rows.len() > 128
+                    || table.delimiter == 0
+                    || table
+                        .tag_decimal_width
+                        .is_some_and(|[lo, hi]| lo == 0 || lo > hi || hi > 20)
+                {
+                    return Err(malformed("invalid table field"));
+                }
+                for (tag, columns) in &table.rows {
+                    if tag.is_empty()
+                        || tag.len() > 32
+                        || !tag.is_ascii()
+                        || tag.as_bytes().contains(&table.delimiter)
+                        || columns.is_empty()
+                        || columns.len() > 8
+                    {
+                        return Err(malformed("invalid table row grammar"));
+                    }
+                    if table.tag_decimal_width.is_some()
+                        && (tag.parse::<u64>().is_err()
+                            || tag.parse::<u64>().is_ok_and(|n| n.to_string() != *tag))
+                    {
+                        return Err(malformed("noncanonical decimal row tag"));
+                    }
+                    for column in columns {
+                        validate_field(column)?;
+                    }
+                }
+            }
+            for action in &route.table_actions {
+                let table = route
+                    .tables
+                    .get(&action.field)
+                    .ok_or_else(|| malformed("unknown action table"))?;
+                if action.boards.is_empty()
+                    || action
+                        .boards
+                        .keys()
+                        .any(|tag| !table.rows.contains_key(tag))
+                    || !route.request.contains_key(&action.identity)
+                    || !route.request.contains_key(&action.name)
+                    || [&action.identity, &action.name].iter().any(|key| {
+                        route
+                            .request
+                            .get(*key)
+                            .is_some_and(|f| f.optional && f.default.is_none())
+                    })
+                {
+                    return Err(malformed("invalid table action fields"));
+                }
+                for (tag, board) in &action.boards {
+                    let board = self
+                        .boards
+                        .get(board)
+                        .ok_or_else(|| malformed("unknown table action board"))?;
+                    let columns = &table.rows[tag];
+                    if board.identity != action.identity
+                        || columns.get(action.score).is_none_or(|c| c.number.is_none())
+                        || action.extra.is_some_and(|i| {
+                            columns.get(i).is_none_or(|c| {
+                                c.number.is_none()
+                                    || c.max_number.is_none_or(|n| n > i64::MAX as u64)
+                            })
+                        })
+                    {
+                        return Err(malformed("invalid numeric table action"));
+                    }
                 }
             }
             if let Some(keys) = &route.matcher.query_keys {
@@ -503,6 +647,9 @@ impl Spec {
                     if !route.request.contains_key(field) {
                         return Err(malformed("unknown action field"));
                     }
+                    if route.request[field].optional && route.request[field].default.is_none() {
+                        return Err(malformed("action field may be absent"));
+                    }
                 }
                 if route.request[&record.score].number.is_none() {
                     return Err(malformed("score field must be numeric"));
@@ -517,7 +664,7 @@ impl Spec {
                     return Err(malformed("unknown or invalid envelope"));
                 }
             }
-            self.segments(route.respond.body.segments(), Some(route), false)?;
+            self.segments(route.respond.body.segments(), Some(route), false, 0)?;
             let mut minimum = self.minimum_size(route.respond.body.segments())?;
             if let Body::Wrapped { envelope, .. } = &route.respond.body {
                 minimum = minimum
@@ -555,6 +702,9 @@ impl Spec {
         let mut total = 0usize;
         for segment in segments {
             let size = match segment {
+                Segment::Date { date } => *date,
+                Segment::Board { width, .. } => width.unwrap_or(1).max(1),
+                Segment::When { .. } => 0,
                 Segment::Text { text } => text.len(),
                 Segment::Bytes { bytes } => bytes.len(),
                 Segment::Zero { zero } => *zero,
@@ -576,9 +726,70 @@ impl Spec {
         }
         Ok(total)
     }
-    fn segments(&self, segments: &[Segment], route: Option<&Route>, in_record: bool) -> Result<()> {
+    fn segments(
+        &self,
+        segments: &[Segment],
+        route: Option<&Route>,
+        in_record: bool,
+        depth: usize,
+    ) -> Result<()> {
+        if depth > 4 || segments.len() > 1024 {
+            return Err(malformed("template nesting or segment limit"));
+        }
         for segment in segments {
             match segment {
+                Segment::Date { date } if !matches!(date, 8 | 14) => {
+                    return Err(malformed("invalid date width"))
+                }
+                Segment::Board {
+                    board,
+                    metric,
+                    identity,
+                    limit,
+                    pad_to,
+                    fmt,
+                    width,
+                    zero_pad,
+                    ..
+                } => {
+                    if in_record
+                        || !self.boards.contains_key(board)
+                        || matches!(fmt, Format::Raw | Format::HtmlShiftJis)
+                        || width.is_some_and(|n| n > 512)
+                        || (matches!(fmt, Format::U8) && (width.is_some() || *zero_pad))
+                        || limit.is_some_and(|n| n > 4096)
+                        || pad_to.is_some_and(|n| n > 4096)
+                    {
+                        return Err(malformed("invalid board metric"));
+                    }
+                    match metric {
+                        Metric::Position
+                            if identity.as_ref().is_none_or(|key| {
+                                !route.is_some_and(|r| r.request.contains_key(key))
+                            }) =>
+                        {
+                            return Err(malformed("position requires identity field"))
+                        }
+                        Metric::Length if limit.is_none() || pad_to.is_none() => {
+                            return Err(malformed("length requires selection bounds"))
+                        }
+                        _ => {}
+                    }
+                }
+                Segment::When { when, segments } => {
+                    if in_record
+                        || when.equals.len() + when.absent.len() == 0
+                        || !route.is_some_and(|r| {
+                            when.equals
+                                .keys()
+                                .chain(when.absent.iter())
+                                .all(|k| r.request.contains_key(k))
+                        })
+                    {
+                        return Err(malformed("invalid template condition"));
+                    }
+                    self.segments(segments, route, false, depth + 1)?;
+                }
                 Segment::Text { text } if text.len() > self.limits.max_body => {
                     return Err(malformed("literal exceeds client body limit"))
                 }
@@ -595,6 +806,8 @@ impl Spec {
                     min,
                     max,
                     empty,
+                    empty_bytes,
+                    divide,
                     zero_pad,
                 } => {
                     if !in_record
@@ -612,11 +825,14 @@ impl Spec {
                         return Err(malformed("row field format type mismatch"));
                     }
                     if (bytes
-                        && (width.is_some()
-                            || min.is_some()
+                        && (min.is_some()
                             || max.is_some()
                             || empty.is_some()
+                            || divide.is_some()
                             || *zero_pad))
+                        || (!bytes && empty_bytes.is_some())
+                        || empty_bytes.as_ref().is_some_and(|b| b.len() > 512)
+                        || *divide == Some(0)
                         || (matches!(fmt, Format::U8)
                             && (width.is_some_and(|v| v != 0) || *zero_pad))
                     {
@@ -722,7 +938,7 @@ impl Respond {
         Ok(())
     }
 }
-fn overlap(a: &Route, b: &Route) -> Result<bool> {
+pub(crate) fn overlap(a: &Route, b: &Route) -> Result<bool> {
     if a.matcher.path != b.matcher.path || a.method != b.method {
         return Ok(false);
     }
@@ -744,4 +960,29 @@ fn overlap(a: &Route, b: &Route) -> Result<bool> {
         }
         _ => Ok(true),
     }
+}
+
+pub(crate) fn field_key(key: &str) -> bool {
+    key == "*" || identifier(key)
+}
+fn validate_field(field: &FieldSpec) -> Result<()> {
+    if field.bytes.is_some_and(|[lo, hi]| lo > hi || hi > 512)
+        || field.default.as_ref().is_some_and(|b| b.len() > 512)
+        || field.choices.as_ref().is_some_and(|choices| {
+            choices.is_empty() || choices.len() > 128 || choices.iter().any(|b| b.len() > 512)
+        })
+        || field
+            .alphabet
+            .as_ref()
+            .is_some_and(|a| a.is_empty() || !a.is_ascii())
+    {
+        return Err(malformed("invalid field grammar"));
+    }
+    if let Some(regex) = &field.regex {
+        decimal_width(regex)?;
+    }
+    if field.max_number.is_some() && field.number.is_none() {
+        return Err(malformed("numeric maximum needs numeric field"));
+    }
+    Ok(())
 }

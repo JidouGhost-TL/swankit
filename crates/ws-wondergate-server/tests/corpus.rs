@@ -38,6 +38,31 @@ impl Digest for ServicesDigest {
                             .map_err(|e| Error::Malformed(e.to_string()))?;
                     }
                 }
+                if let Some(path) = args.str("store_path") {
+                    if std::fs::metadata(path)
+                        .map_err(|e| Error::Malformed(e.to_string()))?
+                        .len()
+                        > 16 * 1024 * 1024
+                    {
+                        return Err(Error::Malformed("oversized corpus starting history".into()));
+                    }
+                    let bytes = std::fs::read(path).map_err(|e| Error::Malformed(e.to_string()))?;
+                    if Some(hash_bytes(&bytes).as_str()) != args.str("store_sha256") {
+                        return Err(Error::Malformed(
+                            "corpus starting history digest mismatch".into(),
+                        ));
+                    }
+                    let rows: Vec<Submission> = serde_json::from_slice(&bytes)
+                        .map_err(|e| Error::Malformed(e.to_string()))?;
+                    if rows.len() > 32768 {
+                        return Err(Error::Malformed("oversized corpus starting history".into()));
+                    }
+                    for row in rows {
+                        store
+                            .submit(row)
+                            .map_err(|e| Error::Malformed(e.to_string()))?;
+                    }
+                }
                 let app = Server::bundled(
                     Box::new(store),
                     Box::new(FixedClock(clock)),
@@ -54,6 +79,20 @@ impl Digest for ServicesDigest {
             },
             _ => return Err(Error::Malformed("unknown corpus protocol".into())),
         };
+        if let Some(path) = args.str("response_path") {
+            if std::fs::metadata(path)
+                .map_err(|e| Error::Malformed(e.to_string()))?
+                .len()
+                > 81924
+            {
+                return Err(Error::Malformed("oversized corpus response".into()));
+            }
+            if std::fs::read(path).map_err(|e| Error::Malformed(e.to_string()))? != reply {
+                return Err(Error::Malformed(
+                    "full corpus reply differs from oracle".into(),
+                ));
+            }
+        }
         Ok(
             json!({"sha256":hash_bytes(bytes),"response_sha256":hash_bytes(&reply),"response_length":reply.len(),"error":error}),
         )
@@ -121,4 +160,15 @@ fn corpus_shared_services() {
     );
     let count = run_dir("ws-wondergate-services", &ServicesDigest);
     eprintln!("ws-wondergate-services: {count} independent HTTP/BPL request/reply vectors passed");
+}
+
+#[test]
+fn corpus_ranking_histories() {
+    assert_ne!(
+        std::env::var("FORMATKIT_CORPUS_WRITE").as_deref(),
+        Ok("1"),
+        "never regenerate frozen ranking expectations"
+    );
+    let count = run_dir("ws-wondergate-rankings", &ServicesDigest);
+    eprintln!("ws-wondergate-rankings: {count} independent history/request/reply vectors passed");
 }

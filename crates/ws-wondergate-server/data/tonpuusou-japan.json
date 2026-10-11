@@ -1,0 +1,999 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "tonpuusou-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "Clean-room request and response grammar from the private wave-2 ROM probes. Empty histories, best-per-identity ordering, dates, score conversion and structural blank slots are newly authored revival policy; no original server data or assets."
+  },
+  "hosts": [
+    "tongpuso.wgg.channel.or.jp"
+  ],
+  "boards": {
+    "course-1": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "1"
+    },
+    "course-2": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "2"
+    },
+    "course-3": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "3"
+    },
+    "course-4": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "4"
+    },
+    "course-5": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "5"
+    },
+    "course-6": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "6"
+    },
+    "course-7": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "7"
+    },
+    "course-8": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "8"
+    },
+    "course-9": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "9"
+    },
+    "course-10": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "10"
+    },
+    "course-11": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "11"
+    },
+    "course-12": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "12"
+    },
+    "course-13": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "13"
+    },
+    "course-14": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "14"
+    },
+    "course-15": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "15"
+    }
+  },
+  "records": {
+    "row": [
+      {
+        "text": " "
+      },
+      {
+        "field": "rank",
+        "fmt": "dec",
+        "min": 1
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "score",
+        "fmt": "dec"
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "name",
+        "fmt": "raw"
+      },
+      {
+        "text": "|\r\n"
+      }
+    ],
+    "row-1": [
+      {
+        "text": " 1|"
+      },
+      {
+        "field": "score",
+        "fmt": "dec"
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "name",
+        "fmt": "raw"
+      },
+      {
+        "text": "|\r\n"
+      }
+    ],
+    "row-2": [
+      {
+        "text": " 2|"
+      },
+      {
+        "field": "score",
+        "fmt": "dec"
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "name",
+        "fmt": "raw"
+      },
+      {
+        "text": "|\r\n"
+      }
+    ],
+    "row-3": [
+      {
+        "text": " 3|"
+      },
+      {
+        "field": "score",
+        "fmt": "dec"
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "name",
+        "fmt": "raw"
+      },
+      {
+        "text": "|\r\n"
+      }
+    ]
+  },
+  "routes": [
+    {
+      "id": "ranking",
+      "method": "POST",
+      "match": {
+        "path": "/swan-ranking"
+      },
+      "source": "form",
+      "request": {
+        "*": {
+          "decode": "percent-plus",
+          "bytes": [
+            6,
+            6
+          ],
+          "alphabet": "0123456789ABCDEF"
+        },
+        "owner": {
+          "decode": "percent-plus",
+          "bytes": [
+            0,
+            16
+          ],
+          "min_byte": 32,
+          "deny": [
+            124,
+            127
+          ],
+          "trim_end": 32
+        },
+        "list": {
+          "decode": "percent-plus",
+          "equals": [
+            66,
+            69,
+            83,
+            84,
+            51,
+            124,
+            49,
+            124,
+            51
+          ]
+        }
+      },
+      "tables": {
+        "score": {
+          "delimiter": 124,
+          "optional": true,
+          "rows": {
+            "1": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{1,5}$",
+                "max_number": 65535
+              },
+              {
+                "equals": []
+              }
+            ],
+            "2": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{1,5}$",
+                "max_number": 65535
+              },
+              {
+                "equals": []
+              }
+            ],
+            "3": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{1,5}$",
+                "max_number": 65535
+              },
+              {
+                "equals": []
+              }
+            ],
+            "4": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{1,5}$",
+                "max_number": 65535
+              },
+              {
+                "equals": []
+              }
+            ],
+            "5": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{1,5}$",
+                "max_number": 65535
+              },
+              {
+                "equals": []
+              }
+            ],
+            "6": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{1,5}$",
+                "max_number": 65535
+              },
+              {
+                "equals": []
+              }
+            ],
+            "7": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{1,5}$",
+                "max_number": 65535
+              },
+              {
+                "equals": []
+              }
+            ],
+            "8": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{1,5}$",
+                "max_number": 65535
+              },
+              {
+                "equals": []
+              }
+            ],
+            "9": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{1,5}$",
+                "max_number": 65535
+              },
+              {
+                "equals": []
+              }
+            ],
+            "10": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{1,5}$",
+                "max_number": 65535
+              },
+              {
+                "equals": []
+              }
+            ],
+            "11": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{1,5}$",
+                "max_number": 65535
+              },
+              {
+                "equals": []
+              }
+            ],
+            "12": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{1,5}$",
+                "max_number": 65535
+              },
+              {
+                "equals": []
+              }
+            ],
+            "13": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{1,5}$",
+                "max_number": 65535
+              },
+              {
+                "equals": []
+              }
+            ],
+            "14": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{1,5}$",
+                "max_number": 65535
+              },
+              {
+                "equals": []
+              }
+            ],
+            "15": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{1,5}$",
+                "max_number": 65535
+              },
+              {
+                "equals": []
+              }
+            ]
+          },
+          "tag_decimal_width": [
+            1,
+            2
+          ]
+        }
+      },
+      "table_actions": [
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "1": "course-1"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "2": "course-2"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "3": "course-3"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "4": "course-4"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "5": "course-5"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "6": "course-6"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "7": "course-7"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "8": "course-8"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "9": "course-9"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "10": "course-10"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "11": "course-11"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "12": "course-12"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "13": "course-13"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "14": "course-14"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "15": "course-15"
+          }
+        }
+      ],
+      "respond": {
+        "status": 200,
+        "content_type": "application/x-swan-ranking-response",
+        "body": [
+          {
+            "text": "course=1|01|0|0|0|0\r\n BEST3=3\r\n"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-1",
+                "n": 1
+              }
+            },
+            "record": "row-1"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-1",
+                "n": 2
+              }
+            },
+            "record": "row-2"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-1",
+                "n": 3
+              }
+            },
+            "record": "row-3"
+          },
+          {
+            "text": "course=1|02|0|0|0|0\r\n BEST3=3\r\n"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-2",
+                "n": 1
+              }
+            },
+            "record": "row-1"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-2",
+                "n": 2
+              }
+            },
+            "record": "row-2"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-2",
+                "n": 3
+              }
+            },
+            "record": "row-3"
+          },
+          {
+            "text": "course=1|03|0|0|0|0\r\n BEST3=3\r\n"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-3",
+                "n": 1
+              }
+            },
+            "record": "row-1"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-3",
+                "n": 2
+              }
+            },
+            "record": "row-2"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-3",
+                "n": 3
+              }
+            },
+            "record": "row-3"
+          },
+          {
+            "text": "course=1|04|0|0|0|0\r\n BEST3=3\r\n"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-4",
+                "n": 1
+              }
+            },
+            "record": "row-1"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-4",
+                "n": 2
+              }
+            },
+            "record": "row-2"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-4",
+                "n": 3
+              }
+            },
+            "record": "row-3"
+          },
+          {
+            "text": "course=1|05|0|0|0|0\r\n BEST3=3\r\n"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-5",
+                "n": 1
+              }
+            },
+            "record": "row-1"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-5",
+                "n": 2
+              }
+            },
+            "record": "row-2"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-5",
+                "n": 3
+              }
+            },
+            "record": "row-3"
+          },
+          {
+            "text": "course=1|06|0|0|0|0\r\n BEST3=3\r\n"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-6",
+                "n": 1
+              }
+            },
+            "record": "row-1"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-6",
+                "n": 2
+              }
+            },
+            "record": "row-2"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-6",
+                "n": 3
+              }
+            },
+            "record": "row-3"
+          },
+          {
+            "text": "course=1|07|0|0|0|0\r\n BEST3=3\r\n"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-7",
+                "n": 1
+              }
+            },
+            "record": "row-1"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-7",
+                "n": 2
+              }
+            },
+            "record": "row-2"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-7",
+                "n": 3
+              }
+            },
+            "record": "row-3"
+          },
+          {
+            "text": "course=1|08|0|0|0|0\r\n BEST3=3\r\n"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-8",
+                "n": 1
+              }
+            },
+            "record": "row-1"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-8",
+                "n": 2
+              }
+            },
+            "record": "row-2"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-8",
+                "n": 3
+              }
+            },
+            "record": "row-3"
+          },
+          {
+            "text": "course=1|09|0|0|0|0\r\n BEST3=3\r\n"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-9",
+                "n": 1
+              }
+            },
+            "record": "row-1"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-9",
+                "n": 2
+              }
+            },
+            "record": "row-2"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-9",
+                "n": 3
+              }
+            },
+            "record": "row-3"
+          },
+          {
+            "text": "course=1|10|0|0|0|0\r\n BEST3=3\r\n"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-10",
+                "n": 1
+              }
+            },
+            "record": "row-1"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-10",
+                "n": 2
+              }
+            },
+            "record": "row-2"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-10",
+                "n": 3
+              }
+            },
+            "record": "row-3"
+          },
+          {
+            "text": "course=1|11|0|0|0|0\r\n BEST3=3\r\n"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-11",
+                "n": 1
+              }
+            },
+            "record": "row-1"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-11",
+                "n": 2
+              }
+            },
+            "record": "row-2"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-11",
+                "n": 3
+              }
+            },
+            "record": "row-3"
+          },
+          {
+            "text": "course=1|12|0|0|0|0\r\n BEST3=3\r\n"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-12",
+                "n": 1
+              }
+            },
+            "record": "row-1"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-12",
+                "n": 2
+              }
+            },
+            "record": "row-2"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-12",
+                "n": 3
+              }
+            },
+            "record": "row-3"
+          },
+          {
+            "text": "course=1|13|0|0|0|0\r\n BEST3=3\r\n"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-13",
+                "n": 1
+              }
+            },
+            "record": "row-1"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-13",
+                "n": 2
+              }
+            },
+            "record": "row-2"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-13",
+                "n": 3
+              }
+            },
+            "record": "row-3"
+          },
+          {
+            "text": "course=1|14|0|0|0|0\r\n BEST3=3\r\n"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-14",
+                "n": 1
+              }
+            },
+            "record": "row-1"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-14",
+                "n": 2
+              }
+            },
+            "record": "row-2"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-14",
+                "n": 3
+              }
+            },
+            "record": "row-3"
+          },
+          {
+            "text": "course=1|15|0|0|0|0\r\n BEST3=3\r\n"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-15",
+                "n": 1
+              }
+            },
+            "record": "row-1"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-15",
+                "n": 2
+              }
+            },
+            "record": "row-2"
+          },
+          {
+            "row": {
+              "place": {
+                "board": "course-15",
+                "n": 3
+              }
+            },
+            "record": "row-3"
+          }
+        ]
+      }
+    }
+  ],
+  "limits": {
+    "max_body": 65536,
+    "max_response": 81924
+  },
+  "errors": {
+    "method": 405,
+    "method_first": false
+  }
+}

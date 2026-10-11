@@ -1,0 +1,168 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "uchuu-senkan-yamato-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "Clean-room request and response grammar from the private wave-2 ROM probes. Empty histories, best-per-identity ordering, dates, score conversion and structural blank slots are newly authored revival policy; no original server data or assets."
+  },
+  "hosts": [
+    "yamato.wgg.channel.or.jp"
+  ],
+  "boards": {
+    "course-1": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "1"
+    }
+  },
+  "records": {
+    "row": [
+      {
+        "field": "rank",
+        "fmt": "dec"
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "score",
+        "fmt": "dec"
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "name",
+        "fmt": "raw"
+      },
+      {
+        "text": "|\r\n"
+      }
+    ]
+  },
+  "routes": [
+    {
+      "id": "ranking",
+      "method": "POST",
+      "match": {
+        "path": "/swan-ranking"
+      },
+      "source": "form",
+      "request": {
+        "*": {
+          "decode": "percent-plus",
+          "bytes": [
+            6,
+            6
+          ],
+          "alphabet": "0123456789ABCDEF"
+        },
+        "owner": {
+          "decode": "percent-plus",
+          "bytes": [
+            0,
+            8
+          ],
+          "min_byte": 32,
+          "deny": [
+            124,
+            127
+          ],
+          "trim_end": 32
+        },
+        "list": {
+          "decode": "percent-plus",
+          "equals": [
+            121,
+            97,
+            109,
+            97,
+            116,
+            111,
+            124,
+            49,
+            124,
+            53,
+            48
+          ]
+        }
+      },
+      "tables": {
+        "score": {
+          "delimiter": 124,
+          "optional": false,
+          "rows": {
+            "1": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{1,5}$"
+              },
+              {
+                "equals": []
+              }
+            ]
+          }
+        }
+      },
+      "table_actions": [
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "1": "course-1"
+          }
+        }
+      ],
+      "respond": {
+        "status": 200,
+        "content_type": "application/x-swan-ranking-response",
+        "body": [
+          {
+            "text": "date="
+          },
+          {
+            "date": 8
+          },
+          {
+            "text": "\r\nyamato="
+          },
+          {
+            "board": "course-1",
+            "metric": "length",
+            "fmt": "dec",
+            "limit": 1,
+            "pad_to": 1
+          },
+          {
+            "text": "\r\n"
+          },
+          {
+            "each": {
+              "leaders": {
+                "board": "course-1",
+                "limit": 1,
+                "pad_to": 1
+              }
+            },
+            "record": "row"
+          }
+        ]
+      },
+      "form_trim_end": [
+        13,
+        10
+      ]
+    }
+  ],
+  "limits": {
+    "max_body": 65536,
+    "max_response": 81924
+  },
+  "errors": {
+    "method": 405,
+    "method_first": false
+  }
+}

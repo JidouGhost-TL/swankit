@@ -307,6 +307,65 @@
             "maximum": 255
           },
           "maxItems": 512
+        },
+        "optional": {
+          "type": "boolean"
+        },
+        "default": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "maxItems": 512
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "maxItems": 512
+          },
+          "minItems": 1,
+          "maxItems": 128
+        },
+        "alphabet": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "prefix": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "suffix": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "trim_end": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "max_number": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615
+        },
+        "last_bytes": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "minItems": 1,
+          "maxItems": 256
         }
       },
       "required": [],
@@ -561,6 +620,20 @@
             },
             "zero_pad": {
               "type": "boolean"
+            },
+            "empty_bytes": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "maxItems": 512
+            },
+            "divide": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 18446744073709551615
             }
           },
           "required": [
@@ -611,6 +684,122 @@
           "required": [
             "row",
             "record"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "date": {
+              "type": "integer",
+              "enum": [
+                8,
+                14
+              ]
+            }
+          },
+          "required": [
+            "date"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "board": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "metric": {
+              "type": "string",
+              "enum": [
+                "count",
+                "position",
+                "length"
+              ]
+            },
+            "identity": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4096
+            },
+            "pad_to": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4096
+            },
+            "fmt": {
+              "$ref": "#/$defs/format"
+            },
+            "width": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 512
+            },
+            "max": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 18446744073709551615
+            },
+            "overflow_zero": {
+              "type": "boolean"
+            },
+            "zero_pad": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "board",
+            "metric",
+            "fmt"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "when": {
+              "type": "object",
+              "properties": {
+                "equals": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 255
+                    },
+                    "maxItems": 512
+                  },
+                  "maxProperties": 128
+                },
+                "absent": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "maxItems": 128
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            },
+            "segments": {
+              "$ref": "#/$defs/segments"
+            }
+          },
+          "required": [
+            "when",
+            "segments"
           ],
           "additionalProperties": false
         }
@@ -805,6 +994,29 @@
         },
         "respond": {
           "$ref": "#/$defs/respond"
+        },
+        "tables": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/table"
+          },
+          "maxProperties": 128
+        },
+        "table_actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/table-action"
+          },
+          "maxItems": 128
+        },
+        "form_trim_end": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "maxItems": 512
         }
       },
       "required": [
@@ -812,6 +1024,91 @@
         "method",
         "match",
         "respond"
+      ],
+      "additionalProperties": false
+    },
+    "table": {
+      "type": "object",
+      "properties": {
+        "tag_decimal_width": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "type": "integer", "minimum": 1, "maximum": 20 }
+        },
+        "delimiter": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 255
+        },
+        "optional": {
+          "type": "boolean"
+        },
+        "rows": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/field"
+            },
+            "minItems": 1,
+            "maxItems": 8
+          },
+          "minProperties": 1,
+          "maxProperties": 128
+        }
+      },
+      "required": [
+        "delimiter",
+        "rows"
+      ],
+      "additionalProperties": false
+    },
+    "table-action": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "identity": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 7
+        },
+        "extra": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 7
+        },
+        "boards": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "minProperties": 1,
+          "maxProperties": 128
+        }
+      },
+      "required": [
+        "field",
+        "identity",
+        "name",
+        "score",
+        "boards"
       ],
       "additionalProperties": false
     }

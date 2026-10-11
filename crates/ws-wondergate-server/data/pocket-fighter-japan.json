@@ -1,0 +1,1787 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "pocket-fighter-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "Clean-room request and response grammar from the private wave-2 ROM probes. Empty histories, best-per-identity ordering, dates, score conversion and structural blank slots are newly authored revival policy; no original server data or assets."
+  },
+  "hosts": [
+    "wgg01.channel.or.jp"
+  ],
+  "boards": {
+    "course-1": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "1"
+    },
+    "course-2": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "2"
+    },
+    "course-3": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "3"
+    },
+    "course-4": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "4"
+    },
+    "course-5": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "5"
+    },
+    "course-6": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "6"
+    },
+    "course-7": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "7"
+    },
+    "course-8": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "8"
+    },
+    "course-9": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "9"
+    },
+    "course-10": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "10"
+    },
+    "course-11": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "11"
+    },
+    "course-12": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "12"
+    },
+    "course-13": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "13"
+    },
+    "course-14": {
+      "identity": "*",
+      "order": "desc",
+      "ties": "first-best-submission",
+      "course": "14"
+    }
+  },
+  "records": {
+    "row": [
+      {
+        "field": "rank",
+        "fmt": "dec"
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "score",
+        "fmt": "dec",
+        "zero_pad": true,
+        "width": 8
+      },
+      {
+        "text": "|"
+      },
+      {
+        "field": "name",
+        "fmt": "raw",
+        "empty_bytes": [
+          32,
+          32,
+          32,
+          65
+        ]
+      },
+      {
+        "text": "\r\n"
+      }
+    ]
+  },
+  "routes": [
+    {
+      "id": "ranking",
+      "method": "POST",
+      "match": {
+        "path": "/service/swan-ranking/pocketf"
+      },
+      "source": "form",
+      "request": {
+        "*": {
+          "decode": "percent-plus",
+          "bytes": [
+            8,
+            8
+          ],
+          "alphabet": "0123456789ABCDEF"
+        },
+        "owner": {
+          "decode": "percent-plus",
+          "bytes": [
+            4,
+            4
+          ],
+          "min_byte": 32,
+          "deny": [
+            124,
+            127
+          ],
+          "trim_end": 32,
+          "last_bytes": [
+            65,
+            66,
+            67,
+            68,
+            69,
+            70,
+            71,
+            72,
+            73,
+            74,
+            75,
+            76
+          ]
+        },
+        "list": {
+          "decode": "percent-plus",
+          "equals": [
+            65,
+            78,
+            83,
+            80,
+            70,
+            95,
+            83,
+            67,
+            79,
+            82,
+            69,
+            124,
+            49,
+            124,
+            53,
+            48
+          ],
+          "optional": true
+        },
+        "group": {
+          "decode": "percent-plus",
+          "default": [
+            49
+          ],
+          "choices": [
+            [
+              49
+            ],
+            [
+              50
+            ],
+            [
+              51
+            ],
+            [
+              52
+            ],
+            [
+              53
+            ],
+            [
+              54
+            ],
+            [
+              55
+            ],
+            [
+              56
+            ],
+            [
+              57
+            ],
+            [
+              49,
+              48
+            ],
+            [
+              49,
+              49
+            ],
+            [
+              49,
+              50
+            ],
+            [
+              68
+            ],
+            [
+              69
+            ]
+          ]
+        }
+      },
+      "tables": {
+        "score": {
+          "delimiter": 124,
+          "optional": true,
+          "rows": {
+            "01": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{8,8}$"
+              }
+            ],
+            "02": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{8,8}$"
+              }
+            ],
+            "03": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{8,8}$"
+              }
+            ],
+            "04": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{8,8}$"
+              }
+            ],
+            "05": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{8,8}$"
+              }
+            ],
+            "06": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{8,8}$"
+              }
+            ],
+            "07": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{8,8}$"
+              }
+            ],
+            "08": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{8,8}$"
+              }
+            ],
+            "09": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{8,8}$"
+              }
+            ],
+            "10": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{8,8}$"
+              }
+            ],
+            "11": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{8,8}$"
+              }
+            ],
+            "12": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{8,8}$"
+              }
+            ],
+            "13": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{8,8}$"
+              }
+            ],
+            "14": [
+              {
+                "as": "u64",
+                "regex": "^[0-9]{8,8}$"
+              }
+            ]
+          }
+        }
+      },
+      "table_actions": [
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "01": "course-1"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "02": "course-2"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "03": "course-3"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "04": "course-4"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "05": "course-5"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "06": "course-6"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "07": "course-7"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "08": "course-8"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "09": "course-9"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "10": "course-10"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "11": "course-11"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "12": "course-12"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "13": "course-13"
+          }
+        },
+        {
+          "field": "score",
+          "identity": "*",
+          "name": "owner",
+          "score": 0,
+          "boards": {
+            "14": "course-14"
+          }
+        }
+      ],
+      "respond": {
+        "status": 200,
+        "content_type": "application/x-swan-ranking-response",
+        "body": [
+          {
+            "text": "date="
+          },
+          {
+            "date": 14
+          },
+          {
+            "text": "\r\n"
+          },
+          {
+            "when": {
+              "equals": {
+                "group": [
+                  49
+                ],
+                "list": [
+                  65,
+                  78,
+                  83,
+                  80,
+                  70,
+                  95,
+                  83,
+                  67,
+                  79,
+                  82,
+                  69,
+                  124,
+                  49,
+                  124,
+                  53,
+                  48
+                ]
+              },
+              "absent": []
+            },
+            "segments": [
+              {
+                "text": "course=1|1|"
+              },
+              {
+                "board": "course-1",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-1",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\nANSPF_SCORE="
+              },
+              {
+                "board": "course-1",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "each": {
+                  "leaders": {
+                    "board": "course-1",
+                    "limit": 1,
+                    "pad_to": 1
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          },
+          {
+            "when": {
+              "equals": {
+                "group": [
+                  50
+                ],
+                "list": [
+                  65,
+                  78,
+                  83,
+                  80,
+                  70,
+                  95,
+                  83,
+                  67,
+                  79,
+                  82,
+                  69,
+                  124,
+                  49,
+                  124,
+                  53,
+                  48
+                ]
+              },
+              "absent": []
+            },
+            "segments": [
+              {
+                "text": "course=1|2|"
+              },
+              {
+                "board": "course-2",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-2",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\nANSPF_SCORE="
+              },
+              {
+                "board": "course-2",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "each": {
+                  "leaders": {
+                    "board": "course-2",
+                    "limit": 1,
+                    "pad_to": 1
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          },
+          {
+            "when": {
+              "equals": {
+                "group": [
+                  51
+                ],
+                "list": [
+                  65,
+                  78,
+                  83,
+                  80,
+                  70,
+                  95,
+                  83,
+                  67,
+                  79,
+                  82,
+                  69,
+                  124,
+                  49,
+                  124,
+                  53,
+                  48
+                ]
+              },
+              "absent": []
+            },
+            "segments": [
+              {
+                "text": "course=1|3|"
+              },
+              {
+                "board": "course-3",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-3",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\nANSPF_SCORE="
+              },
+              {
+                "board": "course-3",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "each": {
+                  "leaders": {
+                    "board": "course-3",
+                    "limit": 1,
+                    "pad_to": 1
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          },
+          {
+            "when": {
+              "equals": {
+                "group": [
+                  52
+                ],
+                "list": [
+                  65,
+                  78,
+                  83,
+                  80,
+                  70,
+                  95,
+                  83,
+                  67,
+                  79,
+                  82,
+                  69,
+                  124,
+                  49,
+                  124,
+                  53,
+                  48
+                ]
+              },
+              "absent": []
+            },
+            "segments": [
+              {
+                "text": "course=1|4|"
+              },
+              {
+                "board": "course-4",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-4",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\nANSPF_SCORE="
+              },
+              {
+                "board": "course-4",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "each": {
+                  "leaders": {
+                    "board": "course-4",
+                    "limit": 1,
+                    "pad_to": 1
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          },
+          {
+            "when": {
+              "equals": {
+                "group": [
+                  53
+                ],
+                "list": [
+                  65,
+                  78,
+                  83,
+                  80,
+                  70,
+                  95,
+                  83,
+                  67,
+                  79,
+                  82,
+                  69,
+                  124,
+                  49,
+                  124,
+                  53,
+                  48
+                ]
+              },
+              "absent": []
+            },
+            "segments": [
+              {
+                "text": "course=1|5|"
+              },
+              {
+                "board": "course-5",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-5",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\nANSPF_SCORE="
+              },
+              {
+                "board": "course-5",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "each": {
+                  "leaders": {
+                    "board": "course-5",
+                    "limit": 1,
+                    "pad_to": 1
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          },
+          {
+            "when": {
+              "equals": {
+                "group": [
+                  54
+                ],
+                "list": [
+                  65,
+                  78,
+                  83,
+                  80,
+                  70,
+                  95,
+                  83,
+                  67,
+                  79,
+                  82,
+                  69,
+                  124,
+                  49,
+                  124,
+                  53,
+                  48
+                ]
+              },
+              "absent": []
+            },
+            "segments": [
+              {
+                "text": "course=1|6|"
+              },
+              {
+                "board": "course-6",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-6",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\nANSPF_SCORE="
+              },
+              {
+                "board": "course-6",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "each": {
+                  "leaders": {
+                    "board": "course-6",
+                    "limit": 1,
+                    "pad_to": 1
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          },
+          {
+            "when": {
+              "equals": {
+                "group": [
+                  55
+                ],
+                "list": [
+                  65,
+                  78,
+                  83,
+                  80,
+                  70,
+                  95,
+                  83,
+                  67,
+                  79,
+                  82,
+                  69,
+                  124,
+                  49,
+                  124,
+                  53,
+                  48
+                ]
+              },
+              "absent": []
+            },
+            "segments": [
+              {
+                "text": "course=1|7|"
+              },
+              {
+                "board": "course-7",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-7",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\nANSPF_SCORE="
+              },
+              {
+                "board": "course-7",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "each": {
+                  "leaders": {
+                    "board": "course-7",
+                    "limit": 1,
+                    "pad_to": 1
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          },
+          {
+            "when": {
+              "equals": {
+                "group": [
+                  56
+                ],
+                "list": [
+                  65,
+                  78,
+                  83,
+                  80,
+                  70,
+                  95,
+                  83,
+                  67,
+                  79,
+                  82,
+                  69,
+                  124,
+                  49,
+                  124,
+                  53,
+                  48
+                ]
+              },
+              "absent": []
+            },
+            "segments": [
+              {
+                "text": "course=1|8|"
+              },
+              {
+                "board": "course-8",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-8",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\nANSPF_SCORE="
+              },
+              {
+                "board": "course-8",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "each": {
+                  "leaders": {
+                    "board": "course-8",
+                    "limit": 1,
+                    "pad_to": 1
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          },
+          {
+            "when": {
+              "equals": {
+                "group": [
+                  57
+                ],
+                "list": [
+                  65,
+                  78,
+                  83,
+                  80,
+                  70,
+                  95,
+                  83,
+                  67,
+                  79,
+                  82,
+                  69,
+                  124,
+                  49,
+                  124,
+                  53,
+                  48
+                ]
+              },
+              "absent": []
+            },
+            "segments": [
+              {
+                "text": "course=1|9|"
+              },
+              {
+                "board": "course-9",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-9",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\nANSPF_SCORE="
+              },
+              {
+                "board": "course-9",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "each": {
+                  "leaders": {
+                    "board": "course-9",
+                    "limit": 1,
+                    "pad_to": 1
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          },
+          {
+            "when": {
+              "equals": {
+                "group": [
+                  49,
+                  48
+                ],
+                "list": [
+                  65,
+                  78,
+                  83,
+                  80,
+                  70,
+                  95,
+                  83,
+                  67,
+                  79,
+                  82,
+                  69,
+                  124,
+                  49,
+                  124,
+                  53,
+                  48
+                ]
+              },
+              "absent": []
+            },
+            "segments": [
+              {
+                "text": "course=1|10|"
+              },
+              {
+                "board": "course-10",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-10",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\nANSPF_SCORE="
+              },
+              {
+                "board": "course-10",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "each": {
+                  "leaders": {
+                    "board": "course-10",
+                    "limit": 1,
+                    "pad_to": 1
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          },
+          {
+            "when": {
+              "equals": {
+                "group": [
+                  49,
+                  49
+                ],
+                "list": [
+                  65,
+                  78,
+                  83,
+                  80,
+                  70,
+                  95,
+                  83,
+                  67,
+                  79,
+                  82,
+                  69,
+                  124,
+                  49,
+                  124,
+                  53,
+                  48
+                ]
+              },
+              "absent": []
+            },
+            "segments": [
+              {
+                "text": "course=1|11|"
+              },
+              {
+                "board": "course-11",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-11",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\nANSPF_SCORE="
+              },
+              {
+                "board": "course-11",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "each": {
+                  "leaders": {
+                    "board": "course-11",
+                    "limit": 1,
+                    "pad_to": 1
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          },
+          {
+            "when": {
+              "equals": {
+                "group": [
+                  49,
+                  50
+                ],
+                "list": [
+                  65,
+                  78,
+                  83,
+                  80,
+                  70,
+                  95,
+                  83,
+                  67,
+                  79,
+                  82,
+                  69,
+                  124,
+                  49,
+                  124,
+                  53,
+                  48
+                ]
+              },
+              "absent": []
+            },
+            "segments": [
+              {
+                "text": "course=1|12|"
+              },
+              {
+                "board": "course-12",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-12",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\nANSPF_SCORE="
+              },
+              {
+                "board": "course-12",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "each": {
+                  "leaders": {
+                    "board": "course-12",
+                    "limit": 1,
+                    "pad_to": 1
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          },
+          {
+            "when": {
+              "equals": {
+                "group": [
+                  68
+                ],
+                "list": [
+                  65,
+                  78,
+                  83,
+                  80,
+                  70,
+                  95,
+                  83,
+                  67,
+                  79,
+                  82,
+                  69,
+                  124,
+                  49,
+                  124,
+                  53,
+                  48
+                ]
+              },
+              "absent": []
+            },
+            "segments": [
+              {
+                "text": "course=1|13|"
+              },
+              {
+                "board": "course-13",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-13",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\nANSPF_SCORE="
+              },
+              {
+                "board": "course-13",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "each": {
+                  "leaders": {
+                    "board": "course-13",
+                    "limit": 1,
+                    "pad_to": 1
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          },
+          {
+            "when": {
+              "equals": {
+                "group": [
+                  69
+                ],
+                "list": [
+                  65,
+                  78,
+                  83,
+                  80,
+                  70,
+                  95,
+                  83,
+                  67,
+                  79,
+                  82,
+                  69,
+                  124,
+                  49,
+                  124,
+                  53,
+                  48
+                ]
+              },
+              "absent": []
+            },
+            "segments": [
+              {
+                "text": "course=1|14|"
+              },
+              {
+                "board": "course-14",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-14",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\nANSPF_SCORE="
+              },
+              {
+                "board": "course-14",
+                "metric": "length",
+                "fmt": "dec",
+                "limit": 1,
+                "pad_to": 1
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "each": {
+                  "leaders": {
+                    "board": "course-14",
+                    "limit": 1,
+                    "pad_to": 1
+                  }
+                },
+                "record": "row"
+              }
+            ]
+          },
+          {
+            "when": {
+              "equals": {},
+              "absent": [
+                "list"
+              ]
+            },
+            "segments": [
+              {
+                "text": "course=1|1|"
+              },
+              {
+                "board": "course-1",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-1",
+                "metric": "count",
+                "fmt": "dec",
+                "max": 50
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "text": "course=1|2|"
+              },
+              {
+                "board": "course-2",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-2",
+                "metric": "count",
+                "fmt": "dec",
+                "max": 50
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "text": "course=1|3|"
+              },
+              {
+                "board": "course-3",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-3",
+                "metric": "count",
+                "fmt": "dec",
+                "max": 50
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "text": "course=1|4|"
+              },
+              {
+                "board": "course-4",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-4",
+                "metric": "count",
+                "fmt": "dec",
+                "max": 50
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "text": "course=1|5|"
+              },
+              {
+                "board": "course-5",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-5",
+                "metric": "count",
+                "fmt": "dec",
+                "max": 50
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "text": "course=1|6|"
+              },
+              {
+                "board": "course-6",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-6",
+                "metric": "count",
+                "fmt": "dec",
+                "max": 50
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "text": "course=1|7|"
+              },
+              {
+                "board": "course-7",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-7",
+                "metric": "count",
+                "fmt": "dec",
+                "max": 50
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "text": "course=1|8|"
+              },
+              {
+                "board": "course-8",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-8",
+                "metric": "count",
+                "fmt": "dec",
+                "max": 50
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "text": "course=1|9|"
+              },
+              {
+                "board": "course-9",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-9",
+                "metric": "count",
+                "fmt": "dec",
+                "max": 50
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "text": "course=1|10|"
+              },
+              {
+                "board": "course-10",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-10",
+                "metric": "count",
+                "fmt": "dec",
+                "max": 50
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "text": "course=1|11|"
+              },
+              {
+                "board": "course-11",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-11",
+                "metric": "count",
+                "fmt": "dec",
+                "max": 50
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "text": "course=1|12|"
+              },
+              {
+                "board": "course-12",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-12",
+                "metric": "count",
+                "fmt": "dec",
+                "max": 50
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "text": "course=1|13|"
+              },
+              {
+                "board": "course-13",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-13",
+                "metric": "count",
+                "fmt": "dec",
+                "max": 50
+              },
+              {
+                "text": "\r\n"
+              },
+              {
+                "text": "course=1|14|"
+              },
+              {
+                "board": "course-14",
+                "metric": "count",
+                "fmt": "dec"
+              },
+              {
+                "text": "|0|0|"
+              },
+              {
+                "board": "course-14",
+                "metric": "count",
+                "fmt": "dec",
+                "max": 50
+              },
+              {
+                "text": "\r\n"
+              }
+            ]
+          }
+        ]
+      },
+      "form_trim_end": [
+        0,
+        13,
+        10
+      ]
+    }
+  ],
+  "limits": {
+    "max_body": 65536,
+    "max_response": 81924
+  },
+  "errors": {
+    "method": 405,
+    "method_first": false
+  }
+}

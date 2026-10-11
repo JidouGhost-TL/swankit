@@ -113,7 +113,7 @@ fn semantic_validation_rejects_ambiguous_or_unexecutable_programs() {
         ),
         ("/records/row/0/field", json!("unknown")),
         ("/records/row/0/fmt", json!("raw")),
-        ("/records/row/2/width", json!(5)),
+        ("/records/row/2/width", json!(513)),
         (
             "/routes/0/respond/body",
             json!([{"row":{"place":{"board":"missing","n":1}},"record":"row"}]),
