@@ -32,7 +32,14 @@ response sizes. Unknown properties, primitives and plugins fail to load.
 | `limits` | Required `max_body` and `max_response`, in bytes, including envelopes and all HTTP bytes respectively. |
 | `errors` | Optional default `host_other_path`, `method` and `invalid` status codes (400/404/405), plus `method_first`. |
 
-A route has `id`, `method` (`GET`/`POST`), `match` and `respond`.
+A route has `id`, `method` (`GET`/`POST`/`HEAD`), `match` and `respond`.
+An explicit `HEAD` route renders the declared body to determine Content-Length,
+then sends headers only. HEAD routes cannot mutate boards.
+Optional `bare_get: true` accepts exactly `GET <declared-path>\r\n\r\n`
+and sends the rendered body without HTTP headers. It requires a static GET
+route with one host, no query selectors, request fields or actions. Missing or
+ambiguous declarations reject the request; strict HTTP parsing remains the
+default. Received wire bytes are preserved.
 `match.path` is an ASCII origin path. Optional `query_exact` compares the raw
 query without percent decoding; optional `query_keys` matches the exact set of
 field keys. These two selectors are mutually exclusive. Without either, the

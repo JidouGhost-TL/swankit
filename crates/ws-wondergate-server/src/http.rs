@@ -15,12 +15,21 @@ pub struct Request {
     pub query: String,
     pub headers: Headers,
     pub body: Vec<u8>,
+    /// Explicit legacy wire grammar selected by a static route.
+    pub headerless: bool,
 }
 fn latin1(bytes: &[u8]) -> String {
     bytes.iter().map(|byte| char::from(*byte)).collect()
 }
 fn header_end(raw: &[u8]) -> Option<usize> {
     raw.windows(4).position(|part| part == b"\r\n\r\n")
+}
+// Some zero-body clients terminate HEAD/GET with one additional CRLF.
+// This is a bounded trailer, never a second request or arbitrary body.
+fn zero_body_tail(method: &str, tail: &[u8], partial: bool) -> bool {
+    tail.is_empty()
+        || tail == [0]
+        || (matches!(method, "HEAD" | "GET") && (tail == b"\r\n" || (partial && tail == b"\r")))
 }
 fn headers(head: &[u8]) -> Result<(String, String, Headers)> {
     let head = latin1(head);
@@ -95,7 +104,7 @@ pub fn parse(raw: &[u8], limits: &Limits) -> Result<Request> {
 }
 pub fn parse_with_aliases(raw: &[u8], limits: &Limits, aliases: &[[String; 2]]) -> Result<Request> {
     limits.validate()?;
-    if raw.len() > limits.max_header + 4 + limits.max_body + 1 {
+    if raw.len() > limits.max_header + 4 + limits.max_body + 2 {
         return Err(malformed("oversized HTTP input"));
     }
     let end = header_end(raw).ok_or_else(|| malformed("missing HTTP headers"))?;
@@ -107,7 +116,7 @@ pub fn parse_with_aliases(raw: &[u8], limits: &Limits, aliases: &[[String; 2]]) 
     reader.skip(4)?;
     let length = body_length(&headers, limits)?;
     let body = reader.rest();
-    if body.len() != length && !(length == 0 && body == [0]) {
+    if body.len() != length && !(length == 0 && zero_body_tail(&method, body, false)) {
         return Err(malformed("body length mismatch"));
     }
     // urlsplit discards these controls and leading C0/space, then fragments.
@@ -173,6 +182,7 @@ pub fn parse_with_aliases(raw: &[u8], limits: &Limits, aliases: &[[String; 2]]) 
         query: query.into(),
         headers,
         body: body[..length].to_vec(),
+        headerless: false,
     })
 }
 /// Content-Length, Connection, Content-Type (if supplied), then extra fields.
@@ -244,6 +254,7 @@ pub struct Assembler {
     limits: Limits,
     expected: Option<(usize, usize)>,
     failed: bool,
+    method: String,
 }
 impl Assembler {
     pub fn new(limits: Limits) -> Self {
@@ -252,6 +263,7 @@ impl Assembler {
             limits,
             expected: None,
             failed: false,
+            method: String::new(),
         }
     }
     pub fn raw(&self) -> &[u8] {
@@ -272,7 +284,7 @@ impl Assembler {
     }
     fn push(&mut self, bytes: &[u8]) -> Result<bool> {
         self.limits.validate()?;
-        let bound = self.limits.max_header + 4 + self.limits.max_body + 1;
+        let bound = self.limits.max_header + 4 + self.limits.max_body + 2;
         if bytes.len() > bound.saturating_sub(self.raw.len()) {
             return Err(malformed("oversized HTTP input"));
         }
@@ -282,7 +294,8 @@ impl Assembler {
                 if end > self.limits.max_header {
                     return Err(malformed("oversized HTTP headers"));
                 }
-                let (_, _, headers) = headers(&self.raw[..end])?;
+                let (method, _, headers) = headers(&self.raw[..end])?;
+                self.method = method;
                 self.expected = Some((end + 4, body_length(&headers, &self.limits)?));
             } else if self.raw.len() > self.limits.max_header + 3 {
                 return Err(malformed("oversized HTTP headers"));
@@ -290,18 +303,21 @@ impl Assembler {
         }
         if let Some((end, length)) = self.expected {
             let expected = end + length;
-            if self.raw.len() > expected && !(length == 0 && self.raw[expected..] == [0]) {
+            if self.raw.len() > expected
+                && !(length == 0 && zero_body_tail(&self.method, &self.raw[expected..], true))
+            {
                 return Err(malformed("body length mismatch"));
             }
-            return Ok(self.raw.len() >= expected);
+            return Ok(self.raw.len() >= expected && self.raw[expected..] != *b"\r");
         }
         Ok(false)
     }
     pub fn finish(&self) -> Result<()> {
         if self.failed
-            || self
-                .expected
-                .is_none_or(|(end, length)| self.raw.len() < end + length)
+            || self.expected.is_none_or(|(end, length)| {
+                self.raw.len() < end + length
+                    || (length == 0 && !zero_body_tail(&self.method, &self.raw[end..], false))
+            })
         {
             return Err(malformed("early EOF"));
         }

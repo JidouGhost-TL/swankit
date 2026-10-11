@@ -203,9 +203,20 @@ pub(crate) fn handle(
         }
     }
     // Serialization/configuration failures are server failures, never client input.
-    let reply = cx
+    let mut reply = cx
         .respond(&route.respond)
         .map_err(|e| Error::Unsupported(format!("response: {e}")))?;
+    if request.method == "HEAD" || request.headerless {
+        let end = reply
+            .windows(4)
+            .position(|b| b == b"\r\n\r\n")
+            .ok_or_else(|| malformed("missing response headers"))?;
+        if request.headerless {
+            reply.drain(..end + 4);
+        } else {
+            reply.truncate(end + 4);
+        }
+    }
     Ok(Some(reply))
 }
 struct Context<'a> {

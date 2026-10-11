@@ -174,6 +174,8 @@ pub(crate) struct Errors {
 pub(crate) struct Route {
     pub id: String,
     pub method: String,
+    #[serde(default)]
+    pub bare_get: bool,
     #[serde(rename = "match")]
     pub matcher: Match,
     #[serde(default)]
@@ -537,7 +539,7 @@ impl Spec {
         for (i, route) in self.routes.iter().enumerate() {
             if !identifier(&route.id)
                 || !ids.insert(&route.id)
-                || !matches!(route.method.as_str(), "GET" | "POST")
+                || !matches!(route.method.as_str(), "GET" | "POST" | "HEAD")
                 || !route.matcher.path.starts_with('/')
                 || !route.matcher.path.is_ascii()
                 || route.matcher.path.contains(['?', '#', '\r', '\n', ' '])
@@ -549,6 +551,25 @@ impl Spec {
             }
             if matches!(route.source, Source::Form) && route.method != "POST" {
                 return Err(malformed("form fields require POST"));
+            }
+            if route.bare_get
+                && (route.method != "GET"
+                    || self.hosts.len() != 1
+                    || route.matcher.query_exact.is_some()
+                    || route.matcher.query_keys.is_some()
+                    || !route.request.is_empty()
+                    || !route.tables.is_empty()
+                    || !route.actions.is_empty()
+                    || !route.table_actions.is_empty())
+            {
+                return Err(malformed(
+                    "bare GET requires one host and a static exact-path route",
+                ));
+            }
+            if route.method == "HEAD"
+                && (!route.actions.is_empty() || !route.table_actions.is_empty())
+            {
+                return Err(malformed("HEAD routes cannot mutate boards"));
             }
             route.errors.validate()?;
             for (name, field) in &route.request {

@@ -368,3 +368,68 @@ fn persistent_http_connection_closes_at_its_message_budget() {
     assert!(records.iter().all(|r| r["error"].is_null()));
     verify(&wire, &records);
 }
+
+#[test]
+fn fragmented_zero_body_trailer_and_explicit_bare_get_preserve_wire() {
+    let temp = Temp::new();
+    let definition = Definition::from_json(
+        r#"{
+      "schema":"swankit-wondergate-title/1", "id":"synthetic-legacy",
+      "provenance":{"server":"new","notes":"Synthetic wire framing"},
+      "hosts":["synthetic.test"], "boards":{}, "records":{},
+      "routes":[
+        {"id":"metadata","method":"HEAD","match":{"path":"/index"},
+         "respond":{"status":200,"body":[{"text":"placeholder"}]}},
+        {"id":"body","method":"GET","bare_get":true,"match":{"path":"/index"},
+         "respond":{"status":200,"body":[{"text":"placeholder"}]}}
+      ], "limits":{"max_body":128,"max_response":256}
+    }"#,
+    )
+    .unwrap();
+    let server = ws_wondergate_server::Server::from_definitions(
+        vec![definition],
+        Box::new(ws_wondergate_server::store::MemoryStore::new()),
+        Box::new(ws_wondergate_server::FixedClock(stamp())),
+        Box::new(ws_wondergate_server::SeededRng::new(1)),
+    )
+    .unwrap();
+    let wire = Arc::new(WireLog::open(temp.0.join("wire")).unwrap());
+    let mut tcp = TcpServer::bind(
+        server,
+        Config {
+            http: ([127, 0, 0, 1], 0).into(),
+            bpl: ([127, 0, 0, 1], 0).into(),
+            timeout: Duration::from_millis(300),
+            ..Config::default()
+        },
+        wire.clone(),
+    )
+    .unwrap();
+    let raw = b"HEAD /index HTTP/1.1\r\nHost: synthetic.test\r\n\r\n\r\n";
+    let mut stream = TcpStream::connect(tcp.http_addr()).unwrap();
+    stream
+        .set_read_timeout(Some(Duration::from_secs(3)))
+        .unwrap();
+    stream.write_all(&raw[..raw.len() - 2]).unwrap();
+    std::thread::sleep(Duration::from_millis(5));
+    stream.write_all(b"\r").unwrap();
+    std::thread::sleep(Duration::from_millis(5));
+    stream.write_all(b"\n").unwrap();
+    stream.shutdown(Shutdown::Write).unwrap();
+    let mut reply = Vec::new();
+    stream.read_to_end(&mut reply).unwrap();
+    assert!(reply.ends_with(b"\r\n\r\n"));
+    assert!(String::from_utf8(reply)
+        .unwrap()
+        .contains("Content-Length: 11\r\n"));
+    let bare = b"GET /index\r\n\r\n";
+    assert_eq!(exchange(tcp.http_addr(), bare, true), b"placeholder");
+    tcp.shutdown().unwrap();
+    let rows = entries(&wire);
+    assert_eq!(rows.len(), 2);
+    assert!(rows.iter().all(|r| r["error"].is_null()));
+    let request =
+        std::fs::read(wire.directory().join(rows[0]["request"].as_str().unwrap())).unwrap();
+    assert_eq!(request, raw);
+    verify(&wire, &rows);
+}

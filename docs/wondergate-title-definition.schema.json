@@ -972,12 +972,14 @@
           "type": "string",
           "enum": [
             "GET",
-            "POST"
+            "POST",
+            "HEAD"
           ]
         },
         "match": {
           "$ref": "#/$defs/match"
         },
+        "bare_get": {"type": "boolean"},
         "source": {
           "type": "string",
           "enum": [

@@ -354,3 +354,59 @@ fn clock_rollover_uses_one_timestamp_for_the_entire_transaction() {
         &[1, 11, 59, 1, 11, 59]
     );
 }
+
+#[test]
+fn explicit_head_preserves_rendered_length_without_body_or_actions() {
+    let mut value = program();
+    value["routes"][0]["method"] = json!("HEAD");
+    value["routes"][0]["actions"] = json!([]);
+    value["routes"][0]["respond"]["body"] = json!([{"text":"placeholder"}]);
+    let server = app(&value, Box::new(MemoryStore::new()));
+    let reply = server.dispatch_http(&request("HEAD", "/submit?nm=A&sc=4", &[], "text/plain"));
+    let header = std::str::from_utf8(&reply).unwrap();
+    assert!(header.starts_with("HTTP/1.1 200 OK\r\n"));
+    assert!(header.contains("Content-Length: 11\r\n"));
+    assert!(header.ends_with("\r\n\r\n"));
+    assert!(!header.contains("placeholder"));
+    value["routes"][0]["actions"] = program()["routes"][0]["actions"].clone();
+    assert!(Definition::from_json(&value.to_string()).is_err());
+}
+
+#[test]
+fn bare_get_requires_explicit_exact_static_route_and_unambiguous_host() {
+    let mut value = program();
+    value["routes"][0]["match"] = json!({"path":"/index"});
+    value["routes"][0]["request"] = json!({});
+    value["routes"][0]["actions"] = json!([]);
+    value["routes"][0]["respond"]["body"] = json!([{"text":"placeholder"}]);
+    let raw = b"GET /index\r\n\r\n";
+    assert!(app(&value, Box::new(MemoryStore::new()))
+        .try_dispatch_http(raw)
+        .is_err());
+    value["routes"][0]["bare_get"] = json!(true);
+    let server = app(&value, Box::new(MemoryStore::new()));
+    assert_eq!(server.try_dispatch_http(raw).unwrap(), b"placeholder");
+    for bad in [
+        b"GET /other\r\n\r\n".as_slice(),
+        b"GET /index?x=1\r\n\r\n",
+        b"GET /index\r\n\r\nGET /index\r\n\r\n",
+        b"POST /index\r\n\r\n",
+        b"GET /index\r\n\r\n\0",
+    ] {
+        assert!(server.try_dispatch_http(bad).is_err());
+    }
+    value["routes"][0]["method"] = json!("HEAD");
+    assert!(Definition::from_json(&value.to_string()).is_err());
+    value["routes"][0]["method"] = json!("GET");
+    let first = load(&value);
+    value["id"] = json!("another");
+    value["hosts"] = json!(["another.test"]);
+    let ambiguous = Server::from_definitions(
+        vec![first, load(&value)],
+        Box::new(MemoryStore::new()),
+        Box::new(FixedClock(stamp())),
+        Box::new(SeededRng::new(1)),
+    )
+    .unwrap();
+    assert!(ambiguous.try_dispatch_http(raw).is_err());
+}

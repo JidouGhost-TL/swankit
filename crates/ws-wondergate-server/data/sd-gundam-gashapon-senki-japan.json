@@ -1,0 +1,21 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "sd-gundam-gashapon-senki-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "ROM-proven HEAD/GET index path: file 06EB39, HEAD builder 057F1E and GET builder 05804A. Parser 06EB71 requires :[MAP, line reader 06EC64 skips to LF, and 06EC35 treats 1A as EOF; 06EBC2 initializes the entry count to zero. This empty index is a newly authored placeholder, not recovered original server data. Original index entries and downloadable map payloads remain unknown. No map route is fabricated."
+  },
+  "hosts": ["wgg01.channel.or.jp"],
+  "boards": {}, "values": {}, "records": {},
+  "routes": [
+    {"id": "index-metadata", "method": "HEAD",
+      "match": {"path": "/download/sdgundame/INDEX.TXT"},
+      "respond": {"status": 200, "keep_alive": true, "content_type": "text/plain",
+        "body": [{"text": ":[MAP]\r\n"}, {"bytes": [26]}]}},
+    {"id": "empty-index-placeholder", "method": "GET", "bare_get": true,
+      "match": {"path": "/download/sdgundame/INDEX.TXT"},
+      "respond": {"status": 200, "keep_alive": true, "content_type": "text/plain",
+        "body": [{"text": ":[MAP]\r\n"}, {"bytes": [26]}]}}
+  ],
+  "limits": {"max_body": 2048, "max_response": 256}
+}

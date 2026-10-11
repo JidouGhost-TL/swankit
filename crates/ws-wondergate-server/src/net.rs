@@ -413,30 +413,48 @@ fn read_http(
             return Err(other("early EOF"));
         }
         raw.extend_from_slice(&chunk[..n]);
-        if input.feed(&chunk[..n]).map_err(io::Error::other)? {
+        let complete = match input.feed(&chunk[..n]) {
+            Ok(complete) => complete,
+            Err(e) => {
+                return server
+                    .parse_http(raw)
+                    .map(|_| ())
+                    .map_err(|_| io::Error::other(e));
+            }
+        };
+        if complete {
             break;
         }
     }
     // The client's strlen+1 byte can be a separate TCP segment. Keep it in raw.
     if input.body_size() == Some(0) && raw.ends_with(b"\r\n\r\n") {
-        read_window(stream, deadline, Duration::from_millis(50))?;
-        let mut byte = [0];
-        let read = stream.read(&mut byte);
-        stream.set_read_timeout(Some(timeout))?;
-        match read {
-            Ok(1) => {
-                raw.push(byte[0]);
-                input.feed(&byte).map_err(io::Error::other)?;
+        for _ in 0..2 {
+            read_window(stream, deadline, Duration::from_millis(50))?;
+            let mut byte = [0];
+            let read = stream.read(&mut byte);
+            stream.set_read_timeout(Some(timeout))?;
+            match read {
+                Ok(1) => {
+                    raw.push(byte[0]);
+                    input.feed(&byte).map_err(io::Error::other)?;
+                    if byte[0] != b'\r' {
+                        break;
+                    }
+                }
+                Ok(_) => break,
+                Err(e)
+                    if matches!(
+                        e.kind(),
+                        io::ErrorKind::WouldBlock | io::ErrorKind::TimedOut
+                    ) =>
+                {
+                    break
+                }
+                Err(e) => return Err(e),
             }
-            Ok(_) => (),
-            Err(e)
-                if matches!(
-                    e.kind(),
-                    io::ErrorKind::WouldBlock | io::ErrorKind::TimedOut
-                ) => {}
-            Err(e) => return Err(e),
         }
     }
+    input.finish().map_err(io::Error::other)?;
     http::parse_with_aliases(raw, &server.limits(), &server.services().http_aliases)
         .map_err(io::Error::other)?;
     Ok(())

@@ -177,8 +177,44 @@ impl Server {
     pub fn title_definitions(&self) -> &[Definition] {
         &self.inner.definitions
     }
+    pub(crate) fn parse_http(&self, raw: &[u8]) -> Result<http::Request> {
+        let strict = http::parse_with_aliases(raw, &self.limits(), &self.services().http_aliases);
+        if strict.is_ok() || raw.len() > self.limits().max_header + 4 {
+            return strict;
+        }
+        let mut selected = None;
+        for definition in self.title_definitions() {
+            for route in &definition.spec.routes {
+                if route.bare_get && raw == format!("GET {}\r\n\r\n", route.matcher.path).as_bytes()
+                {
+                    if selected.is_some() {
+                        return Err(malformed("ambiguous bare GET route"));
+                    }
+                    selected = Some((definition, route));
+                }
+            }
+        }
+        let Some((definition, route)) = selected else {
+            return strict;
+        };
+        // Use the ordinary Formatkit-backed parser for the declared semantics.
+        // Preserve received bytes in Request and the wire log.
+        let canonical = format!(
+            "GET {} HTTP/1.0\r\nHost: {}\r\n\r\n",
+            route.matcher.path,
+            definition.hosts()[0]
+        );
+        let mut request = http::parse_with_aliases(
+            canonical.as_bytes(),
+            &self.limits(),
+            &self.services().http_aliases,
+        )?;
+        request.raw = raw.to_vec();
+        request.headerless = true;
+        Ok(request)
+    }
     pub fn try_dispatch_http(&self, raw: &[u8]) -> Result<Vec<u8>> {
-        let request = http::parse_with_aliases(raw, &self.limits(), &self.services().http_aliases)?;
+        let request = self.parse_http(raw)?;
         let mut rng = self
             .inner
             .rng
