@@ -405,3 +405,47 @@ fn discover_draft_is_verified_and_wrong_identity_writes_nothing() {
     );
     assert!(!std::path::Path::new(&absent).exists());
 }
+
+#[test]
+fn snapshot_scanline_ports_change_only_the_selected_rows() {
+    let f = Fixture::new();
+    let mut snapshot = vec![0; 65536 + 256];
+    snapshot[65536 + 0x1c] = 0xf0;
+    let snap = f.put("line-snapshot", &snapshot);
+    let mut rows = vec![0; 144 * 256];
+    for y in 0..144 {
+        rows[y * 256 + 0x1c] = 0xf0;
+        if y >= 72 {
+            rows[y * 256 + 1] = 1;
+        }
+    }
+    let ports = f.put("line-ports", &rows);
+    let output = f.path("lines.png");
+    ok(&[
+        "tiles",
+        &snap,
+        "--snapshot",
+        "--line-ports",
+        &ports,
+        "--output",
+        &output,
+        "--json",
+    ]);
+    let pixels = png(&output, 224, 144);
+    let stride = 1 + 224 * 4;
+    assert_ne!(&pixels[1..5], &pixels[100 * stride + 1..100 * stride + 5]);
+    assert_eq!(&pixels[1..5], &pixels[71 * stride + 1..71 * stride + 5]);
+    let short = f.put("short-ports", &rows[..rows.len() - 1]);
+    assert!(!command(&[
+        "tiles",
+        &snap,
+        "--snapshot",
+        "--line-ports",
+        &short,
+        "--output",
+        &f.path("bad.png"),
+        "--json"
+    ])
+    .status
+    .success());
+}

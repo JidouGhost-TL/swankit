@@ -286,3 +286,13 @@ references and explicitly selected external family profiles. See
 draft preserves uncertainty and does not establish exhaustive references or
 free space. New grammar witnesses outside the current asset-map codec enum
 remain labelled in the report sidecar.
+
+`swankit tiles SNAPSHOT --snapshot --line-ports PORTS --output PNG` accepts
+144 consecutive 256-byte port rows, one per visible scanline. It composes those
+rows over the snapshot's single RAM image with the existing `ws-gfx` renderer.
+This captures scroll/window/register changes; intra-frame palette RAM and tile
+updates still require additional RAM evidence. Use `--color` for a color hardware
+capture, independently of the saved value of a mono-only/unavailable register.
+`tools/capture-scenes.lua` can capture existing states, input replays, RAM, ports,
+screenshots and (with `RASTER=1`) scanline ports through the emulator debugger API.
+Its environment inputs are described in the script; assets remain external.

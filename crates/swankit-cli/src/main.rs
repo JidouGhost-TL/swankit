@@ -20,7 +20,7 @@ const HELP: &str = "swankit: WonderSwan format tools
   info ROM [--json]
   detect FILE... [--json]
   tiles FILE --format 2bpp|4bpp-planar|4bpp-packed --offset N --length N --output PNG
-  tiles SNAPSHOT --snapshot [--color] [--profile hardware|java] --output PNG
+  tiles SNAPSHOT --snapshot [--color] [--profile hardware|java] [--line-ports FILE] --output PNG
   extract text ROM --def JSON_OR_ID --table NAME [--output JSON] [--json]
   extract font ROM --def JSON_OR_ID --font NAME --output PNG [--columns N]
   extract sound FILE --def JSON [--output JSON] [--json]
@@ -231,12 +231,22 @@ fn run(words: Vec<String>) -> Result<()> {
                     "java" => gfx::RenderProfile::JavaDiagnostic,
                     _ => return Err("invalid render profile".into()),
                 };
+                let line_ports = a.value("--line-ports");
                 a.finish(2)?;
-                Toolkit::new()?.snapshot(
-                    &io::read(&a.positional[1], 65536 + 256)?,
-                    color,
-                    profile,
-                )?
+                let bytes = io::read(&a.positional[1], 65536 + 256)?;
+                if let Some(path) = line_ports {
+                    let ports = io::read(&path, 144 * 256)?;
+                    if ports.len() != 144 * 256 {
+                        return Err("line ports must contain 144 rows of 256 bytes".into());
+                    }
+                    let rows: Vec<[u8; 256]> = ports
+                        .chunks_exact(256)
+                        .map(|row| row.try_into().unwrap())
+                        .collect();
+                    Toolkit::new()?.snapshot_with_line_ports(&bytes, color, profile, &rows)?
+                } else {
+                    Toolkit::new()?.snapshot(&bytes, color, profile)?
+                }
             } else {
                 let format = match a.require("--format")?.as_str() {
                     "2bpp" => gfx::TileFormat::Bpp2,

@@ -349,6 +349,15 @@ impl SoundDefinition {
 }
 
 pub fn snapshot(bytes: &[u8], color: bool, profile: gfx::RenderProfile) -> Result<Image> {
+    snapshot_with_line_ports(bytes, color, profile, None)
+}
+
+pub fn snapshot_with_line_ports(
+    bytes: &[u8],
+    color: bool,
+    profile: gfx::RenderProfile,
+    rows: Option<&[[u8; 256]]>,
+) -> Result<Image> {
     let mut r = Reader::new(bytes);
     let ram = r.bytes(65536)?;
     let ports = r.bytes(256)?;
@@ -357,5 +366,10 @@ pub fn snapshot(bytes: &[u8], color: bool, profile: gfx::RenderProfile) -> Resul
             "snapshot must contain exactly 65536 RAM bytes and 256 ports",
         ));
     }
-    gfx::Snapshot::new(ram, ports, color)?.render(profile)
+    let snapshot = gfx::Snapshot::new(ram, ports, color)?;
+    if let Some(rows) = rows {
+        snapshot.with_line_ports(rows)?.render(profile)
+    } else {
+        snapshot.render(profile)
+    }
 }

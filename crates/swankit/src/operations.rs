@@ -29,6 +29,18 @@ impl Toolkit {
         self.available(gfx::catalog::SCREEN_MAP)?;
         extract::snapshot(bytes, color, profile)
     }
+    /// Compose per-scanline display ports over one captured RAM image.
+    /// Changes to palette RAM or tiles within the frame require more evidence.
+    pub fn snapshot_with_line_ports(
+        &self,
+        bytes: &[u8],
+        color: bool,
+        profile: gfx::RenderProfile,
+        rows: &[[u8; 256]],
+    ) -> Result<Image> {
+        self.available(gfx::catalog::SCREEN_MAP)?;
+        extract::snapshot_with_line_ports(bytes, color, profile, Some(rows))
+    }
     pub fn extract_text(
         &self,
         bytes: &[u8],
