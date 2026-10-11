@@ -1,0 +1,21 @@
+[package]
+name = "ws-assets"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Per-ROM asset maps: checked extraction, replacement and relocation of located assets"
+readme = "README.md"
+
+[dependencies]
+formatkit-core.workspace = true
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+ws-rom = { path = "../ws-rom" }
+ws-gfx = { path = "../ws-gfx" }
+ws-compress = { path = "../ws-compress" }
+ws-text = { path = "../ws-text" }
+ws-sound = { path = "../ws-sound" }
+ws-patch = { path = "../ws-patch" }

@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "swankit-asset-map/1",
+  "title": "swankit per-ROM asset map, version 1",
+  "description": "Located assets of one ROM image (identified by SHA-256): offset, stored length, codec, format, relations, references, evidence. Read by `swankit assets` (crate ws-assets). See docs/asset-maps.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "rom", "assets"],
+  "$defs": {
+    "num": {
+      "description": "Unsigned integer: JSON number or 0x-prefixed hexadecimal string.",
+      "oneOf": [
+        {"type": "integer", "minimum": 0},
+        {"type": "string", "pattern": "^(0x[0-9a-fA-F]+|[0-9]+)$"}
+      ]
+    },
+    "signed": {
+      "oneOf": [
+        {"type": "integer"},
+        {"type": "string", "pattern": "^-?(0x[0-9a-fA-F]+|[0-9]+)$"}
+      ]
+    },
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$"},
+    "rgb": {"type": "string", "pattern": "^#[0-9a-fA-F]{6}$"},
+    "encoding": {
+      "description": "Linear form: stored = ((anchor(target) + add) >> shift) mod 2^(8*width); bits above the width are implied and must not change on relocation. Far form: 4-byte offset16+segment16 into a 64 KiB window.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width"],
+      "properties": {
+        "width": {"type": "integer", "minimum": 1, "maximum": 4},
+        "endian": {"enum": ["little", "big"]},
+        "anchor": {"enum": ["file", "chip"]},
+        "add": {"$ref": "#/$defs/signed"},
+        "shift": {"type": "integer", "minimum": 0, "maximum": 24},
+        "align": {"$ref": "#/$defs/num"},
+        "form": {"enum": ["linear", "far"]},
+        "segment_base": {"$ref": "#/$defs/num"},
+        "window": {"$ref": "#/$defs/num"},
+        "normalize": {"enum": ["paragraph", "segment"]}
+      }
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["at", "width"],
+      "properties": {
+        "at": {"$ref": "#/$defs/num"},
+        "width": {"type": "integer", "minimum": 1, "maximum": 4},
+        "endian": {"enum": ["little", "big"]},
+        "anchor": {"enum": ["file", "chip"]},
+        "add": {"$ref": "#/$defs/signed"},
+        "shift": {"type": "integer", "minimum": 0, "maximum": 24},
+        "align": {"$ref": "#/$defs/num"},
+        "form": {"enum": ["linear", "far"]},
+        "segment_base": {"$ref": "#/$defs/num"},
+        "window": {"$ref": "#/$defs/num"},
+        "normalize": {"enum": ["paragraph", "segment"]},
+        "kind": {"enum": ["pointer-table-entry", "code-immediate", "bank-number", "segment", "other"]},
+        "note": {"type": "string"}
+      }
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "offset"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "kind": {"enum": ["tiles", "tilemap", "palette", "font", "text", "pointer-table", "music", "sound-effect", "pcm", "data-table", "other"]},
+        "offset": {"$ref": "#/$defs/num"},
+        "length": {"$ref": "#/$defs/num", "description": "Stored bytes; omit for codec-terminated streams or end-terminated text."},
+        "codec": {"enum": ["raw", "ws-lz-rle-7f", "ws-lz-bits-16", "ws-okumura-lzss"]},
+        "codec_params": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "decoded_length": {"$ref": "#/$defs/num"},
+            "bit_order": {"enum": ["lsb", "msb"]},
+            "ring_fill": {"$ref": "#/$defs/num"}
+          }
+        },
+        "address": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "window": {"enum": ["c0", "c2", "c3"]},
+            "bank": {"$ref": "#/$defs/num"},
+            "segment": {"$ref": "#/$defs/num"},
+            "offset": {"$ref": "#/$defs/num"}
+          }
+        },
+        "format": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "bpp": {"enum": [1, 2, 4]},
+            "layout": {"enum": ["planar", "packed"]},
+            "width": {"$ref": "#/$defs/num"},
+            "height": {"$ref": "#/$defs/num"},
+            "entry": {"enum": ["ws-word", "byte", "index12-flip"]},
+            "tile_base": {"$ref": "#/$defs/num"},
+            "attributes": {"$ref": "#/$defs/num"},
+            "color": {"type": "boolean"},
+            "shades": {"type": "array", "items": {"type": "integer", "minimum": 0, "maximum": 15}, "minItems": 8, "maxItems": 8},
+            "palette_format": {"enum": ["rgb444", "mono-lut"]},
+            "palette_index": {"$ref": "#/$defs/num"},
+            "tiles_wide": {"type": "integer", "minimum": 1},
+            "tiles_high": {"type": "integer", "minimum": 1},
+            "order": {"enum": ["row", "column"]},
+            "tile_offsets": {"type": "array", "items": {"$ref": "#/$defs/num"}},
+            "count": {"$ref": "#/$defs/num"},
+            "stride": {"$ref": "#/$defs/num"},
+            "pointer": {"$ref": "#/$defs/encoding"},
+            "pointer_offset": {"$ref": "#/$defs/num"},
+            "sample_rate": {"type": "integer", "minimum": 1},
+            "pad": {"$ref": "#/$defs/num"}
+          }
+        },
+        "relations": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "tiles": {"type": "array", "items": {
+              "type": "object", "additionalProperties": false, "required": ["id"],
+              "properties": {"id": {"$ref": "#/$defs/id"}, "at": {"$ref": "#/$defs/num"}, "skip": {"$ref": "#/$defs/num"}}
+            }},
+            "palette": {"type": "string"},
+            "palettes": {"type": "array", "items": {"type": "string"}},
+            "charmap": {"type": "string"},
+            "pointer_table": {"$ref": "#/$defs/id"},
+            "font": {"$ref": "#/$defs/id"},
+            "targets": {"type": "array", "items": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]}}
+          }
+        },
+        "references": {"type": "array", "items": {"$ref": "#/$defs/reference"}},
+        "references_complete": {"type": "boolean"},
+        "overlaps": {"type": "array", "items": {"$ref": "#/$defs/id"}},
+        "confidence": {"enum": ["high", "medium", "low"]},
+        "evidence": {
+          "type": "object", "additionalProperties": false,
+          "properties": {"loader": {"type": "string"}, "trace": {"type": "string"}, "notes": {"type": "string"}}
+        }
+      }
+    }
+  },
+  "properties": {
+    "schema": {"const": "swankit-asset-map/1"},
+    "rom": {
+      "type": "object", "additionalProperties": false, "required": ["sha256", "size"],
+      "properties": {
+        "sha256": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+        "size": {"$ref": "#/$defs/num"},
+        "label": {"type": "string"}
+      }
+    },
+    "charmaps": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object", "additionalProperties": false,
+        "description": "Exactly one of builtin (a ws-text definition id), file (relative path beside the map: swankit-charmap/1 JSON, swankit-text-def/1 JSON or TSV) or inline (swankit-charmap/1).",
+        "properties": {
+          "builtin": {"type": "string"},
+          "file": {"type": "string"},
+          "inline": {"type": "object"},
+          "unit": {"enum": ["byte", "word-le", "word-be"]}
+        }
+      }
+    },
+    "palettes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object", "additionalProperties": false, "required": ["colors"],
+        "properties": {"colors": {"type": "array", "items": {"$ref": "#/$defs/rgb"}, "minItems": 1, "maxItems": 256}, "evidence": {"type": "string"}}
+      }
+    },
+    "free_space": {"type": "array", "items": {
+      "type": "object", "additionalProperties": false, "required": ["offset", "length"],
+      "properties": {"offset": {"$ref": "#/$defs/num"}, "length": {"$ref": "#/$defs/num"}, "fill": {"$ref": "#/$defs/num"}, "note": {"type": "string"}}
+    }},
+    "coverage": {"type": "object", "additionalProperties": false, "properties": {"notes": {"type": "string"}}},
+    "assets": {"type": "array", "items": {"$ref": "#/$defs/asset"}, "maxItems": 65536},
+    "screens": {"type": "array", "items": {
+      "type": "object", "additionalProperties": false, "required": ["id", "layers"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "layers": {"type": "array", "items": {
+          "type": "object", "additionalProperties": false, "required": ["tilemap"],
+          "properties": {"tilemap": {"$ref": "#/$defs/id"}, "x": {"type": "integer"}, "y": {"type": "integer"}}
+        }},
+        "back_color": {"$ref": "#/$defs/rgb"},
+        "note": {"type": "string"}
+      }
+    }}
+  }
+}

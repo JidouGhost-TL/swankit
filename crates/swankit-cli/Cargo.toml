@@ -16,6 +16,8 @@ ws-wondergate = { path = "../ws-wondergate" }
 ws-link = { path = "../ws-link" }
 ws-wondergate-server = { path = "../ws-wondergate-server", features = ["net"] }
 swankit-ffi = { path = "../swankit-ffi" }
+ws-assets = { path = "../ws-assets" }
+formatkit-codec.workspace = true
 formatkit-core.workspace = true
 formatkit-catalog.workspace = true
 formatkit-runtime.workspace = true

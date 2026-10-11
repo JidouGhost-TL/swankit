@@ -1,8 +1,10 @@
 #![forbid(unsafe_code)]
 mod args;
+mod assets;
 mod io;
 mod link;
 mod png;
+mod png_read;
 #[cfg(feature = "saves")]
 mod save;
 mod wg_server;
@@ -27,6 +29,7 @@ const HELP: &str = "swankit: WonderSwan format tools
   save fix DEF_OR_AUTO SAVE --output SAVE [--context JSON]
   patch apply PATCH BASE --output FILE [--overlap reject|last-write-wins] [--growth reject|zero-fill]
   patch create BASE TARGET --output IPS
+  assets extract|replace|verify ROM MAP ... (see swankit assets --help)
 Options: --json, --force (replace output); integers accept decimal or 0x hexadecimal.
 Experimental: interop --json [--server] (versioned JSON-lines requests on stdin).
   wg-server --data DIR --wire DIR [--bind IP] [--http-port N] [--bpl-port N]
@@ -83,6 +86,9 @@ fn text_definition(id: &str) -> Result<text::TextDefinition> {
 fn run(words: Vec<String>) -> Result<()> {
     if words.first().is_some_and(|s| s == "wg-adapter") {
         return wg::adapter(words.into_iter().skip(1).collect());
+    }
+    if words.first().is_some_and(|s| s == "assets") {
+        return assets::run(words);
     }
     if words.first().is_some_and(|s| s == "wg-decode") {
         return wg::decode(words.into_iter().skip(1).collect());
