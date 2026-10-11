@@ -113,13 +113,19 @@ pub fn encode_reference(
     let new = full_value(encoding, target, rom_len)?;
     let old = full_value(encoding, previous, rom_len)?;
     let bits = 8 * u32::from(encoding.width);
-    if new >> bits != old >> bits {
+    if !encoding.companion && new >> bits != old >> bits {
         return Err(malformed(format!(
             "target {target:#x} leaves the {}-byte reference's implied range of {previous:#x} (bank or segment limit)",
             encoding.width
         )));
     }
     let value = (new & mask(encoding.width)) as u64;
+    if let Some(below) = encoding.below.filter(|b| value >= b.0) {
+        return Err(malformed(format!(
+            "target {target:#x} needs stored value {value:#x}; the referencing code accepts values below {:#x}",
+            below.0
+        )));
+    }
     let le: Vec<u8> = (0..encoding.width)
         .map(|i| (value >> (8 * i)) as u8)
         .collect();

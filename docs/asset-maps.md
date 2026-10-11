@@ -107,7 +107,12 @@ short image). Bits above the stored width are implied by the referencing code
 (a bank register or a segment held elsewhere): a relocated target must keep
 them, which expresses bank limits without game knowledge. Bits below `shift`
 come from a companion reference (an offset beside a bank number);
-`align` requires target alignment.
+`align` requires target alignment; `below` is an exclusive upper bound on the
+stored value that the referencing code accepts (a loader that switches banks
+only below some bank number), checked when a reference is rewritten.
+`companion: true` marks a reference whose bits above `width` come from another
+reference of the same asset (an offset beside its bank byte): relocation may
+then change them, since the companion is rewritten too.
 
 A far reference (`form: far`, `width` 4) is an offset16 + segment16 pair
 into the 64 KiB window starting at file offset `window`, seen by the CPU at

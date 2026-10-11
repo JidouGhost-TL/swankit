@@ -729,3 +729,27 @@ fn header_counts_belong_to_the_asset_and_tiles_can_grow() {
     let bad_map = load(&v);
     assert!(decode_asset(&bad_map, &cm, &bad, "blob").is_err());
 }
+
+#[test]
+fn references_refuse_stored_values_the_code_does_not_accept() {
+    // A loader that switches banks only for bank bytes below 0x74.
+    let bank: ws_assets::map::Encoding =
+        serde_json::from_value(json!({"width": 1, "shift": 16, "below": "0x74"})).unwrap();
+    let len = 0x80_0000;
+    assert_eq!(
+        ws_assets::encode_reference(&bank, 0x73_1234, 0x07_0000, len).unwrap(),
+        [0x73]
+    );
+    let err = ws_assets::encode_reference(&bank, 0x74_0000, 0x07_0000, len).unwrap_err();
+    assert!(err.to_string().contains("0x74"), "{err}");
+    // A 16-bit offset whose bank comes from that companion bank byte may move
+    // to another bank; without the declaration its implied bank is fixed.
+    let fixed: ws_assets::map::Encoding = serde_json::from_value(json!({"width": 2})).unwrap();
+    assert!(ws_assets::encode_reference(&fixed, 0x73_1234, 0x07_0000, len).is_err());
+    let paired: ws_assets::map::Encoding =
+        serde_json::from_value(json!({"width": 2, "companion": true})).unwrap();
+    assert_eq!(
+        ws_assets::encode_reference(&paired, 0x73_1234, 0x07_0000, len).unwrap(),
+        [0x34, 0x12]
+    );
+}

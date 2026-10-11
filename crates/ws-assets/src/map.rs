@@ -223,6 +223,15 @@ pub struct Encoding {
     /// Required target alignment (a segment-only pointer needs 16).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub align: Option<Num>,
+    /// Exclusive upper bound on the stored value that the referencing code
+    /// accepts (a loader that switches banks only below some bank).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub below: Option<Num>,
+    /// The bits above `width` come from another reference of the same asset
+    /// (a bank number beside this offset) that is rewritten with it, so they
+    /// may change on relocation instead of being fixed.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub companion: bool,
     /// `linear` (default) or `far`: a 4-byte offset16+segment16 pointer into a
     /// 64 KiB window starting at file offset `window` and seen at CPU segment
     /// `segment_base`; `normalize` is `paragraph` (offset < 16) or `segment`
@@ -282,6 +291,14 @@ pub struct Reference {
     pub shift: u8,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub align: Option<Num>,
+    /// See [`Encoding`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub below: Option<Num>,
+    /// The bits above `width` come from another reference of the same asset
+    /// (a bank number beside this offset) that is rewritten with it, so they
+    /// may change on relocation instead of being fixed.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub companion: bool,
     /// Far form: see [`Encoding`].
     #[serde(default, skip_serializing_if = "is_linear")]
     pub form: Form,
@@ -307,6 +324,8 @@ impl Reference {
             add: self.add,
             shift: self.shift,
             align: self.align,
+            below: self.below,
+            companion: self.companion,
             form: self.form,
             segment_base: self.segment_base,
             window: self.window,
@@ -718,6 +737,14 @@ impl AssetMap {
             }
             for r in &a.references {
                 check_encoding(&r.encoding(), &a.id)?;
+            }
+            if a.references.iter().any(|r| r.companion)
+                && !a.references.iter().any(|r| !r.companion && r.shift > 0)
+            {
+                return Err(malformed(format!(
+                    "{}: a companion reference needs a shifted reference (the bank) beside it",
+                    a.id
+                )));
             }
             if let Some(p) = &a.format.pointer {
                 check_encoding(p, &a.id)?;
