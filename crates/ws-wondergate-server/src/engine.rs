@@ -137,6 +137,10 @@ pub(crate) fn handle(
         now: clock.now_utc(),
         fields,
         submitted: BTreeMap::new(),
+        close_requested: request
+            .headers
+            .get("connection")
+            .is_some_and(|v| v.split(',').any(|t| t.trim().eq_ignore_ascii_case("close"))),
     };
     for action in &route.actions {
         let record = action.record();
@@ -210,6 +214,7 @@ struct Context<'a> {
     now: Timestamp,
     fields: BTreeMap<String, Field>,
     submitted: BTreeMap<String, Submission>,
+    close_requested: bool,
 }
 struct RowData {
     rank: u64,
@@ -283,7 +288,12 @@ impl Context<'_> {
         if let Some(content_type) = &response.content_type {
             headers.insert(0, ("Content-Type", content_type));
         }
-        let reply = http::response(response.status, &headers, &body)?;
+        let reply = http::response_with_connection(
+            response.status,
+            &headers,
+            &body,
+            response.keep_alive && !self.close_requested,
+        )?;
         if reply.len() > self.spec.limits.max_response {
             return Err(malformed("response exceeds client buffer"));
         }
@@ -347,6 +357,10 @@ impl Context<'_> {
                         .iter()
                         .all(|(k, v)| self.fields.get(k).is_some_and(|f| &f.bytes == v))
                         && when.absent.iter().all(|k| !self.fields.contains_key(k))
+                        && when
+                            .submitted
+                            .iter()
+                            .all(|b| self.submitted.contains_key(b))
                     {
                         self.render(segments, row, out)?;
                     }

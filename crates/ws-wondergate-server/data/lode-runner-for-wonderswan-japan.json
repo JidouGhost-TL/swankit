@@ -1,0 +1,89 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "lode-runner-for-wonderswan-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "Native GET uses a double-slash origin path. ROM list reader accepts filename,year,month,day lines, at most 50 entries, filename at most 12 bytes. Map reader requires exactly 504 bytes for a 28-by-18 grid and tile codes at most 0x1e. LOCAL001 is a newly authored editor demonstration: 17 zero-filled rows and a final row of tile code 1. No original server catalogue, maps or ROM assets."
+  },
+  "hosts": [
+    "wgg01.channel.or.jp"
+  ],
+  "boards": {},
+  "values": {},
+  "records": {},
+  "routes": [
+    {
+      "id": "map-index",
+      "method": "GET",
+      "match": {
+        "path": "//download/loadrunner/mapdata/filelist.txt"
+      },
+      "respond": {
+        "status": 200,
+        "content_type": "text/plain",
+        "body": [
+          {
+            "text": "LOCAL001,2026,10,10\r\n"
+          }
+        ]
+      }
+    },
+    {
+      "id": "local-map",
+      "method": "GET",
+      "match": {
+        "path": "//download/loadrunner/mapdata/LOCAL001"
+      },
+      "respond": {
+        "status": 200,
+        "content_type": "application/octet-stream",
+        "body": [
+          {
+            "zero": 476
+          },
+          {
+            "bytes": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "limits": {
+    "max_body": 504,
+    "max_response": 640
+  },
+  "errors": {
+    "invalid": 400,
+    "method": 405,
+    "method_first": true
+  }
+}

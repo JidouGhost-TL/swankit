@@ -780,6 +780,16 @@
                   },
                   "maxProperties": 128
                 },
+                "submitted": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "uniqueItems": true,
+                  "maxItems": 128
+                },
                 "absent": {
                   "type": "array",
                   "items": {
@@ -873,6 +883,7 @@
     "respond": {
       "type": "object",
       "properties": {
+        "keep_alive": {"type": "boolean"},
         "status": {
           "type": "integer",
           "enum": [

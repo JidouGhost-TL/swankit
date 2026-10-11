@@ -66,6 +66,27 @@ fn codec_roundtrips_at_both_mode_boundaries() {
             .is_err());
     }
 }
+
+#[test]
+fn len8_recovers_after_zero_length_startup_without_be16_drain() {
+    // A malformed startup prefix followed by padding and a valid PDC request.
+    let bytes = [1, 0x8f, 0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0];
+    let mut legacy = Decoder::new(HeaderMode::ZeroThenLen8, true, Limits::default());
+    let mut frames = Vec::new();
+    for byte in bytes {
+        if let Some(Ok(frame)) = legacy.push(byte) {
+            frames.push(frame);
+        }
+    }
+    assert_eq!(frames, [frame(1, 0, &[])]);
+    assert!(legacy.finish().is_none());
+    let mut be = Decoder::new(HeaderMode::Len16Be, true, Limits::default());
+    for byte in bytes {
+        assert!(!matches!(be.push(byte), Some(Ok(_))));
+    }
+    assert!(be.finish().is_some());
+}
+
 #[test]
 fn decoder_drains_over_limit_and_recovers_without_interpreting_payload() {
     let mut d = Decoder::new(

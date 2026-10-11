@@ -11,6 +11,25 @@ use ws_wondergate_server::{
 };
 
 #[test]
+fn origin_path_keeps_double_slashes_and_host_authority() {
+    let raw = b"GET //assets/index.txt?x=1 HTTP/1.1\r\nHost: local.test\r\n\r\n";
+    let request = http::parse(raw, &Limits::default()).unwrap();
+    assert_eq!(request.host, "local.test");
+    assert_eq!(request.path, "//assets/index.txt");
+    assert_eq!(request.query, "x=1");
+    assert!(http::parse(
+        b"GET //assets/index.txt HTTP/1.1\r\n\r\n",
+        &Limits::default()
+    )
+    .is_err());
+    assert!(http::parse(
+        b"GET http://other.test//assets/index.txt HTTP/1.1\r\nHost: local.test\r\n\r\n",
+        &Limits::default()
+    )
+    .is_err());
+}
+
+#[test]
 fn http_latin1_and_binary_body_are_lossless() {
     let services = Services::bundled().unwrap();
     let mut raw = format!(
@@ -70,13 +89,7 @@ fn http_rejects_invalid_headers_targets_and_lengths() {
             "{line}"
         );
     }
-    for target in [
-        "relative",
-        "https://untrusted/",
-        "http://untrusted/",
-        "//untrusted/",
-        "/",
-    ] {
+    for target in ["relative", "https://untrusted/", "http://untrusted/", "/"] {
         let req = format!("GET {target} HTTP/2.0\r\nHost: {host}\r\n\r\n");
         assert!(http::parse(req.as_bytes(), &Limits::default()).is_err());
         if target != "/" {

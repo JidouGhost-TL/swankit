@@ -3,7 +3,7 @@
   "id": "gunpey-ex-japan",
   "provenance": {
     "server": "new",
-    "notes": "Clean-room request and response grammar from the private wave-2 ROM probes. Empty histories, best-per-identity ordering, dates, score conversion and structural blank slots are newly authored revival policy; no original server data or assets."
+    "notes": "Clean-room request and response grammar from the private wave-2 ROM probes. Empty histories, best-per-identity ordering, dates, score conversion and structural blank slots are newly authored revival policy; no original server data or assets. Native ranking requires the adapter revival profile with header=zero-then-len8; length counts command plus parameters after the ignored byte."
   },
   "hosts": [
     "gunpeyex.wgg.channel.or.jp"
