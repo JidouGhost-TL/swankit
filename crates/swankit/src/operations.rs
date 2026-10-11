@@ -57,6 +57,8 @@ impl Toolkit {
             extract::Codec::LzRle7f => compress::catalog::LZ_RLE_7F_ID,
             extract::Codec::LzBits16 => compress::catalog::LZ_BITS_16_ID,
             extract::Codec::OkumuraLzss => compress::catalog::OKUMURA_ID,
+            extract::Codec::LzssU16Zero => compress::catalog::LZSS_U16_ZERO_ID,
+            extract::Codec::Lzss12 => compress::catalog::LZSS_12_ID,
         })?;
         definition.decode(bytes)
     }

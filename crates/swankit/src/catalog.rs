@@ -62,6 +62,18 @@ pub static MODULES: &[FormatModule] = &[
         Some(&ws_compress::catalog::EMBEDDED[1]),
     ),
     row(
+        ws_compress::catalog::LZSS_12_ID,
+        "ws-compress",
+        None,
+        Some(&ws_compress::catalog::EMBEDDED[4]),
+    ),
+    row(
+        ws_compress::catalog::LZSS_U16_ZERO_ID,
+        "ws-compress",
+        None,
+        Some(&ws_compress::catalog::EMBEDDED[3]),
+    ),
+    row(
         ws_compress::catalog::OKUMURA_ID,
         "ws-compress",
         None,

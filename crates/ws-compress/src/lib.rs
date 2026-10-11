@@ -5,6 +5,8 @@
 pub mod catalog;
 pub mod lz_bits_16;
 pub mod lz_rle_7f;
+pub mod lzss_12;
+pub mod lzss_u16_zero;
 pub mod okumura;
 
 pub use formatkit_codec::{BitOrder, DecodeOutcome};

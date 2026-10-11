@@ -163,3 +163,10 @@ stock and conservative content-refusal routes. See the [definition read/write
 guide and plugin ledger](docs/wondergate-title-definitions.md). Captured title
 HTTP flows enroll separately in `ws-wondergate-server`; the in-process adapter
 remains a later milestone.
+
+[Asset discovery](docs/asset-families.md) adds `swankit assets discover` and an
+adapter for ROM + runtime read/write groups + RAM/ports + decompile evidence.
+Drafts are verified before writing. External family profiles define charmaps
+and pointer records; new codec witnesses remain explicit sidecars until the map
+codec enum supports them. Enroll frozen drafts and independent emulator outputs
+with `tools/stage-corpus.py --discovery-manifest MANIFEST --output ROOT`.

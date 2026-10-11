@@ -12,6 +12,7 @@ default = ["saves"]
 saves = ["swankit/saves"]
 
 [dependencies]
+ws-discover = { path = "../ws-discover" }
 ws-wondergate = { path = "../ws-wondergate" }
 ws-link = { path = "../ws-link" }
 ws-wondergate-server = { path = "../ws-wondergate-server", features = ["net"] }

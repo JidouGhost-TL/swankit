@@ -125,7 +125,10 @@ A `swankit-codec-def/1` definition selects one headerless stream. For example:
  "offset":4096,"length":128,"max_output":512}
 ```
 
-`codec` is `lz-rle-7f`, `lz-bits-16` or `okumura-lzss`. `offset` defaults to
+`codec` is `lz-rle-7f`, `lz-bits-16`, `okumura-lzss`, `lzss-u16-zero`
+or `lzss-12`. The length-prefixed grammar accepts `destination` (default 8192)
+and `prehistory` (`low5-prefix`, `low8-prefix`, `zero-until-start`). The
+external-length grammar requires `decoded_size` and accepts explicit `history`. `offset` defaults to
 zero; `length` and `max_output` are required. The output bound is at most
 65,536 bytes. Optional `history` is an array of known preceding RAM bytes for
 the two terminated grammars. The library reports consumed stream bytes through
@@ -271,3 +274,15 @@ the journal; it does not select definition files. Edit shipped JSON and rebuild
 to change CLI policy, or use `Server::from_definitions` in an embedding application.
 See [the definition read/write guide](wondergate-title-definitions.md) and
 [the server API](../crates/ws-wondergate-server/README.md).
+
+## Trace-driven draft discovery
+
+`swankit assets discover ROM EVIDENCE -o MAP --report REPORT` consumes normalized
+`swankit-discovery-evidence/1` data. `--force` permits output replacement; `--json`
+prints the coverage report. `swankit assets discover --help` lists the arguments.
+`tools/discover-assets.py` prepares snapshots, runtime source groups, decompile
+references and explicitly selected external family profiles. See
+[asset families](asset-families.md) for the data contract and limits. A verified
+draft preserves uncertainty and does not establish exhaustive references or
+free space. New grammar witnesses outside the current asset-map codec enum
+remain labelled in the report sidecar.

@@ -377,3 +377,31 @@ fn save_definition() -> Value {
             ]))
         ],"type_ignores":[]}})
 }
+
+#[test]
+fn discover_draft_is_verified_and_wrong_identity_writes_nothing() {
+    let help = ok(&["assets", "discover", "--help"]);
+    assert!(String::from_utf8_lossy(&help.stdout).contains("swankit-discovery-evidence/1"));
+    let f = Fixture::new();
+    let rom = vec![0; 65536];
+    let image = f.put("image.fixture", &rom);
+    let mut evidence = json!({"schema":"swankit-discovery-evidence/1",
+        "seed":{"schema":"swankit-asset-map/1","rom":{"sha256":ws_assets::sha256_hex(&rom),"size":rom.len()},"assets":[]},
+        "ram":vec![0;65536],"ports":vec![0;256]});
+    let input = f.json("evidence.json", evidence.clone());
+    let output = f.path("draft.json");
+    let report = f.path("report.json");
+    ok(&[
+        "assets", "discover", &image, &input, "-o", &output, "--report", &report, "--json",
+    ]);
+    ok(&["assets", "verify", &image, &output, "--json"]);
+    evidence["seed"]["rom"]["sha256"] = json!("0".repeat(64));
+    let bad = f.json("wrong.json", evidence);
+    let absent = f.path("absent.json");
+    assert!(
+        !command(&["assets", "discover", &image, &bad, "-o", &absent])
+            .status
+            .success()
+    );
+    assert!(!std::path::Path::new(&absent).exists());
+}

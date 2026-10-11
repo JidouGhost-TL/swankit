@@ -403,6 +403,7 @@ def main():
                            help="enroll composed natural-save detection and repair from frozen owner specs")
     selection.add_argument("--product-detection", action="store_true",
                            help="enroll composed detection from existing frozen ROM and IPS selections")
+    selection.add_argument("--discovery-manifest", type=Path, help="enroll verified drafts and additional codec witnesses in new frozen namespaces")
     selection.add_argument("--assets-manifest", type=Path,
                            help="enroll per-ROM asset maps with independent decodes in a NEW ws-assets selection")
     selection.add_argument("--patch-manifest", type=Path,
@@ -457,6 +458,10 @@ def main():
             log(args.progress_log, "sound corpus staging", f"{count} samples, 1 frozen spec; existing specs unchanged", "run safe corpus gate")
         elif args.text_manifest:
             stage_text(args)
+        elif args.discovery_manifest:
+            from stage_discovery import stage_discovery
+            drafts, pairs = stage_discovery(args.discovery_manifest, args.output)
+            print(f"Staged {drafts} discovery drafts and {pairs} codec witnesses")
         elif args.assets_manifest:
             from stage_assets import stage_assets
             count = stage_assets(args.assets_manifest, args.output, args.assets_selection)

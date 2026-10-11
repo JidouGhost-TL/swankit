@@ -62,6 +62,16 @@ fn codec_definitions_dispatch_all_grammars_and_bound_outputs() {
             None,
         ),
         (
+            "lzss-u16-zero",
+            swankit::compress::lzss_u16_zero::encode(b"abcabc").unwrap(),
+            Some(6),
+        ),
+        (
+            "lzss-12",
+            swankit::compress::lzss_12::encode(b"abcabc").unwrap(),
+            Some(6),
+        ),
+        (
             "okumura-lzss",
             swankit::compress::okumura::encode(b"abcabc", swankit::compress::BitOrder::LsbFirst, 0),
             Some(6),

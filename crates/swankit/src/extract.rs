@@ -25,6 +25,21 @@ pub enum Codec {
     #[serde(rename = "lz-bits-16")]
     LzBits16,
     OkumuraLzss,
+    #[serde(rename = "lzss-u16-zero")]
+    LzssU16Zero,
+    #[serde(rename = "lzss-12")]
+    Lzss12,
+}
+#[derive(Debug, Clone, Copy, Default, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Prehistory {
+    #[default]
+    Low5Prefix,
+    Low8Prefix,
+    ZeroUntilStart,
+}
+fn default_destination() -> u16 {
+    0x2000
 }
 #[derive(Debug, Clone, Copy, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -58,6 +73,10 @@ pub struct CodecDefinition {
     pub fill: u8,
     #[serde(default)]
     pub history: Vec<u8>,
+    #[serde(default = "default_destination")]
+    pub destination: u16,
+    #[serde(default)]
+    pub prehistory: Prehistory,
 }
 impl CodecDefinition {
     pub fn decode(&self, bytes: &[u8]) -> Result<compress::DecodeOutcome> {
@@ -88,6 +107,31 @@ impl CodecDefinition {
                     self.max_output,
                 )
             }
+            Codec::LzssU16Zero => {
+                if !self.history.is_empty() {
+                    return Err(bad("length-prefixed LZSS uses its prehistory policy"));
+                }
+                let policy = match self.prehistory {
+                    Prehistory::Low5Prefix => compress::lzss_u16_zero::Prehistory::Low5Prefix,
+                    Prehistory::Low8Prefix => compress::lzss_u16_zero::Prehistory::Low8Prefix,
+                    Prehistory::ZeroUntilStart => {
+                        compress::lzss_u16_zero::Prehistory::ZeroUntilStart
+                    }
+                };
+                compress::lzss_u16_zero::decode_with_policy(
+                    source,
+                    self.max_output,
+                    self.destination,
+                    policy,
+                )
+            }
+            Codec::Lzss12 => compress::lzss_12::decode_with_history(
+                source,
+                &self.history,
+                self.decoded_size
+                    .ok_or_else(|| bad("external-length LZSS requires decoded_size"))?,
+                self.max_output,
+            ),
         }
     }
 }

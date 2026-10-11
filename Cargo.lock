@@ -484,6 +484,7 @@ dependencies = [
  "swankit",
  "swankit-ffi",
  "ws-assets",
+ "ws-discover",
  "ws-link",
  "ws-wondergate",
  "ws-wondergate-server",
@@ -643,6 +644,18 @@ dependencies = [
  "formatkit-corpus",
  "formatkit-corpus-test",
  "serde_json",
+]
+
+[[package]]
+name = "ws-discover"
+version = "0.1.0"
+dependencies = [
+ "formatkit-core",
+ "formatkit-corpus-test",
+ "serde",
+ "serde_json",
+ "ws-assets",
+ "ws-compress",
 ]
 
 [[package]]

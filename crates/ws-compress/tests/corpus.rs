@@ -118,3 +118,67 @@ fn corpus_codec_parity() {
     }
     assert_eq!(counted, samples);
 }
+
+struct AdditionalCodecDigest;
+impl Digest for AdditionalCodecDigest {
+    fn digest(&self, bytes: &[u8], args: &Args) -> Result<Value> {
+        let pair =
+            Pair::from_bytes(bytes).ok_or_else(|| Error::Malformed("invalid codec pair".into()))?;
+        let destination = args
+            .get("destination")
+            .and_then(Value::as_u64)
+            .unwrap_or(0x2000);
+        let destination = u16::try_from(destination)
+            .map_err(|_| Error::Malformed("destination outside segment".into()))?;
+        let policy = match args
+            .get("prehistory")
+            .and_then(Value::as_str)
+            .unwrap_or("low5-prefix")
+        {
+            "low5-prefix" => ws_compress::lzss_u16_zero::Prehistory::Low5Prefix,
+            "low8-prefix" => ws_compress::lzss_u16_zero::Prehistory::Low8Prefix,
+            "zero-until-start" => ws_compress::lzss_u16_zero::Prehistory::ZeroUntilStart,
+            _ => return Err(Error::Malformed("unknown prehistory policy".into())),
+        };
+        let (got, encoded) = match pair.codec.as_str() {
+            "lzss-u16-zero" => (
+                ws_compress::lzss_u16_zero::decode_with_policy(
+                    &pair.stored,
+                    pair.raw.len(),
+                    destination,
+                    policy,
+                )?,
+                ws_compress::lzss_u16_zero::encode(&pair.raw)?,
+            ),
+            "lzss-12" => (
+                ws_compress::lzss_12::decode(&pair.stored, pair.raw.len(), pair.raw.len())?,
+                ws_compress::lzss_12::encode(&pair.raw)?,
+            ),
+            _ => return Err(Error::Unsupported(pair.codec)),
+        };
+        if args.get("codec").and_then(Value::as_str) != Some(&pair.codec)
+            || got.bytes != pair.raw
+            || got.consumed != pair.stored.len()
+        {
+            return Err(Error::Malformed(
+                "captured decompressor output/extent mismatch".into(),
+            ));
+        }
+        let back = match pair.codec.as_str() {
+            "lzss-u16-zero" => ws_compress::lzss_u16_zero::decode(&encoded, pair.raw.len())?,
+            _ => ws_compress::lzss_12::decode(&encoded, pair.raw.len(), pair.raw.len())?,
+        };
+        if back.bytes != pair.raw || back.consumed != encoded.len() {
+            return Err(Error::Malformed("new encoder round trip".into()));
+        }
+        Ok(
+            json!({"codec":pair.codec,"raw_sha256":hash_bytes(&got.bytes),"stored_sha256":hash_bytes(&pair.stored),"consumed":got.consumed,"round_trip":true}),
+        )
+    }
+}
+#[test]
+fn corpus_additional_codecs() {
+    assert_ne!(std::env::var("FORMATKIT_CORPUS_WRITE").as_deref(), Ok("1"));
+    let n = run_dir("ws-compress-extra", &AdditionalCodecDigest);
+    eprintln!("ws-compress-extra: {n} game-decompressor witnesses equal; encoders round-trip");
+}

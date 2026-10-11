@@ -9,6 +9,8 @@ bytes through the terminator. Trailing carrier data remains unconsumed.
 | --- | --- | --- |
 | `lz_rle_7f` | 10-bit backward distance, literals, zero-prefixed words, runs, zeros; `7f ff` terminator | Minimum encoded-byte dynamic programming |
 | `lz_bits_16` | LSB-first 16-bit little-endian flags, short/long matches, extended zero-length terminator | Reference-compatible minimum-bit dynamic programming with bounded match search |
+| `lzss_u16_zero` | u16 length, LSB byte flags, length4/distance12 tokens, destination-dependent zero prefix | Deterministic backward-match encoder |
+| `lzss_12` | External length, LSB byte flags, distance12-minus-one/length4 tokens | Deterministic backward-match encoder |
 | `okumura` | 4 KiB initialized ring, flag bytes, external decoded length | Formatkit's original tree matcher |
 
 ```rust
@@ -45,3 +47,8 @@ to the carrier; see [hardware sources](../../docs/hardware.md). No emulator
 implementation is used. Synthetic tests cover all commands, eager refill,
 history, malformed streams and bounds. External frozen specs compare Java
 decode extents, RAM captures, encode/decode round trips, encoder bytes and fit.
+
+Additional explicit extraction definitions accept `lzss-u16-zero` with optional
+`destination` and `prehistory` (`low5-prefix`, `low8-prefix`, `zero-until-start`),
+or `lzss-12` with `decoded_size` and optional `history`. The encoders avoid
+prehistory dependence. Independent game-output witnesses remain external.
