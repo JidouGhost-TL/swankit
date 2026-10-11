@@ -1,0 +1,36 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "buffers-evolution-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "New zero-record placeholder, not recovered original contest data. Native request path and BFEVSND marker: ROM files 3782A1 and 378A97. Reply marker BFEVREC= CRLF and fixed fields: 3783EF/378518; 36 records with stride 17: 378433..378444; packed decimal parser 37859C; 20 identity digits and final record: 378446..378478. All times and identifiers are zero. Submissions are not ranked or persisted; original competition policy remains unknown."
+  },
+  "hosts": [
+    "wgg01.channel.or.jp"
+  ],
+  "boards": {},
+  "values": {},
+  "records": {},
+  "routes": [
+    {
+      "id": "zero-record-placeholder",
+      "method": "POST",
+      "match": {
+        "path": "/service/buffersevolution"
+      },
+      "respond": {
+        "status": 200,
+        "content_type": "text/plain",
+        "body": [
+          {
+            "text": "BFEVREC=\r\n00000000 00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000000000000000000000000000000000000000000000000000000   00000000000000000000"
+          }
+        ]
+      }
+    }
+  ],
+  "limits": {
+    "max_body": 2048,
+    "max_response": 2048
+  }
+}
