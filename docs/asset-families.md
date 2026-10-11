@@ -30,6 +30,11 @@ callbacks, sound DMA, or arbitrary userops. Unknown output operators and origin
 sets over 64 bytes become opaque. Register/address origins can include constants,
 table indices and banks; they are reference candidates until field arithmetic
 and reader semantics are independently reviewed. They never authorize relocation.
+`source_ranges` lists the exact half-open ROM origin ranges contributing to a
+span; `source`/`source_end` bound all ROM data read in the call and remain the
+codec probe context. That context can contain unrelated reads. Data provenance
+omits compression flag/control dependence, so causal ranges alone are not a
+complete stored stream extent.
 Uniform data and incomplete calls are not codec proof. Supplied prior history
 still requires an entry-state capture.
 

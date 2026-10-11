@@ -31,7 +31,11 @@ public class WSAssetTraceCarryChecks extends WSAssetTrace {
   machine=new WSMachine(currentProgram,true);put(machine.ram,0,1,Set.of(999L));
   stored(store,machine.ram,new byte[]{(byte)255,(byte)255},2,new byte[]{1,2});
   if(!get(machine.ram,0,1).equals(Set.of(999L)))failures.add("CPU stores crossing 64 KiB do not wrap into RAM");
-  Files.writeString(out.resolve("checks.json"),"{\"checks\":5,\"failures\":"+listStrings(failures)+"}");
+  StringWriter captured=new StringWriter();calls=new PrintWriter(captured);
+  call.sources.clear();call.sources.addAll(Set.of(123L,2000L));call.regs="{}";
+  put(machine.ram,8192,8,Set.of(123L));finishSpan(call,true,8192,8200);calls.flush();
+  if(!captured.toString().contains("\"source_ranges\":[[123,124]]"))failures.add("witness lists only actual causal ROM ranges separately from read context");
+  Files.writeString(out.resolve("checks.json"),"{\"checks\":6,\"failures\":"+listStrings(failures)+"}");
   println("CARRY TESTS: "+failures);
   if(!failures.isEmpty())throw new IllegalStateException("carry tests failed");
  }

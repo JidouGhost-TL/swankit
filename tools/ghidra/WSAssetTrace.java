@@ -262,7 +262,16 @@ public class WSAssetTrace extends GhidraScript {
         }
         if(causal.isEmpty())return;
         byte[] output=machine.read(lo,hi-lo);StringBuilder hex=new StringBuilder();for(byte b:output)hex.append(String.format("%02x",b&255));
-        calls.printf("{\"kind\":\"instruction-flow\",\"id\":%d,\"frame\":%d,\"entry\":%d,\"return\":%d,\"entry_registers\":%s,\"source\":%d,\"source_end\":%d,\"source_bytes\":%d,\"causal_source_bytes\":%d,\"destination\":%d,\"cpu_destination\":%d,\"length\":%d,\"explained_bytes\":%d,\"complete_return\":%s,\"opaque_operations\":%d,\"pointer_origins\":%s,\"banks\":%s,\"output_hex\":\"%s\"}%n",c.id,c.frame,c.entry,c.ret,c.regs,c.sources.first(),c.sources.last()+1,c.sources.size(),causal.size(),lo,c.cpuDestinations.getOrDefault(lo,lo),hi-lo,explained,complete,opaque-c.opaque,c.pointers,listStrings(c.banks),hex);
+        calls.printf("{\"kind\":\"instruction-flow\",\"id\":%d,\"frame\":%d,\"entry\":%d,\"return\":%d,\"entry_registers\":%s,\"source\":%d,\"source_end\":%d,\"source_bytes\":%d,\"causal_source_bytes\":%d,\"source_ranges\":%s,\"destination\":%d,\"cpu_destination\":%d,\"length\":%d,\"explained_bytes\":%d,\"complete_return\":%s,\"opaque_operations\":%d,\"pointer_origins\":%s,\"banks\":%s,\"output_hex\":\"%s\"}%n",c.id,c.frame,c.entry,c.ret,c.regs,c.sources.first(),c.sources.last()+1,c.sources.size(),causal.size(),sourceRanges(causal),lo,c.cpuDestinations.getOrDefault(lo,lo),hi-lo,explained,complete,opaque-c.opaque,c.pointers,listStrings(c.banks),hex);
+    }
+    static String sourceRanges(TreeSet<Long> sources) {
+        StringJoiner ranges=new StringJoiner(",","[","]");long lo=-1,hi=-1;
+        for(long source:sources) {
+            if(lo<0) {lo=source;hi=source+1;}
+            else if(source==hi)hi++;
+            else {ranges.add("["+lo+","+hi+"]");lo=source;hi=source+1;}
+        }
+        if(lo>=0)ranges.add("["+lo+","+hi+"]");return ranges.toString();
     }
     static String listStrings(Collection<String> s) {StringJoiner j=new StringJoiner(",","[","]");for(String x:s)j.add("\""+x+"\"");return j.toString();}
     @Override public void run() throws Exception {
