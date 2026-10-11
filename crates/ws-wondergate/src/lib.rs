@@ -13,7 +13,7 @@ pub mod profile;
 pub mod raw;
 pub mod redirect;
 pub mod transcript;
-pub use config::{Config, ConfigError, Ppp};
+pub use config::{Config, ConfigError, Ppp, Probe};
 pub use device::{Adapter, AdapterState, Event, NetEvent, SocketState};
 pub use profile::Profile;
 

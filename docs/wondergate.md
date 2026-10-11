@@ -233,6 +233,16 @@ NUL, incomplete tokens and out-of-range values are errors, with line numbers
 and no echoed input values. Text is bounded to 1 MiB, lines to 8192 bytes and
 credentials to 255 bytes. Reception is checked in 0..15.
 
+Standalone detector handling is opt-in. `probe=echo` returns one raw `8F` for
+each standalone `8F`; `probe=ignore` discards it, allowing clients that enter
+the framed session directly to avoid an unread detector reply. Both policies
+apply only between frames, including after a rejected frame's declared body
+has drained. Header, command and payload bytes are never intercepted. Neither
+policy powers on the adapter or contacts a backend. The default `framed`
+retains the original decoder behavior. These are client compatibility policies,
+not a measurement of a physical adapter. Initialization still returns ASCII
+major/minor `10` in both profiles.
+
 Numeric values accept decimal, `0x`, `$`, `0b` and `0o` prefixes. Complete
 tokens and checked arithmetic replace C's suffix truncation and overflow.
 IPv4 uses dotted four-octet notation. Boolean fields accept `true`, `false`
@@ -241,6 +251,7 @@ or numeric zero/nonzero. `[swankit]` provides the following settings:
 | Key | Default / valid values |
 | --- | --- |
 | `profile` | `revival`; also `upstream` |
+| `probe` | `framed`; opt-in `ignore` or `echo` for standalone `8F` at a frame boundary |
 | `header` | profile default; `len16be` or `zero-then-len8`, independent of key order |
 | `backend` | `tcp`; also `transcript` (selection metadata for the caller) |
 | `transcript_file` | optional external path, loaded by the caller |

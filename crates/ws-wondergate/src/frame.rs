@@ -73,6 +73,10 @@ pub struct Decoder {
 }
 
 impl Decoder {
+    pub(crate) fn at_boundary(&self) -> bool {
+        self.header_len == 0 && self.wanted == 0 && self.discard == 0
+    }
+
     pub fn new(mode: HeaderMode, skip_zero_padding: bool, limits: Limits) -> Self {
         Self {
             mode,

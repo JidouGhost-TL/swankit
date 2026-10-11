@@ -7,7 +7,7 @@
 use crate::{
     dispatch,
     frame::{Decoder, Frame, FrameError},
-    Config, Connection, Network, Ppp,
+    Config, Connection, Network, Ppp, Probe,
 };
 use formatkit_core::Error;
 
@@ -29,6 +29,10 @@ pub struct AdapterState {
 
 #[derive(Debug)]
 pub enum Event {
+    /// Unframed detector acknowledgment; no adapter power or network action.
+    Probe {
+        echoed: bool,
+    },
     /// Credential bytes in PPP input frames are replaced by zeros.
     FrameIn(Frame),
     FrameOut(Frame),
@@ -165,6 +169,14 @@ impl<N: Network> Adapter<N> {
 
     pub fn push(&mut self, input: &[u8], out: &mut Vec<u8>, events: &mut dyn FnMut(Event)) {
         for &byte in input {
+            if self.config.probe != Probe::Framed && byte == 0x8f && self.decoder.at_boundary() {
+                let echoed = self.config.probe == Probe::Echo;
+                if echoed {
+                    out.push(byte);
+                }
+                events(Event::Probe { echoed });
+                continue;
+            }
             match self.decoder.push(byte) {
                 Some(Ok(frame)) => {
                     events(Event::FrameIn(redacted(&frame)));

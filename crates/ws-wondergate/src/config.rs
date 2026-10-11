@@ -33,8 +33,20 @@ pub enum Backend {
     Tcp,
     Transcript,
 }
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Probe {
+    /// Original command framing, including unknown frame kinds.
+    #[default]
+    Framed,
+    /// Discard standalone detector bytes without buffering a reply.
+    Ignore,
+    /// Echo the detector byte for clients with an interrupt-driven detector.
+    Echo,
+}
 #[derive(Clone, Debug)]
 pub struct Config {
+    /// Standalone detector policy; bytes inside frames are always opaque.
+    pub probe: Probe,
     pub pdc_reception: u8,
     pub ppp: Ppp,
     pub builtin_bpl: bool,
@@ -49,6 +61,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            probe: Probe::Framed,
             pdc_reception: 15,
             ppp: Ppp::default(),
             builtin_bpl: true,
@@ -186,6 +199,14 @@ impl Config {
                 return Err(error(line, "empty key"));
             }
             match (section, key) {
+                ("swankit", "probe") => {
+                    config.probe = match value {
+                        "framed" => Probe::Framed,
+                        "ignore" => Probe::Ignore,
+                        "echo" => Probe::Echo,
+                        _ => return Err(error(line, "unknown detector policy")),
+                    }
+                }
                 ("pdc", "reception") => config.pdc_reception = number(value, 0, 15, line)? as u8,
                 ("ppp", "user" | "pass") => {
                     if value.len() > 255 {
