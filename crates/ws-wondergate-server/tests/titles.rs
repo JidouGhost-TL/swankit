@@ -335,6 +335,45 @@ fn bank13_lineage_percent_bytes_invalid_queries_do_not_store() {
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].submission.name, [0x82, 0xa0]);
 }
+fn tonpuusou() -> Definition {
+    Definition::bundled()
+        .unwrap()
+        .into_iter()
+        .find(|d| d.id() == "tonpuusou-japan")
+        .unwrap()
+}
+fn tonpuusou_post(path: &str, body: &str) -> Vec<u8> {
+    format!(
+        "POST http://tongpuso.wgg.channel.or.jp{path} HTTP/1.1\r\nHost: tongpuso.wgg.channel.or.jp\r\nUser-Agent: SWAN/1.0\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: {}\r\n\r\n{body}",
+        body.len()
+    )
+    .into_bytes()
+}
+#[test]
+fn tonpuusou_getrate_rating_reply() {
+    // M32: traced Tonpuusou_Japan getrate builder 4000:F208 sends c=<id>&d=<pw>
+    // (both nonempty, id<=11 bytes, pw<=13 bytes); the M31 capture c=M31&d=test
+    // used to 404. The reply grammar comes from response parser A000:2C24:
+    // c=1 status plus e=<rating><2 digits> and f=<games>; values are placeholders.
+    let app = app(tonpuusou());
+    let reply = app.dispatch_http(&tonpuusou_post("/cgi-bin/getrate.cgi", "c=M31&d=test"));
+    assert!(reply.starts_with(b"HTTP/1.1 200"));
+    let (_, fields, body) = split_response(&reply);
+    assert_eq!(fields["Content-Type"], "text/plain");
+    assert_eq!(body, b"c=1&e=150000&f=00001");
+    let bad = app.dispatch_http(&tonpuusou_post("/cgi-bin/getrate.cgi", "c=&d=test"));
+    assert!(bad.starts_with(b"HTTP/1.1 400"));
+    // M32: setrate builder 4000:F5DD sends c/d plus e=<0355><0357 zero-padded
+    // to 2>, f=<0365>, g=<0365-1>; parser A000:35AB needs c=1 (c=2 retries).
+    let reply = app.dispatch_http(&tonpuusou_post(
+        "/cgi-bin/setrate.cgi",
+        "c=M31&d=test&e=150000&f=1&g=0",
+    ));
+    assert!(reply.starts_with(b"HTTP/1.1 200"));
+    assert_eq!(split_response(&reply).2, b"c=1");
+    let bad = app.dispatch_http(&tonpuusou_post("/cgi-bin/setrate.cgi", "c=M31&d=test"));
+    assert!(bad.starts_with(b"HTTP/1.1 400"));
+}
 #[test]
 fn bank13_lineage_new_stock_and_unimplemented_content() {
     let d = rankings();

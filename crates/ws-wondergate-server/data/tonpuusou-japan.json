@@ -3,7 +3,7 @@
   "id": "tonpuusou-japan",
   "provenance": {
     "server": "new",
-    "notes": "Clean-room request and response grammar from the private wave-2 ROM probes. Empty histories, best-per-identity ordering, dates, score conversion and structural blank slots are newly authored revival policy; no original server data or assets."
+    "notes": "Clean-room request and response grammar from the private wave-2 ROM probes. Empty histories, best-per-identity ordering, dates, score conversion and structural blank slots are newly authored revival policy; no original server data or assets. M32 rating routes: getrate request builder 4000:F208 (body c=<id>&d=<pw>, both nonempty, id<=11 bytes at RAM 072A, pw<=13 bytes at RAM 0735) and response parser A000:2C24 (status c=1 required at RAM 0304, rating e=<value><2 digits> to RAM 0355/0357, games f=<digits> to RAM 0365; rating>=2500 takes the alternate display branch in A000:3866); setrate request builder 4000:F5DD (adds e=<0355><0357 zero-padded to 2>, f=<0365>, g=<0365-1>) and response parser A000:35AB (c=1 success, c=2 retry). Returned rating values are labelled placeholders; no original account or rating data."
   },
   "hosts": [
     "tongpuso.wgg.channel.or.jp"
@@ -983,6 +983,88 @@
               }
             },
             "record": "row-3"
+          }
+        ]
+      }
+    },
+    {
+      "id": "getrate",
+      "method": "POST",
+      "match": {
+        "path": "/cgi-bin/getrate.cgi"
+      },
+      "source": "form",
+      "request": {
+        "c": {
+          "decode": "percent-plus",
+          "bytes": [
+            1,
+            11
+          ]
+        },
+        "d": {
+          "decode": "percent-plus",
+          "bytes": [
+            1,
+            13
+          ]
+        }
+      },
+      "respond": {
+        "status": 200,
+        "content_type": "text/plain",
+        "body": [
+          {
+            "text": "c=1&e=150000&f=00001"
+          }
+        ]
+      }
+    },
+    {
+      "id": "setrate",
+      "method": "POST",
+      "match": {
+        "path": "/cgi-bin/setrate.cgi"
+      },
+      "source": "form",
+      "request": {
+        "c": {
+          "decode": "percent-plus",
+          "bytes": [
+            1,
+            11
+          ]
+        },
+        "d": {
+          "decode": "percent-plus",
+          "bytes": [
+            1,
+            13
+          ]
+        },
+        "e": {
+          "decode": "percent-plus",
+          "regex": "^[0-9]{3,7}$"
+        },
+        "f": {
+          "decode": "percent-plus",
+          "regex": "^[0-9]{1,5}$",
+          "as": "u64",
+          "max_number": 65535
+        },
+        "g": {
+          "decode": "percent-plus",
+          "regex": "^[0-9]{1,5}$",
+          "as": "u64",
+          "max_number": 65535
+        }
+      },
+      "respond": {
+        "status": 200,
+        "content_type": "text/plain",
+        "body": [
+          {
+            "text": "c=1"
           }
         ]
       }
