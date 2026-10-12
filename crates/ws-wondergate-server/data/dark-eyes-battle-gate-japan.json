@@ -3,7 +3,7 @@
   "id": "dark-eyes-battle-gate-japan",
   "provenance": {
     "server": "new",
-    "notes": "Clean-room match-request reply derived from the traced ROM parser (M32). Request builder 35ABD2 sends POST /cgi-bin/dark/nph-reqmatch.cgi with X-SWAN-MTCH-ID/NAME/LVL/RETRY headers (272 bytes native). Reply status is parsed by 35AEB9 (finds HTTP/1. and reads the decimal code); 302 means retry-later, anything else continues. MTCH headers are found case-insensitively by 35AF6C (requires the X-SWAN- prefix immediately before the name and a colon after it); numbers are parsed by 35AFA8/35AF2D, which stop only at space or LF, so every value line ends with LF (a bare CR would corrupt the value). RETCD 0/1 waits using MTCH-POLINT/MTCH-TIMEOUT (35C386); missing RETCD shows 3598DA 'no opponent' and retries; RETCD 2 stores opponent ID/NAME (URL-decoded by 35AB8A)/LVL/SEED/MATCH/HOST/PATH/ACOUNT/BCOUNT/COUNT (35C3C1..35C474) and the wrapper returns 9. All opponent fields here are newly authored PLACEHOLDER values; no original server data, ranking, or battle pairing is reconstructed. Original matchmaking policy and the nph-match.cgi battle phase remain unknown."
+    "notes": "Clean-room match/handshake replies derived from the traced ROM parser (M32 phases 1-2). Request builder 35C495 sends POST /cgi-bin/dark/nph-match.cgi with X-SWAN-MTCH-ID (9 bytes from 1000:4759), MTCH-OID (9 bytes from 0000:0433, the reqmatch opponent ID), MTCH-NAME (1000:515E, %XX-encoded by 35AB3C), MTCH-CMD (decimal AX at builder entry). CMD 0/2 append a CX-byte body from ES:BX and patch Content-Length (traced: 47 field bytes -> 'Content-Length:  47', length 323; CMD 1/3/4 send headers only, length 276). Reply status is parsed by 35AEB9 (302 = retry, else continue); MTCH-RETCD by 35AFA8 into [SS:0x3B1]; MTCH-POLINT/MTCH-TIMEOUT by 35AFA8 into [0x398]=n*75/[0x39A]=n*75. Traced dialogue (each step verified natively with AL=9): wrapper 35C7B0 sends CMD 0 until RETCD 0 then CMD 1 until RETCD 2; 35C8F2 sends CMD 2 until RETCD 3; 35C9A7 sends CMD 3 (RETCD 4 waits) until RETCD 5; 35CA60 sends CMD 4 until RETCD 6; missing RETCD stores 9 and fails with AL=0xFF. For RETCD 2/5 the parser copies [0x3AB] (Content-Length) bytes from after the LF blank line to the caller buffer ES:[0x3B6] (traced 1021-byte copy). Numbers stop only at space/LF and the body search needs an LF blank line, so the original format is LF-only; with CRLF the count corrupts to L*10+221 (word) and the copy source misses (both traced). This static route serves the dialogue-entry step (RETCD 0 for CMD 0); a live server must sequence RETCD 0/2/3/5/6 per CMD as documented (per-phase probe definitions are archived with the M32 runs). Body length 80 keeps the corrupted count (253) past the response end. All match values here are newly authored PLACEHOLDERS; original pairing policy and battle-payload contents remain unknown."
   },
   "hosts": [
     "battleg1.dark-eyes.com"
@@ -24,6 +24,22 @@
         "body": [
           {
             "text": "X-SWAN-MTCH-RETCD: 2\nX-SWAN-MTCH-ID: RIVAL001\nX-SWAN-MTCH-NAME: RIVAL%2D001\nX-SWAN-MTCH-LVL: 5\nX-SWAN-MTCH-SEED: 1234\nX-SWAN-MTCH-MATCH: 7\nX-SWAN-MTCH-HOST: battleg1.dark-eyes.com\nX-SWAN-MTCH-PATH: /cgi-bin/dark/nph-match.cgi\nX-SWAN-MTCH-ACOUNT: 3\nX-SWAN-MTCH-BCOUNT: 3\nX-SWAN-MTCH-COUNT: 6\n"
+          }
+        ]
+      }
+    },
+    {
+      "id": "match-dialogue-entry",
+      "method": "POST",
+      "match": {
+        "path": "/cgi-bin/dark/nph-match.cgi"
+      },
+      "respond": {
+        "status": 200,
+        "content_type": "text/plain",
+        "body": [
+          {
+            "text": "X-SWAN-MTCH-RETCD: 0\nX-SWAN-MTCH-POLINT: 1\nX-SWAN-MTCH-TIMEOUT: 30\nXPADDING0000\n"
           }
         ]
       }
