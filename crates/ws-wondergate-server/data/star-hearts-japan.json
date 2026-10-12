@@ -1,0 +1,84 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "star-hearts-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "Clean-room placeholder for Star Hearts quest downloads. Request grammar (GET /cgi-bin/starhearts.cgi?000NFFFF, Host s_hearts.wgg.channel.or.jp, UA SWAN/1.0) from ROM URL table file 371A00/42/84/C6 via quest entries A000:33A0/33DE/343E/34A0 (bank 0x3A). Reply grammar from traced parser A000:D011: 2xx status digit at status-line+9, case-insensitive Content-Length line, blank line, body bytes to DS:0x295B; quest post-parse A000:341E/3534/34FE reads a 3-char reversed-hex length at 0x295D and hex payload at 0x2962, storing a u32 at SRAM 1000:500E/5012/5000. All body bytes are newly authored placeholders, not original quest data; original content unknown."
+  },
+  "hosts": [
+    "s_hearts.wgg.channel.or.jp"
+  ],
+  "boards": {},
+  "values": {},
+  "records": {},
+  "routes": [
+    {
+      "id": "quest-0002-placeholder",
+      "method": "GET",
+      "match": {
+        "path": "/cgi-bin/starhearts.cgi",
+        "query_exact": "0002FFFF"
+      },
+      "respond": {
+        "status": 200,
+        "body": [
+          {
+            "text": "800ZZ1A2B"
+          }
+        ]
+      }
+    },
+    {
+      "id": "quest-0003-placeholder",
+      "method": "GET",
+      "match": {
+        "path": "/cgi-bin/starhearts.cgi",
+        "query_exact": "0003FFFF"
+      },
+      "respond": {
+        "status": 200,
+        "body": [
+          {
+            "text": "800ZZ1A2B"
+          }
+        ]
+      }
+    },
+    {
+      "id": "quest-0004-placeholder",
+      "method": "GET",
+      "match": {
+        "path": "/cgi-bin/starhearts.cgi",
+        "query_exact": "0004FFFF"
+      },
+      "respond": {
+        "status": 200,
+        "body": [
+          {
+            "text": "800ZZ1A2B"
+          }
+        ]
+      }
+    },
+    {
+      "id": "quest-0005-placeholder",
+      "method": "GET",
+      "match": {
+        "path": "/cgi-bin/starhearts.cgi",
+        "query_exact": "0005FFFF"
+      },
+      "respond": {
+        "status": 200,
+        "body": [
+          {
+            "text": "800ZZ1A2B"
+          }
+        ]
+      }
+    }
+  ],
+  "limits": {
+    "max_body": 256,
+    "max_response": 1024
+  }
+}
