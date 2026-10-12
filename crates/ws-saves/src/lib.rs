@@ -15,6 +15,31 @@ use serde_json::Value as Json;
 use std::{collections::HashMap, sync::OnceLock};
 use value::{bad, Environment, Value};
 
+fn medium_kind(label: &str) -> Result<&'static str> {
+    let label = label.to_ascii_lowercase();
+    if label.contains("sram") {
+        Ok("cartridge-sram")
+    } else if ["internal", "console", "ieep"]
+        .iter()
+        .any(|part| label.contains(part))
+    {
+        Ok("internal-eeprom")
+    } else if label.contains("eeprom") {
+        Ok("cartridge-eeprom")
+    } else {
+        Err(bad("field medium is not SRAM or EEPROM"))
+    }
+}
+
+fn accepts_medium_size(media: &[Json], kind: &str, length: usize) -> bool {
+    media.iter().any(|m| {
+        m["kind"] == kind
+            && m["sizes"]
+                .as_array()
+                .is_some_and(|sizes| sizes.iter().any(|n| n.as_u64() == Some(length as u64)))
+    })
+}
+
 /// A generated fixed field; symbolic/conditional fields live in the semantic program.
 #[derive(Debug, Clone)]
 pub struct Field {
@@ -185,9 +210,29 @@ impl Format {
                 {
                     return Err(bad("field extent"));
                 }
+                let medium = text(&f["medium"])?;
+                let kind = medium_kind(&medium)?;
+                if !media.iter().any(|m| {
+                    m["kind"] == kind
+                        && m["sizes"].as_array().is_some_and(|sizes| {
+                            sizes.iter().any(|n| {
+                                n.as_u64()
+                                    .is_some_and(|length| (offset + size) as u64 <= length)
+                            })
+                        })
+                }) {
+                    return Err(bad("field extent exceeds its declared medium"));
+                }
+                if let Some(array) = f.get("array") {
+                    let count = extent(&array["count"])?;
+                    let stride = extent(&array["stride"])?;
+                    if count == 0 || stride == 0 || count.checked_mul(stride) != Some(size) {
+                        return Err(bad("field array geometry"));
+                    }
+                }
                 Ok(Field {
                     name: text(&f["name"])?,
-                    medium: text(&f["medium"])?,
+                    medium,
                     offset,
                     size,
                     encoding: text(&f["encoding"])?,
@@ -237,12 +282,22 @@ impl Format {
             .map_err(|_| bad("primitive bindings"))?;
         Ok(engine)
     }
-    /// Edit an explicitly selected stored field. Field names need not be unique.
+    /// Edit a stored field in a full image of its declared medium.
+    /// Field names need not be unique; semantic ranges and aliases remain caller policy.
     pub fn set_field(&self, bytes: &mut [u8], field: usize, value: &Json) -> Result<()> {
-        self.fields
+        let field = self
+            .fields
             .get(field)
-            .ok_or_else(|| bad("unknown field index"))?
-            .write(bytes, value)
+            .ok_or_else(|| bad("unknown field index"))?;
+        let media = self.definition["media"]
+            .as_array()
+            .ok_or_else(|| bad("definition media"))?;
+        if !accepts_medium_size(media, medium_kind(&field.medium)?, bytes.len()) {
+            return Err(bad(
+                "field edit requires a full image of its declared medium",
+            ));
+        }
+        field.write(bytes, value)
     }
     /// Collect every decoded validity/checksum flag with its JSON pointer.
     pub fn verify(&self, bytes: &[u8], name: &str) -> Result<Json> {

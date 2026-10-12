@@ -171,6 +171,9 @@ pub fn record(bytes: &[u8], start: usize, width: usize, index: usize) -> Result<
         108 => Ok(FixedRecords::<108>::new(start)
             .record(bytes, index)?
             .as_slice()),
+        109 => Ok(FixedRecords::<109>::new(start)
+            .record(bytes, index)?
+            .as_slice()),
         111 => Ok(FixedRecords::<111>::new(start)
             .record(bytes, index)?
             .as_slice()),
@@ -286,6 +289,9 @@ pub fn record(bytes: &[u8], start: usize, width: usize, index: usize) -> Result<
             .record(bytes, index)?
             .as_slice()),
         1702 => Ok(FixedRecords::<1702>::new(start)
+            .record(bytes, index)?
+            .as_slice()),
+        1714 => Ok(FixedRecords::<1714>::new(start)
             .record(bytes, index)?
             .as_slice()),
         1778 => Ok(FixedRecords::<1778>::new(start)

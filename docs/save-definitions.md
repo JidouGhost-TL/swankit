@@ -64,6 +64,12 @@ Optional `array` has `count` and `stride` in bytes: element `i` starts at
 `offset + i*stride`, for `0 <= i < count`. Verify `count*stride == size`.
 Names are not necessarily unique: repeated rows and aliasing are preserved.
 Editing by array index avoids ambiguity and does not update aliases or copies.
+The loader rejects unknown or undeclared field media, fields that fit none of
+that medium's declared sizes, and invalid array geometry. `set_field` requires
+a full image length declared for the selected field's medium. Two media with
+the same length remain indistinguishable from bytes alone; select the image
+explicitly. Standalone `Field::write` checks resident bounds and stored values,
+without a format's media metadata.
 
 A record has `name`, `width` and `fields`. Each member has `name`, relative
 `offset`, total `size`, C `type`, `count` and element `stride`. Integer C types
@@ -156,6 +162,8 @@ fn edit(definition_json: &str, image: &mut [u8], field_index: usize)
 5. Select the stored field's image and index. Edit a copy using `set_field`,
    or use `Field::write`. The scalar adapter checks ranges; raw byte arrays
    must match the exact extent. Derived tree edits do not mutate the image.
+   These are raw stored-field edits: numeric width, media length and bounds
+   checks do not establish gameplay ranges, progression, or safe encoded values.
 6. Call `fix_with_context` on the candidate. Repair is transactional and must
    preserve image length. The program controls initialization and copy repair;
    some grammars intentionally have no protection rewrite.
