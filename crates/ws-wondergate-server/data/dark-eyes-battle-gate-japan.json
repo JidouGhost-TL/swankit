@@ -1,0 +1,36 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "dark-eyes-battle-gate-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "Clean-room match-request reply derived from the traced ROM parser (M32). Request builder 35ABD2 sends POST /cgi-bin/dark/nph-reqmatch.cgi with X-SWAN-MTCH-ID/NAME/LVL/RETRY headers (272 bytes native). Reply status is parsed by 35AEB9 (finds HTTP/1. and reads the decimal code); 302 means retry-later, anything else continues. MTCH headers are found case-insensitively by 35AF6C (requires the X-SWAN- prefix immediately before the name and a colon after it); numbers are parsed by 35AFA8/35AF2D, which stop only at space or LF, so every value line ends with LF (a bare CR would corrupt the value). RETCD 0/1 waits using MTCH-POLINT/MTCH-TIMEOUT (35C386); missing RETCD shows 3598DA 'no opponent' and retries; RETCD 2 stores opponent ID/NAME (URL-decoded by 35AB8A)/LVL/SEED/MATCH/HOST/PATH/ACOUNT/BCOUNT/COUNT (35C3C1..35C474) and the wrapper returns 9. All opponent fields here are newly authored PLACEHOLDER values; no original server data, ranking, or battle pairing is reconstructed. Original matchmaking policy and the nph-match.cgi battle phase remain unknown."
+  },
+  "hosts": [
+    "battleg1.dark-eyes.com"
+  ],
+  "boards": {},
+  "values": {},
+  "records": {},
+  "routes": [
+    {
+      "id": "reqmatch-placeholder",
+      "method": "POST",
+      "match": {
+        "path": "/cgi-bin/dark/nph-reqmatch.cgi"
+      },
+      "respond": {
+        "status": 200,
+        "content_type": "text/plain",
+        "body": [
+          {
+            "text": "X-SWAN-MTCH-RETCD: 2\nX-SWAN-MTCH-ID: RIVAL001\nX-SWAN-MTCH-NAME: RIVAL%2D001\nX-SWAN-MTCH-LVL: 5\nX-SWAN-MTCH-SEED: 1234\nX-SWAN-MTCH-MATCH: 7\nX-SWAN-MTCH-HOST: battleg1.dark-eyes.com\nX-SWAN-MTCH-PATH: /cgi-bin/dark/nph-match.cgi\nX-SWAN-MTCH-ACOUNT: 3\nX-SWAN-MTCH-BCOUNT: 3\nX-SWAN-MTCH-COUNT: 6\n"
+          }
+        ]
+      }
+    }
+  ],
+  "limits": {
+    "max_body": 2048,
+    "max_response": 2048
+  }
+}

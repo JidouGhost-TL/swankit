@@ -18,6 +18,51 @@ impl Drop for Owned {
         let _ = std::fs::remove_dir_all(&self.directory);
     }
 }
+fn spawn_with_timeout(next: &AtomicU64, timeout: &str) -> (Owned, SocketAddr) {
+    let directory = loop {
+        let path = std::env::temp_dir().join(format!(
+            "swankit-wg-cli-{}-{}",
+            std::process::id(),
+            next.fetch_add(1, Ordering::Relaxed)
+        ));
+        match std::fs::create_dir(&path) {
+            Ok(()) => break path,
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => (),
+            Err(e) => panic!("{e}"),
+        }
+    };
+    let child = Command::new(env!("CARGO_BIN_EXE_swankit"))
+        .args([
+            "wg-server",
+            "--http-port",
+            "0",
+            "--bpl-port",
+            "0",
+            "--clock",
+            "fixed:20261005200403",
+            "--seed",
+            "7",
+            "--timeout",
+            timeout,
+            "--data",
+        ])
+        .arg(directory.join("data"))
+        .arg("--wire")
+        .arg(directory.join("wire"))
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut owned = Owned { child, directory };
+    let mut startup = String::new();
+    BufReader::new(owned.child.stdout.take().unwrap())
+        .read_line(&mut startup)
+        .unwrap();
+    let parts: Vec<_> = startup.split_whitespace().collect();
+    assert_eq!(parts[0], "WonderGate");
+    let address: SocketAddr = parts[1].strip_prefix("HTTP:").unwrap().parse().unwrap();
+    (owned, address)
+}
 #[test]
 fn wg_server_cli_starts_serves_logs_and_persists_tokens() {
     static NEXT: AtomicU64 = AtomicU64::new(0);
@@ -89,5 +134,47 @@ fn wg_server_cli_starts_serves_logs_and_persists_tokens() {
         )
         .unwrap(),
         reply
+    );
+}
+#[test]
+fn wg_server_timeout_option_covers_slow_chunked_clients() {
+    static NEXT: AtomicU64 = AtomicU64::new(1000);
+    let host = &Services::bundled().unwrap().charge_hosts[0];
+    let part1 = format!("POST /service/charge/nph-session HTTP/1.1\r\nHost: {host}\r\n");
+    let part2 = b"X-swan-cmnd-sid: synthetic\r\n\r\n";
+    // A client pausing 1.5 s mid-request exceeds a 1 s read window: 400.
+    let (_short, address) = spawn_with_timeout(&NEXT, "1");
+    let mut stream = TcpStream::connect(address).unwrap();
+    stream
+        .set_read_timeout(Some(std::time::Duration::from_secs(5)))
+        .unwrap();
+    stream.write_all(part1.as_bytes()).unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(1500));
+    // The server already timed out and closed; late bytes may not send.
+    let _ = stream.write_all(part2);
+    let _ = stream.shutdown(Shutdown::Write);
+    let mut reply = vec![];
+    stream.read_to_end(&mut reply).unwrap();
+    assert!(
+        reply.starts_with(b"HTTP/1.1 400"),
+        "{}",
+        reply.escape_ascii()
+    );
+    // The same pacing fits a generous window: 200.
+    let (_long, address) = spawn_with_timeout(&NEXT, "10");
+    let mut stream = TcpStream::connect(address).unwrap();
+    stream
+        .set_read_timeout(Some(std::time::Duration::from_secs(15)))
+        .unwrap();
+    stream.write_all(part1.as_bytes()).unwrap();
+    std::thread::sleep(std::time::Duration::from_millis(1500));
+    stream.write_all(part2).unwrap();
+    stream.shutdown(Shutdown::Write).unwrap();
+    let mut reply = vec![];
+    stream.read_to_end(&mut reply).unwrap();
+    assert!(
+        reply.starts_with(b"HTTP/1.1 200 OK"),
+        "{}",
+        reply.escape_ascii()
     );
 }
