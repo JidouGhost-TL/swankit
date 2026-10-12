@@ -52,6 +52,9 @@ pub struct Config {
     pub zero_sync: bool,
     /// Add a trailing zero to the dial acknowledgment for older reply readers.
     pub dial_padding: bool,
+    /// Minimum total reply frame size in bytes for successful dial
+    /// acknowledgments, padded with trailing zeros. Zero disables the floor.
+    pub dial_min_length: usize,
     pub pdc_reception: u8,
     pub ppp: Ppp,
     pub builtin_bpl: bool,
@@ -69,6 +72,7 @@ impl Default for Config {
             probe: Probe::Framed,
             zero_sync: false,
             dial_padding: false,
+            dial_min_length: 0,
             pdc_reception: 15,
             ppp: Ppp::default(),
             builtin_bpl: true,
@@ -208,6 +212,9 @@ impl Config {
             match (section, key) {
                 ("swankit", "zero_sync") => config.zero_sync = boolean(value, line)?,
                 ("swankit", "dial_padding") => config.dial_padding = boolean(value, line)?,
+                ("swankit", "dial_min_length") => {
+                    config.dial_min_length = number(value, 0, 255, line)? as usize
+                }
                 ("swankit", "probe") => {
                     config.probe = match value {
                         "framed" => Probe::Framed,

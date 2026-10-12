@@ -1,0 +1,37 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "sd-gundam-g-generation-gather-beat-2-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "ROM-proven GET path /download/ggene_gb/gggbgate2.txt on host wgg02.channel.or.jp (request bytes traced on the wire). Client parser takes ordered digit sections 1/2/3/4, one record per line as type digit plus three decimal digits plus four decimal digits plus CRLF; bytes past the result are length-checked only. The four authored revival records below are newly chosen placeholder indices verified to render on the native resupply list; they are not original server data and the original list contents remain unknown."
+  },
+  "hosts": [
+    "wgg02.channel.or.jp"
+  ],
+  "boards": {},
+  "values": {},
+  "records": {},
+  "routes": [
+    {
+      "id": "supply-list",
+      "method": "GET",
+      "match": {
+        "path": "/download/ggene_gb/gggbgate2.txt"
+      },
+      "respond": {
+        "status": 200,
+        "keep_alive": false,
+        "content_type": "text/plain",
+        "body": [
+          {
+            "text": "10010001\r\n20020002\r\n30030003\r\n40040004\r\n"
+          }
+        ]
+      }
+    }
+  ],
+  "limits": {
+    "max_body": 2048,
+    "max_response": 2048
+  }
+}

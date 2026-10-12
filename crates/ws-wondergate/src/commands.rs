@@ -116,15 +116,16 @@ impl<N: Network> Adapter<N> {
                 let phone = reader.bytes(count)?;
                 self.state.phone = phone.to_vec();
                 self.state.status = 3;
-                return Ok(reply(
-                    frame,
-                    0xb,
-                    if self.config.dial_padding {
-                        vec![0, 0]
-                    } else {
-                        vec![0]
-                    },
-                ));
+                let mut params = if self.config.dial_padding {
+                    vec![0, 0]
+                } else {
+                    vec![0]
+                };
+                let floor = self.config.dial_min_length.saturating_sub(4);
+                if params.len() < floor {
+                    params.resize(floor, 0);
+                }
+                return Ok(reply(frame, 0xb, params));
             }
             (1, 9) => return Ok(reply(frame, 0xb, vec![0])),
             (1, 0xa) => {

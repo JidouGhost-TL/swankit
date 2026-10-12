@@ -65,6 +65,51 @@ fn optional_dial_padding_is_bounded_and_default_reply_is_unchanged() {
 }
 
 #[test]
+fn dial_min_length_pads_ack_to_total_floor() {
+    let request = Frame {
+        kind: 1,
+        cmd: 8,
+        params: vec![0, 1, 1, 2, b'#', b'#'],
+    };
+    for padding in [false, true] {
+        let cfg = Config {
+            dial_padding: padding,
+            dial_min_length: 24,
+            ..Config::default()
+        };
+        let mut adapter = Adapter::new(cfg, Scripted::default());
+        let response = adapter.try_handle(&request).unwrap().unwrap();
+        assert_eq!(response.cmd, 0xb);
+        assert_eq!(response.params, vec![0; 20]);
+        assert_eq!(
+            response
+                .encode(ws_wondergate::frame::HeaderMode::Len16Be)
+                .unwrap()
+                .len(),
+            24
+        );
+        assert_eq!(adapter.snapshot().status, 3);
+    }
+    // A floor below the base reply preserves the base shape.
+    let cfg = Config {
+        dial_padding: true,
+        dial_min_length: 5,
+        ..Config::default()
+    };
+    let mut adapter = Adapter::new(cfg, Scripted::default());
+    let response = adapter.try_handle(&request).unwrap().unwrap();
+    assert_eq!(response.params, vec![0, 0]);
+    // The floor composes with the frame bound and INI parsing.
+    let mut cfg = Config::from_ini("[swankit]\ndial_min_length=24\n").unwrap();
+    cfg.limits.max_frame = 20;
+    let mut adapter = Adapter::new(cfg, Scripted::default());
+    assert!(adapter.try_handle(&request).is_err());
+    assert_eq!(adapter.snapshot().status, 0);
+    assert!(Config::from_ini("[swankit]\ndial_min_length=256\n").is_err());
+    assert!(Config::from_ini("[swankit]\ndial_min_length=maybe\n").is_err());
+}
+
+#[test]
 fn warmup_is_opt_in_chunk_independent_and_preserves_frames() {
     for chunk in [1, 3, 64] {
         let cfg = Config::from_ini("[swankit]\nzero_sync=true\n").unwrap();

@@ -260,6 +260,12 @@ read; the extra declared byte prevents its drain counter from underflowing.
 The zero is a compatibility placeholder and can remain unread until the next
 header scan. Default dial replies retain one result parameter.
 
+`dial_min_length=N` pads a successful `01:08` reply with trailing zeros until
+the total reply frame reaches N bytes. A client reader that validates a
+minimum acknowledgment length rejects shorter replies; the padding bytes are
+compatibility placeholders and can remain unread. Zero disables the floor and
+preserves default replies.
+
 Numeric values accept decimal, `0x`, `$`, `0b` and `0o` prefixes. Complete
 tokens and checked arithmetic replace C's suffix truncation and overflow.
 IPv4 uses dotted four-octet notation. Boolean fields accept `true`, `false`
@@ -271,6 +277,7 @@ or numeric zero/nonzero. `[swankit]` provides the following settings:
 | `probe` | `framed`; opt-in `ignore` or `echo` for standalone `8F` at a frame boundary |
 | `zero_sync` | false; opt-in five-byte raw reply to ten boundary-padding zeros |
 | `dial_padding` | false; opt-in trailing zero on successful `01:08` acknowledgments |
+| `dial_min_length` | 0; 0..255 total reply bytes on successful `01:08` acknowledgments |
 | `header` | profile default; `len16be` or `zero-then-len8`, independent of key order |
 | `backend` | `tcp`; also `transcript` (selection metadata for the caller) |
 | `transcript_file` | optional external path, loaded by the caller |

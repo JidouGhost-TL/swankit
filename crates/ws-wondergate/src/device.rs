@@ -146,7 +146,10 @@ impl<N: Network> Adapter<N> {
                 }
             }
             (1, 0 | 2) | (0x11, 3 | 0xd | 0xe | 0xf) => 3,
-            (1, 8) if self.config.dial_padding => 3,
+            (1, 8) => {
+                let base = if self.config.dial_padding { 2 } else { 1 };
+                base.max(self.config.dial_min_length.saturating_sub(4)) + 1
+            }
             (0x11, 7) if self.config.profile.close_reply == crate::profile::CloseReply::SixByte => {
                 3
             }
