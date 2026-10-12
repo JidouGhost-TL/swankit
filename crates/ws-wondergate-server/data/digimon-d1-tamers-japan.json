@@ -1,0 +1,35 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "digimon-d1-tamers-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "Clean-room placeholder signup reply. Recovery instruction trace: phase 08 at file 3E3286 calls signup builder 3E23C3; request is nine bytes from SRAM 48A5..48AC plus 48AE. HTTP session 3A0DA5 accepts status digit 2 at 3A0F64, parses Content-Length through 3A123E, and reads the body through 3A1273 and reader 3A1C7D. REP MOVSB at 3A1D04 stores the flag at SRAM 4428 and eight identifier bytes at 4429..4430. Consumer 3E32A2/32A9 compares flag with 01/FF; other values take 3E32C6, copy eight bytes to 48AF..48B6 at 3E32E8, set 48A4=1 at 3E32F0 and call save at 3E32F5. Response bytes are newly authored placeholders. Native prepared-context parser and storage are verified; the resulting display is corrupted, so visible signup completion and natural player entry remain unverified."
+  },
+  "hosts": [
+    "digi4.wgg.channel.or.jp"
+  ],
+  "boards": {},
+  "values": {},
+  "records": {},
+  "routes": [
+    {
+      "id": "signup-placeholder",
+      "method": "POST",
+      "match": {
+        "path": "/cgi-bin/dm4signup.cgi"
+      },
+      "respond": {
+        "status": 200,
+        "body": [
+          {
+            "bytes": [0, 1, 2, 3, 4, 5, 6, 7, 8]
+          }
+        ]
+      }
+    }
+  ],
+  "limits": {
+    "max_body": 2048,
+    "max_response": 2048
+  }
+}
