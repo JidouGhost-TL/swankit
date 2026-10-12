@@ -1,0 +1,37 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "sd-gundam-g-generation-gather-beat-2-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "ROM-traced GET path on wgg02.channel.or.jp. Client decimal helper at file 7AEF43 and parser 7AEF76 accept ordered section markers 1/2/3/4, then three index digits and four word digits, with optional CR and LF. Section4 decrements the decoded index before its byte store. Native body buffer is 0000:E000; records store indices and words in caller DS at 0404 and 0202. Four newly authored placeholder records select local table entries; they are not original server content. Following non-section byte is required. After the forty-byte body, the native caller at file 7AEBAE (live AC08:2B2E) writes a zero terminator at E028. The prepared context also starts with zero there; it is not the sole termination mechanism. Prepared pull and full-wire runs display three name labels and four numeric rows, with the fourth name blank. A prepared short-wire run fails: UART reception loses bytes 2E31 from the HTTP/1.1 status header, reports an overrun, and never receives the body or installs records. Scheduling, IRQ and pacing repeatability remain unresolved. Readable display is distinct from acquisition, save persistence and battle. Adapter length compatibility uses the separately accepted opt-in dial_long_success profile."
+  },
+  "hosts": [
+    "wgg02.channel.or.jp"
+  ],
+  "boards": {},
+  "values": {},
+  "records": {},
+  "routes": [
+    {
+      "id": "supply-list",
+      "method": "GET",
+      "match": {
+        "path": "/download/ggene_gb/gggbgate2.txt"
+      },
+      "respond": {
+        "status": 200,
+        "keep_alive": false,
+        "content_type": "text/plain",
+        "body": [
+          {
+            "text": "10010001\r\n20020002\r\n30030003\r\n40040004\r\n"
+          }
+        ]
+      }
+    }
+  ],
+  "limits": {
+    "max_body": 2048,
+    "max_response": 2048
+  }
+}
