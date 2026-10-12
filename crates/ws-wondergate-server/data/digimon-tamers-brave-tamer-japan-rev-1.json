@@ -1,0 +1,45 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "digimon-tamers-brave-tamer-japan-rev-1",
+  "provenance": {
+    "server": "new",
+    "notes": "Clean-room signup reply from traced parser code. Request POST /cgi-bin/dmBsignup.cgi built by ROM file 3B070C (POST template 3B45A0) with path dmBsignup.cgi (3ABD80) and host digi_b.wgg.channel.or.jp; 9-byte body semantics unknown. Reply status must be 2xx: file 3B0891/3B0898 accept '2' (3B08A5 checks 301/302+Location redirect, all else fails 0x1F3). Headers scanned line by line; Content-Length parsed case-insensitively (3B0A02) with decimal value at payload+16 (3B0B7D); blank line ends headers (3B09F5). Body first byte at DS:3814 decides phase 8 (file 3F8D45): 01/FF takes the non-registering path, any other byte copies body+1..8 to the account ID at DS:3A17, sets registered flag DS:3A0C=1 and writes the save (3F8D7D). Body byte 0 and ID bytes M32PLACE are newly authored placeholders, not recovered original account data."
+  },
+  "hosts": [
+    "digi_b.wgg.channel.or.jp"
+  ],
+  "boards": {},
+  "values": {},
+  "records": {},
+  "routes": [
+    {
+      "id": "signup",
+      "method": "POST",
+      "match": {
+        "path": "/cgi-bin/dmBsignup.cgi"
+      },
+      "respond": {
+        "status": 200,
+        "body": [
+          {
+            "bytes": [
+              0,
+              77,
+              51,
+              50,
+              80,
+              76,
+              65,
+              67,
+              69
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "limits": {
+    "max_body": 64,
+    "max_response": 256
+  }
+}
