@@ -40,6 +40,11 @@ pub struct Profile {
     pub status_params: &'static [u8],
     /// A client lineage sends the status command with no parameter bytes.
     pub status_without_parameter: bool,
+    /// Some clients require a success frame of at least 24 bytes with a
+    /// zero result code; shorter frames are rejected.
+    /// When true, dial success returns 21 placeholder zero params (25-byte
+    /// frame). Extra bytes are length-checked only; content is placeholder.
+    pub dial_long_success: bool,
     pub bpl_reply: BplReply,
 }
 
@@ -58,6 +63,7 @@ impl Profile {
         dial_modes: &[3],
         status_params: &[3],
         status_without_parameter: false,
+        dial_long_success: false,
         bpl_reply: BplReply::FieldPreserving24,
     };
     pub const REVIVAL: Self = Self {
@@ -74,6 +80,7 @@ impl Profile {
         dial_modes: &[1, 3],
         status_params: &[0, 3],
         status_without_parameter: true,
+        dial_long_success: false,
         bpl_reply: BplReply::FieldPreserving24,
     };
 }

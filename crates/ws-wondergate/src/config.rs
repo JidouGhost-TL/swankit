@@ -161,6 +161,7 @@ impl Config {
         let mut config = Self::default();
         let mut section = "";
         let mut header = None;
+        let mut dial_long_success = None;
         for (index, raw) in text.trim_start_matches('\u{feff}').lines().enumerate() {
             let line = index + 1;
             if raw.len() > 8192 {
@@ -250,6 +251,7 @@ impl Config {
                         _ => return Err(error(line, "unknown header mode")),
                     })
                 }
+                ("swankit", "dial_long_success") => dial_long_success = Some(boolean(value, line)?),
                 ("swankit", "backend") => {
                     config.backend = match value {
                         "tcp" => Backend::Tcp,
@@ -301,6 +303,9 @@ impl Config {
         }
         if let Some(header) = header {
             config.profile.header = header;
+        }
+        if let Some(dial_long_success) = dial_long_success {
+            config.profile.dial_long_success = dial_long_success;
         }
         Ok(config)
     }
