@@ -146,6 +146,7 @@ impl<N: Network> Adapter<N> {
                 }
             }
             (1, 0 | 2) | (0x11, 3 | 0xd | 0xe | 0xf) => 3,
+            (1, 8) if self.config.profile.dial_long_success => 22,
             (1, 8) if self.config.dial_padding => 3,
             (0x11, 7) if self.config.profile.close_reply == crate::profile::CloseReply::SixByte => {
                 3

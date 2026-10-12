@@ -159,6 +159,26 @@ fn both_dial_prefixes() {
     }
 }
 #[test]
+fn dial_long_success_for_gather_beat_length_gate() {
+    // ROM 38C887 returns 99 unless dial success has BX>=0x18 (24 bytes
+    // incl. 3-byte header) with result 00. Short 5/6-byte replies fail.
+    let cfg = Config::from_ini("[swankit]\ndial_long_success = true\n").unwrap();
+    assert!(cfg.profile.dial_long_success);
+    let mut a = Adapter::new(cfg, Scripted::default());
+    for phone in [vec![], vec![b'1']] {
+        let mut params = vec![0, 1, 1, phone.len() as u8];
+        params.extend_from_slice(&phone);
+        let reply = command(&mut a, 1, 8, &params);
+        let mut expected = vec![1, 0, 22, 0xb];
+        expected.extend_from_slice(&[0; 21]);
+        assert_eq!(reply, expected);
+        assert_eq!(reply.len(), 25);
+    }
+    // Default profile keeps short replies for other titles.
+    let mut short = Adapter::new(Config::default(), Scripted::default());
+    assert_eq!(command(&mut short, 1, 8, &[0, 1, 1, 0]), [1, 0, 2, 0xb, 0]);
+}
+#[test]
 fn interframe_nul_padding() {
     let mut a = Adapter::new(Config::default(), Scripted::default());
     let mut out = Vec::new();
