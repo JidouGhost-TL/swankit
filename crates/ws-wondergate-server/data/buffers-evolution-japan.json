@@ -3,7 +3,7 @@
   "id": "buffers-evolution-japan",
   "provenance": {
     "server": "new",
-    "notes": "New zero-record placeholder, not recovered original contest data. Native request path and BFEVSND marker: ROM files 3782A1 and 378A97. Reply marker BFEVREC= CRLF and fixed fields: 3783EF/378518; 36 records with stride 17: 378433..378444; packed decimal parser 37859C; 20 identity digits and final record: 378446..378478. All times and identifiers are zero. Submissions are not ranked or persisted; original competition policy remains unknown."
+    "notes": "M32 traced-grammar zero placeholder (not recovered original contest data). Chunks: [0] BFEVREC=CRLF marker (scan 3783EF, marker 378518); [1] 9B header h0/h1 859C->BX022E/0230 +1sp (37840D-378430); [2] 36x17B records f0..f4 via 378522/37859C (stride 378444, spill 1B into next); [3] 20B identity ->tiles 3800 via 378620, cmp BX0502-514 (378446-37847E); [4] 31B mismatch-path trailer 84C9/84ED (match path skips, 378478); [5] 37B tail pad for 37th-record spill read (37850E). Status byte[9] must be '2' (378FB1-378FC0; '4'->AX190 '5'->AX1F4). Stores: EEPROM words via 374588 (CX=5: 0x1400+BX/2); match/mismatch identity vs reply tiles; 8667 BCD accumulation needs nonzero mask+slots. Evidence: m32/buffers TRACE.md/GRAMMAR.md. All identifiers/times/scores are newly authored zeros; no ranking history or submission policy is reconstructed. Phase 2: ranking display FOUND (screen state machine 6CC5, tables 376D67/376D81; VIEW ENDURO/S.S./CONTEST states 3/4/5 gated on nonzero h0|h1; rows 7C64->7CFD, detail 7D77, totals state 8, grid 7183 state 9); f2 correction: +8 field stores (0,AH) to BX+0x6 (8522 378583/378585), slots +2/+C/+E never written (totals stay 0). Evidence: m32/buffers phase2/TRACE-continuation.md."
   },
   "hosts": [
     "wgg01.channel.or.jp"
@@ -23,7 +23,22 @@
         "content_type": "text/plain",
         "body": [
           {
-            "text": "BFEVREC=\r\n00000000 00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000000000000000000000000000000000000000000000000000000   00000000000000000000"
+            "text": "BFEVREC=\r\n"
+          },
+          {
+            "text": "00000000 "
+          },
+          {
+            "text": "00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   "
+          },
+          {
+            "text": "00000000000000000000"
+          },
+          {
+            "text": "0000000000000000000000000000000"
+          },
+          {
+            "text": "00000000000000   00000000000000000000"
           }
         ]
       }
