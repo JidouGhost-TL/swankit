@@ -1,0 +1,52 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "dark-eyes-battle-gate-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "Newly authored PLACEHOLDER opponent values; original pairing policy and battle payload are unknown. The request-match parser at file 35C32A reads MTCH-RETCD and stores opponent ID/name/level/seed/host/path/count fields in RAM before wrapper 35C6B0 can return 9. The match route here is a static dialogue-entry response with RETCD 0. It does not implement the RETCD 0/2/3/5/6 sequence. Separate prepared-call probes exercised individual wrappers, including 35C8F2 with RETCD 3; these are not a continuous handshake or natural entry. Parser 35C5D6 copies a response body only for RETCD 2 or 5. Its number primitives stop at space or LF; CRLF can corrupt Content-Length and prevent its LF blank-line search. An 80-byte CRLF response parsed as 1021 bytes in prepared probes, so no battle payload is served or claimed. No saved-account, visible battle or complete online feature is established by this definition."
+  },
+  "hosts": [
+    "battleg1.dark-eyes.com"
+  ],
+  "boards": {},
+  "values": {},
+  "records": {},
+  "routes": [
+    {
+      "id": "reqmatch-placeholder",
+      "method": "POST",
+      "match": {
+        "path": "/cgi-bin/dark/nph-reqmatch.cgi"
+      },
+      "respond": {
+        "status": 200,
+        "content_type": "text/plain",
+        "body": [
+          {
+            "text": "X-SWAN-MTCH-RETCD: 2\nX-SWAN-MTCH-ID: RIVAL001\nX-SWAN-MTCH-NAME: RIVAL%2D001\nX-SWAN-MTCH-LVL: 5\nX-SWAN-MTCH-SEED: 1234\nX-SWAN-MTCH-MATCH: 7\nX-SWAN-MTCH-HOST: battleg1.dark-eyes.com\nX-SWAN-MTCH-PATH: /cgi-bin/dark/nph-match.cgi\nX-SWAN-MTCH-ACOUNT: 3\nX-SWAN-MTCH-BCOUNT: 3\nX-SWAN-MTCH-COUNT: 6\n"
+          }
+        ]
+      }
+    },
+    {
+      "id": "match-dialogue-entry",
+      "method": "POST",
+      "match": {
+        "path": "/cgi-bin/dark/nph-match.cgi"
+      },
+      "respond": {
+        "status": 200,
+        "content_type": "text/plain",
+        "body": [
+          {
+            "text": "X-SWAN-MTCH-RETCD: 0\nX-SWAN-MTCH-POLINT: 1\nX-SWAN-MTCH-TIMEOUT: 30\nXPADDING0000\n"
+          }
+        ]
+      }
+    }
+  ],
+  "limits": {
+    "max_body": 2048,
+    "max_response": 2048
+  }
+}
