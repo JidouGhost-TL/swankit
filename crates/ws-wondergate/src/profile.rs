@@ -40,8 +40,8 @@ pub struct Profile {
     pub status_params: &'static [u8],
     /// A client lineage sends the status command with no parameter bytes.
     pub status_without_parameter: bool,
-    /// Gather Beat dial validator (ROM 38C887) requires a 24+ byte success
-    /// frame (BX>=0x18) with result 00; short 5/6-byte replies return 99.
+    /// Some clients require a success frame of at least 24 bytes with a
+    /// zero result code; shorter frames are rejected.
     /// When true, dial success returns 21 placeholder zero params (25-byte
     /// frame). Extra bytes are length-checked only; content is placeholder.
     pub dial_long_success: bool,

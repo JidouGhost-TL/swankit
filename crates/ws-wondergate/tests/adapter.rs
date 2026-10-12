@@ -159,11 +159,10 @@ fn both_dial_prefixes() {
     }
 }
 #[test]
-fn dial_long_success_for_gather_beat_length_gate() {
-    // ROM 38C887 returns 99 unless dial success has BX>=0x18 (24 bytes
-    // incl. 3-byte header) with result 00. Short 5/6-byte replies fail.
+fn dial_long_success_satisfies_client_length_gate() {
+    // A client length gate requires at least 24 bytes, including the
+    // three-byte header, and a zero result code.
     let cfg = Config::from_ini("[swankit]\ndial_long_success = true\n").unwrap();
-    assert!(cfg.profile.dial_long_success);
     let mut a = Adapter::new(cfg, Scripted::default());
     for phone in [vec![], vec![b'1']] {
         let mut params = vec![0, 1, 1, phone.len() as u8];

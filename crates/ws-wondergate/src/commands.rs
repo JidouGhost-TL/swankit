@@ -116,8 +116,8 @@ impl<N: Network> Adapter<N> {
                 let phone = reader.bytes(count)?;
                 self.state.phone = phone.to_vec();
                 self.state.status = 3;
-                // Gather Beat 38C887 needs BX>=0x18 with result 00; extra
-                // bytes are length-checked only (placeholder zeros).
+                // Some clients require a dial success frame of at least 24 bytes.
+                // The trailing bytes are placeholder zeros.
                 if self.config.profile.dial_long_success {
                     return Ok(reply(frame, 0xb, vec![0; 21]));
                 }
