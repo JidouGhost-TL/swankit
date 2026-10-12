@@ -3,7 +3,7 @@
   "id": "tonpuusou-japan",
   "provenance": {
     "server": "new",
-    "notes": "Clean-room request and response grammar from the private wave-2 ROM probes. Empty histories, best-per-identity ordering, dates, score conversion and structural blank slots are newly authored revival policy; no original server data or assets."
+    "notes": "Clean-room request and response grammar from the private wave-2 ROM probes. Empty histories, best-per-identity ordering, dates, score conversion and structural blank slots are newly authored revival policy; no original server data or assets. Rating download builder 4000:F208 uses nonempty FF-terminated credentials from RAM 072A/0735; the 11/13-byte server limits are bounded revival policy, not native builder length checks. Response parser A000:2C24 stores c=1 to word 0304, e=150000 as word 0355=1500 and byte 0357=0, and f=00001 to word 0365=1; display A000:3866 selects the main screen for ratings below 2500. Returned values and credentials are authored placeholders, with no original account data or persistent rating history. Upload grammar is static evidence only: builder 4000:F5DD calls A000:0243 at F639 and emits a decimal word plus a decimal byte padded to at least two digits; e therefore permits 3..8 digits. Response parser A000:35AB accepts c=1; c=2 retains an error/carry result for caller retry. Native upload, natural entry, save persistence and battle are not established by the definition."
   },
   "hosts": [
     "tongpuso.wgg.channel.or.jp"
@@ -983,6 +983,88 @@
               }
             },
             "record": "row-3"
+          }
+        ]
+      }
+    },
+    {
+      "id": "getrate",
+      "method": "POST",
+      "match": {
+        "path": "/cgi-bin/getrate.cgi"
+      },
+      "source": "form",
+      "request": {
+        "c": {
+          "decode": "percent-plus",
+          "bytes": [
+            1,
+            11
+          ]
+        },
+        "d": {
+          "decode": "percent-plus",
+          "bytes": [
+            1,
+            13
+          ]
+        }
+      },
+      "respond": {
+        "status": 200,
+        "content_type": "text/plain",
+        "body": [
+          {
+            "text": "c=1&e=150000&f=00001"
+          }
+        ]
+      }
+    },
+    {
+      "id": "setrate",
+      "method": "POST",
+      "match": {
+        "path": "/cgi-bin/setrate.cgi"
+      },
+      "source": "form",
+      "request": {
+        "c": {
+          "decode": "percent-plus",
+          "bytes": [
+            1,
+            11
+          ]
+        },
+        "d": {
+          "decode": "percent-plus",
+          "bytes": [
+            1,
+            13
+          ]
+        },
+        "e": {
+          "decode": "percent-plus",
+          "regex": "^[0-9]{3,8}$"
+        },
+        "f": {
+          "decode": "percent-plus",
+          "regex": "^[0-9]{1,5}$",
+          "as": "u64",
+          "max_number": 65535
+        },
+        "g": {
+          "decode": "percent-plus",
+          "regex": "^[0-9]{1,5}$",
+          "as": "u64",
+          "max_number": 65535
+        }
+      },
+      "respond": {
+        "status": 200,
+        "content_type": "text/plain",
+        "body": [
+          {
+            "text": "c=1"
           }
         ]
       }
