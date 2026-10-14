@@ -1,0 +1,84 @@
+{
+  "schema": "swankit-wondergate-title/1",
+  "id": "star-hearts-japan",
+  "provenance": {
+    "server": "new",
+    "notes": "Newly authored quest-download transport placeholders. GET /cgi-bin/starhearts.cgi?000NFFFF for N=2..5 at host s_hearts.wgg.channel.or.jp comes from the ROM URL table and entry routines A000:33A0/33DE/343E/34A0. The HTTP parser A000:D011 scans the status token for a 2xx hundreds digit and recognizes Content-Length case-insensitively. In the prepared quest-0003 trace the nine-byte body 800ZZ1A2B lands at RAM 0000:295D. A000:3534 reads the first three ASCII hex digits in reverse order, yielding 8; A000:341E subtracts 4 and A000:34FE converts four forward ASCII hex digits starting at 0000:2962 to BX:AX=0000:1A2B. A000:3432/3435 store that value at SRAM 1000:500E. The skipped ZZ bytes and numeric value are authored placeholders. Original content, natural entry, readable quest display, other quest consumers and gameplay remain unverified. The definition byte limits are local safety policy, not recovered client limits."
+  },
+  "hosts": [
+    "s_hearts.wgg.channel.or.jp"
+  ],
+  "boards": {},
+  "values": {},
+  "records": {},
+  "routes": [
+    {
+      "id": "quest-0002-placeholder",
+      "method": "GET",
+      "match": {
+        "path": "/cgi-bin/starhearts.cgi",
+        "query_exact": "0002FFFF"
+      },
+      "respond": {
+        "status": 200,
+        "body": [
+          {
+            "text": "800ZZ1A2B"
+          }
+        ]
+      }
+    },
+    {
+      "id": "quest-0003-placeholder",
+      "method": "GET",
+      "match": {
+        "path": "/cgi-bin/starhearts.cgi",
+        "query_exact": "0003FFFF"
+      },
+      "respond": {
+        "status": 200,
+        "body": [
+          {
+            "text": "800ZZ1A2B"
+          }
+        ]
+      }
+    },
+    {
+      "id": "quest-0004-placeholder",
+      "method": "GET",
+      "match": {
+        "path": "/cgi-bin/starhearts.cgi",
+        "query_exact": "0004FFFF"
+      },
+      "respond": {
+        "status": 200,
+        "body": [
+          {
+            "text": "800ZZ1A2B"
+          }
+        ]
+      }
+    },
+    {
+      "id": "quest-0005-placeholder",
+      "method": "GET",
+      "match": {
+        "path": "/cgi-bin/starhearts.cgi",
+        "query_exact": "0005FFFF"
+      },
+      "respond": {
+        "status": 200,
+        "body": [
+          {
+            "text": "800ZZ1A2B"
+          }
+        ]
+      }
+    }
+  ],
+  "limits": {
+    "max_body": 256,
+    "max_response": 1024
+  }
+}
