@@ -3,7 +3,7 @@
 // Copyright (C) 2026 jidoughost. Evidence is named by client lineage.
 mod common;
 use common::*;
-use serde_json::{json, Value};
+use serde_json::json;
 use ws_wondergate_server::{
     store::{JournalStore, MemoryStore, Scope, Store},
     Definition, FixedClock, SeededRng, Server,
@@ -28,6 +28,13 @@ fn check_in() -> Definition {
         .unwrap()
         .into_iter()
         .find(|d| d.json()["routes"][0]["id"] == "check-in")
+        .unwrap()
+}
+fn signup_placeholder() -> Definition {
+    Definition::bundled()
+        .unwrap()
+        .into_iter()
+        .find(|d| d.json()["routes"][0]["id"] == "signup-placeholder")
         .unwrap()
 }
 fn get(d: &Definition, path: &str, query: &str) -> Vec<u8> {
@@ -168,7 +175,7 @@ fn short_lineage_fragmented_request_over_tcp() {
     assert_eq!(received, server().dispatch_http(&raw));
     tcp.shutdown().unwrap();
     let entries = std::fs::read_to_string(wire.directory().join("wire.jsonl")).unwrap();
-    let entry: Value = serde_json::from_str(entries.lines().next().unwrap()).unwrap();
+    let entry: serde_json::Value = serde_json::from_str(entries.lines().next().unwrap()).unwrap();
     assert_eq!(entry["request_length"], raw.len());
     assert_eq!(entry["response_length"], received.len());
     assert_eq!(
@@ -334,6 +341,30 @@ fn bank13_lineage_percent_bytes_invalid_queries_do_not_store() {
         .unwrap();
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0].submission.name, [0x82, 0xa0]);
+}
+#[test]
+fn signup_placeholder_accepts_binary_post_and_preserves_reply_layout() {
+    // A synthetic binary account request with the observed MIME spelling.
+    // The authored reply is a flag followed by an eight-byte identifier.
+    let d = signup_placeholder();
+    let app = server();
+    let body = [0xFFu8, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00];
+    let raw = [
+        format!(
+            "POST {} HTTP/1.1\r\nHost: {}\r\nUser-Agent: SWAN/1.0\r\nContent-Type: application/x-www-from-urlencoded\r\nContent-Length: 9\r\n\r\n",
+            d.json()["routes"][0]["match"]["path"].as_str().unwrap(),
+            d.hosts()[0],
+        )
+        .into_bytes(),
+        body.to_vec(),
+    ]
+    .concat();
+    let reply = app.dispatch_http(&raw);
+    assert!(reply.starts_with(b"HTTP/1.1 200"));
+    let (status, headers, payload) = split_response(&reply);
+    assert!(status.starts_with("HTTP/1.1 200"));
+    assert_eq!(headers.get("Content-Length").map(String::as_str), Some("9"));
+    assert_eq!(payload, &[0, 1, 2, 3, 4, 5, 6, 7, 8]);
 }
 #[test]
 fn bank13_lineage_new_stock_and_unimplemented_content() {
