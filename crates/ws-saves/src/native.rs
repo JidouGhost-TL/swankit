@@ -1211,7 +1211,31 @@ impl Engine {
                 }
             }
             "to_bytes" => {
-                let n = checked_count(arg(&a, 0)?.index()?)?;
+                if a.len() > 2
+                    || kw
+                        .keys()
+                        .any(|k| !["length", "byteorder", "signed"].contains(&k.as_str()))
+                {
+                    return Err(bad("integer to_bytes arguments"));
+                }
+                if a.first().is_some() && kw.contains_key("length") {
+                    return Err(bad("duplicate integer byte length"));
+                }
+                if a.get(1).is_some() && kw.contains_key("byteorder") {
+                    return Err(bad("duplicate integer byteorder"));
+                }
+                let n = checked_count(
+                    a.first()
+                        .or_else(|| kw.get("length"))
+                        .ok_or_else(|| bad("missing integer byte length"))?
+                        .index()?,
+                )?;
+                let little = match a.get(1).or_else(|| kw.get("byteorder")) {
+                    None => false,
+                    Some(Value::Text(order)) if order == "little" => true,
+                    Some(Value::Text(order)) if order == "big" => false,
+                    _ => return Err(bad("integer byteorder must be little or big")),
+                };
                 if n > 16 {
                     return Err(bad("integer byte width"));
                 }
@@ -1220,7 +1244,22 @@ impl Engine {
                 if !signed && v < 0 {
                     return Err(bad("unsigned integer bytes"));
                 }
-                let little = a.get(1).map(Value::text).unwrap_or_else(|| "big".into()) == "little";
+                if n == 0 {
+                    if v != 0 && !(signed && v == -1) {
+                        return Err(bad("integer byte width overflow"));
+                    }
+                } else if n < 16 {
+                    let bits = n * 8;
+                    let fits = if signed {
+                        let limit = 1i128 << (bits - 1);
+                        v >= -limit && v < limit
+                    } else {
+                        v >= 0 && v < (1i128 << bits)
+                    };
+                    if !fits {
+                        return Err(bad("integer byte width overflow"));
+                    }
+                }
                 let raw = if little {
                     v.to_le_bytes()
                 } else {
