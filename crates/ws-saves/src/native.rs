@@ -1220,6 +1220,22 @@ impl Engine {
                 if !signed && v < 0 {
                     return Err(bad("unsigned integer bytes"));
                 }
+                if n == 0 {
+                    if v != 0 && !(signed && v == -1) {
+                        return Err(bad("integer byte width overflow"));
+                    }
+                } else if n < 16 {
+                    let bits = n * 8;
+                    let fits = if signed {
+                        let limit = 1i128 << (bits - 1);
+                        v >= -limit && v < limit
+                    } else {
+                        v >= 0 && v < (1i128 << bits)
+                    };
+                    if !fits {
+                        return Err(bad("integer byte width overflow"));
+                    }
+                }
                 let little = a.get(1).map(Value::text).unwrap_or_else(|| "big".into()) == "little";
                 let raw = if little {
                     v.to_le_bytes()
