@@ -1,6 +1,6 @@
 //! External frozen asset maps with independent decodes; synthetic runs skip cleanly.
 use formatkit_core::{Error, Result};
-use formatkit_corpus_test::{corpus_root, hash_bytes, run_dir, Args, Digest};
+use formatkit_corpus_test::{corpus_root, hash_bytes, required_mode, run_dir, Args, Digest};
 use serde_json::{json, Map, Value};
 use std::{
     cell::Cell,
@@ -76,14 +76,18 @@ fn corpus_asset_map_parity() {
     };
     // The first selection and every later map revision (ws-assets-<suffix>).
     let mut selections: Vec<String> = std::fs::read_dir(&root)
-        .map(|entries| {
-            entries
-                .filter_map(|e| e.ok()?.file_name().into_string().ok())
-                .filter(|n| n == "ws-assets" || n.starts_with("ws-assets-"))
-                .collect()
+        .expect("read asset corpus root")
+        .map(|entry| {
+            entry
+                .expect("read asset corpus entry")
+                .file_name()
+                .into_string()
+                .expect("asset corpus entry must have a UTF-8 name")
         })
-        .unwrap_or_default();
+        .filter(|name| name == "ws-assets" || name.starts_with("ws-assets-"))
+        .collect();
     selections.sort();
+    let mut inspected = 0;
     for selection in selections {
         let handler = AssetDigest {
             root: root.join(&selection),
@@ -92,11 +96,69 @@ fn corpus_asset_map_parity() {
             independent: Cell::new(0),
         };
         let count = run_dir(&selection, &handler);
+        inspected += count;
         eprintln!(
             "{selection} corpus: {count} maps; {} assets and {} references verified; {} decodes equal independent extractor files",
             handler.assets.get(),
             handler.references.get(),
             handler.independent.get()
+        );
+    }
+    assert!(
+        !required_mode() || inspected > 0,
+        "required asset corpus inspected no samples"
+    );
+}
+
+#[test]
+fn required_asset_maps_refuse_missing_or_empty_selections() {
+    for case in ["empty-root", "not-directory", "empty-selection"] {
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!(
+            "asset-corpus-required-{}-{nonce}-{case}",
+            std::process::id()
+        ));
+        if case == "not-directory" {
+            std::fs::write(&root, []).unwrap();
+        } else {
+            std::fs::create_dir(&root).unwrap();
+            if case == "empty-selection" {
+                let selection = root.join("ws-assets");
+                std::fs::create_dir(&selection).unwrap();
+                std::fs::write(selection.join("spec.json"), br#"{"samples":{}}"#).unwrap();
+            }
+        }
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "corpus_asset_map_parity", "--nocapture"])
+            .env("FORMATKIT_CORPUS_DIR", &root)
+            .env("FORMATKIT_CORPUS_REQUIRED", "1")
+            .env("FORMATKIT_CORPUS_RUNNER_LOCKED", "1")
+            .env("FORMATKIT_CORPUS_WRITE", "0")
+            .output()
+            .unwrap();
+        if case == "not-directory" {
+            std::fs::remove_file(&root).unwrap();
+        } else {
+            std::fs::remove_dir_all(&root).unwrap();
+        }
+        assert_eq!(
+            output.status.code(),
+            Some(101),
+            "required asset corpus accepted {case}: {}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+        let expected = match case {
+            "empty-root" => "required asset corpus inspected no samples",
+            "not-directory" => "read asset corpus root",
+            _ => "spec present but lists no samples",
+        };
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains(expected),
+            "wrong failure for {case}: {}",
+            String::from_utf8_lossy(&output.stderr)
         );
     }
 }

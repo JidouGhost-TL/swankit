@@ -1,6 +1,6 @@
 //! Frozen independent parser outputs and save bytes live outside Git.
 use formatkit_core::Result;
-use formatkit_corpus_test::{hash_bytes, run_dir, Args, Digest, Spec};
+use formatkit_corpus_test::{hash_bytes, required_mode, run_dir, Args, Digest, Spec};
 use serde_json::{json, Value};
 struct SaveDigest {
     origins: std::collections::HashMap<(String, String, String), Origin>,
@@ -167,6 +167,11 @@ fn corpus_rejected_primary_media() {
     };
     let ledger = root.join("ws-saves-play-enrollment.json");
     if !ledger.is_file() {
+        assert!(
+            !required_mode(),
+            "required rejected save media ledger is missing: {}",
+            ledger.display()
+        );
         return;
     }
     let enrollment: Value = serde_json::from_slice(&std::fs::read(ledger).unwrap()).unwrap();
@@ -197,5 +202,65 @@ fn corpus_rejected_primary_media() {
         );
         rejected += 1;
     }
+    assert!(
+        !required_mode() || rejected > 0,
+        "required rejected save media inspected no samples"
+    );
     eprintln!("ws-saves rejected primary media: {rejected} bounded errors checked");
+}
+
+#[test]
+fn required_rejected_media_refuses_missing_or_empty_ledger() {
+    for (case, ledger) in [
+        ("missing", None),
+        ("empty", Some(json!({"source_excluded": []}))),
+        (
+            "excluded",
+            Some(json!({"source_excluded": [{
+                "reason": "independent oracle does not mark a record/image valid"
+            }]})),
+        ),
+    ] {
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!(
+            "save-corpus-required-{}-{nonce}-{case}",
+            std::process::id()
+        ));
+        std::fs::create_dir(&root).unwrap();
+        if let Some(ledger) = ledger {
+            std::fs::write(
+                root.join("ws-saves-play-enrollment.json"),
+                serde_json::to_vec(&ledger).unwrap(),
+            )
+            .unwrap();
+        }
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "corpus_rejected_primary_media", "--nocapture"])
+            .env("FORMATKIT_CORPUS_DIR", &root)
+            .env("FORMATKIT_CORPUS_REQUIRED", "1")
+            .env("FORMATKIT_CORPUS_RUNNER_LOCKED", "1")
+            .env("FORMATKIT_CORPUS_WRITE", "0")
+            .output()
+            .unwrap();
+        std::fs::remove_dir_all(&root).unwrap();
+        assert_eq!(
+            output.status.code(),
+            Some(101),
+            "required rejection corpus accepted {case}: {}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+        let expected = if case == "missing" {
+            "required rejected save media ledger is missing"
+        } else {
+            "required rejected save media inspected no samples"
+        };
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains(expected),
+            "wrong failure for {case}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
 }
