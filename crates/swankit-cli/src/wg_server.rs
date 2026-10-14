@@ -36,6 +36,10 @@ pub fn run(args: &mut Args) -> Result<()> {
         Some(value) => Box::new(SeededRng::new(value.parse()?)),
         None => Box::new(OsRng::new()?),
     };
+    let timeout_secs = args.number("--timeout", 5)?;
+    if timeout_secs == 0 || timeout_secs > 60 {
+        return Err("timeout must be 1..=60 seconds".into());
+    }
     args.finish(1)?;
     std::fs::create_dir_all(&data)?;
     let app = Server::bundled(
@@ -48,6 +52,7 @@ pub fn run(args: &mut Args) -> Result<()> {
         Config {
             http: SocketAddr::new(bind, http_port),
             bpl: SocketAddr::new(bind, bpl_port),
+            timeout: Duration::from_secs(timeout_secs as u64),
             ..Config::default()
         },
         Arc::new(WireLog::open(wire)?),

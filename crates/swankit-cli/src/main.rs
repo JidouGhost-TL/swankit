@@ -34,8 +34,9 @@ const HELP: &str = "swankit: WonderSwan format tools
 Options: --json, --force (replace output); integers accept decimal or 0x hexadecimal.
 Experimental: interop --json [--server] (versioned JSON-lines requests on stdin).
   wg-server --data DIR --wire DIR [--bind IP] [--http-port N] [--bpl-port N]
-            [--clock system|fixed:YYYYMMDDhhmmss] [--seed N]
+            [--clock system|fixed:YYYYMMDDhhmmss] [--seed N] [--timeout SECONDS]
 The server loads bundled shared services and validated title definitions.
+--timeout sets the per-request read window in seconds (1..=60, default 5).
   wg-adapter [CONFIG.ini | ASDF] [--config CONFIG.ini] [--tap FILE] [--net tcp]
   wg-decode SERIAL.log [--header len16be|zero-then-len8]
 The same commands are available as stand-alone wg-adapter and wg-decode binaries.
