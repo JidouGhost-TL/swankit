@@ -310,7 +310,11 @@ impl Engine {
                 }
                 let mut kwargs = HashMap::new();
                 for kw in array(&n["keywords"])? {
-                    kwargs.insert(string(&kw["arg"])?.into(), self.eval(&kw["value"], s)?);
+                    let name = string(&kw["arg"])?;
+                    if kwargs.contains_key(name) {
+                        return Err(bad(format!("duplicate save keyword argument {name}")));
+                    }
+                    kwargs.insert(name.into(), self.eval(&kw["value"], s)?);
                 }
                 self.call(fun, args, kwargs)
             }
