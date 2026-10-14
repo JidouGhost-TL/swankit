@@ -3,7 +3,7 @@
   "id": "buffers-evolution-japan",
   "provenance": {
     "server": "new",
-    "notes": "M32 traced-grammar zero placeholder (not recovered original contest data). Chunks: [0] BFEVREC=CRLF marker (scan 3783EF, marker 378518); [1] 9B header h0/h1 859C->BX022E/0230 +1sp (37840D-378430); [2] 36x17B records f0..f4 via 378522/37859C (stride 378444, spill 1B into next); [3] 20B identity ->tiles 3800 via 378620, cmp BX0502-514 (378446-37847E); [4] 31B mismatch-path trailer 84C9/84ED (match path skips, 378478); [5] 37B tail pad for 37th-record spill read (37850E). Status byte[9] must be '2' (378FB1-378FC0; '4'->AX190 '5'->AX1F4). Stores: EEPROM words via 374588 (CX=5: 0x1400+BX/2); match/mismatch identity vs reply tiles; 8667 BCD accumulation needs nonzero mask+slots. Evidence: m32/buffers TRACE.md/GRAMMAR.md. All identifiers/times/scores are newly authored zeros; no ranking history or submission policy is reconstructed. Phase 2: ranking display FOUND (screen state machine 6CC5, tables 376D67/376D81; VIEW ENDURO/S.S./CONTEST states 3/4/5 gated on nonzero h0|h1; rows 7C64->7CFD, detail 7D77, totals state 8, grid 7183 state 9); f2 correction: +8 field stores (0,AH) to BX+0x6 (8522 378583/378585), slots +2/+C/+E never written (totals stay 0). Evidence: m32/buffers phase2/TRACE-continuation.md."
+    "notes": "Newly authored placeholder for a prepared-entry rank-row demonstration, not recovered original server content or real rankings. Nonzero header 2026/1012 enables the VIEW options (376DC4-376DF1, 3774EC-3774F3). Body: marker 378518 scanned at 3783EF; two packed-decimal header words at 37840D/378420; 36 records of stride 17 at 378439-378444. Record 378522: +0 rank -> slot+0 and unsigned minimum slot+10; +4 full packed word -> slot+4; +8 high packed pair -> slot+6; +10 full packed word -> slot+8; +14 high packed pair -> slot+A, with decoder reading +16 and next-record byte but discarding that low pair. All numeric positions use ASCII digits; the old spaces produced F0 garbage. Identity 20 ASCII zero digits -> tiles 3800 (378446-378458); mismatch trailer 31 bytes, match skips it (37846E-37850E); zero tail includes 37th record. Header, ranks 1-36, identity and trailer are synthetic. Rank rows are consumed at 377CFD from minimum slots 0242/0256/026A, page two offset 0168; no earned scores, submission policy, original history, world records or totals reconstruction. Entry still requires explicitly prepared RAM 00E2=03; no natural-entry or persistent-save unlock claim."
   },
   "hosts": [
     "wgg01.channel.or.jp"
@@ -13,7 +13,7 @@
   "records": {},
   "routes": [
     {
-      "id": "zero-record-placeholder",
+      "id": "placeholder-rank-preview",
       "method": "POST",
       "match": {
         "path": "/service/buffersevolution"
@@ -26,19 +26,19 @@
             "text": "BFEVREC=\r\n"
           },
           {
-            "text": "00000000 "
+            "text": "20261012 "
           },
           {
-            "text": "00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   00000000000000   "
+            "text": "000100000000000000002000000000000000030000000000000000400000000000000005000000000000000060000000000000000700000000000000008000000000000000090000000000000001000000000000000011000000000000000120000000000000001300000000000000014000000000000000150000000000000001600000000000000017000000000000000180000000000000001900000000000000020000000000000000210000000000000002200000000000000023000000000000000240000000000000002500000000000000026000000000000000270000000000000002800000000000000029000000000000000300000000000000003100000000000000032000000000000000330000000000000003400000000000000035000000000000000360000000000000"
           },
           {
             "text": "00000000000000000000"
           },
           {
-            "text": "0000000000000000000000000000000"
+            "text": "20261012 20261012 000000000000 "
           },
           {
-            "text": "00000000000000   00000000000000000000"
+            "text": "0000000000000000000000000000000000000"
           }
         ]
       }
