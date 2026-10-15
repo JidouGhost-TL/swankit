@@ -166,6 +166,10 @@ attribute bits, aliases), only the edited span is canonically encoded, and
 inside that span each glyph keeps the hidden attribute bits (the bits a
 `glyph_mask` ignores) of the source glyph at the same position.
 
+For a tile sheet without a count header, transparent cells after the last tile
+are padding. Replacement keeps the original tile count and refuses nontransparent
+pixels in those cells. A counted tile set retains its declared growth behavior.
+
 Placement: the payload is re-encoded with the asset's codec. When it fits
 the stored range it is written in place (the tail is filled with `pad` when
 declared, otherwise left as it was; a terminated stream's declared length

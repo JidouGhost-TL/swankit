@@ -107,7 +107,9 @@ pub fn decode_with_policy(
     })
 }
 
-/// Deterministic encoder; ordinary backward matches avoid prehistory subtleties.
+/// Minimum-byte parse over literals and ordinary backward matches. Accounting
+/// for each eight-token flag group avoids greedy matches exhausting a slot.
+/// Produced-byte references avoid prehistory subtleties.
 pub fn encode(src: &[u8]) -> Result<Vec<u8>> {
     input_size(src)?;
     if src.len() > u16::MAX as usize {
@@ -116,35 +118,59 @@ pub fn encode(src: &[u8]) -> Result<Vec<u8>> {
             value: src.len() as u64,
         });
     }
-    let mut out = (src.len() as u16).to_le_bytes().to_vec();
+    let mut matches = vec![(0, 0); src.len()];
+    for at in 0..src.len() {
+        for d in 1..=at.min(4095) {
+            let mut n = 0;
+            while n < 18 && at + n < src.len() && src[at + n] == src[at + n - d] {
+                n += 1;
+            }
+            if n > matches[at].1 {
+                matches[at] = (d, n);
+                if n == 18 {
+                    break;
+                }
+            }
+        }
+    }
+    // A longest match's distance also supports every shorter match at that
+    // position. Keep token phase in the cost: a new group costs one flag byte.
+    let mut costs = vec![[0usize; 8]; src.len() + 1];
+    let mut lengths = vec![[1u8; 8]; src.len()];
+    for at in (0..src.len()).rev() {
+        for phase in 0..8 {
+            let next = (phase + 1) % 8;
+            let flag = usize::from(phase == 0);
+            costs[at][phase] = flag + 1 + costs[at + 1][next];
+            for n in 3..=matches[at].1 {
+                let cost = flag + 2 + costs[at + n][next];
+                if cost < costs[at][phase] {
+                    costs[at][phase] = cost;
+                    lengths[at][phase] = n as u8;
+                }
+            }
+        }
+    }
+    let mut out = Vec::with_capacity(2 + costs[0][0]);
+    out.extend_from_slice(&(src.len() as u16).to_le_bytes());
     let mut at = 0;
     while at < src.len() {
         let flag_at = out.len();
         out.push(0);
         let mut flags = 0;
-        for bit in 0..8 {
-            if at == src.len() {
-                break;
-            }
-            let mut best = (0, 0);
-            for d in 1..=at.min(4095) {
-                let mut n = 0;
-                while n < 18 && at + n < src.len() && src[at + n] == src[at + n - d] {
-                    n += 1;
-                }
-                if n > best.1 {
-                    best = (d, n);
-                }
-            }
-            if best.1 >= 3 {
-                let token = ((best.0 << 4) | (best.1 - 3)) as u16;
+        let mut bit = 0;
+        while bit < 8 && at < src.len() {
+            let n = usize::from(lengths[at][bit]);
+            if n >= 3 {
+                let token = ((matches[at].0 << 4) | (n - 3)) as u16;
                 out.extend_from_slice(&token.to_le_bytes());
-                at += best.1;
+                at += n;
             } else {
                 flags |= 1 << bit;
                 out.push(src[at]);
                 at += 1;
             }
+            bit += 1;
         }
         out[flag_at] = flags;
     }
@@ -188,6 +214,16 @@ mod tests {
             assert_eq!(d.bytes, src);
             assert_eq!(d.consumed, e.len());
         }
+    }
+
+    #[test]
+    fn encoder_fits_a_slot_that_requires_a_shorter_match() {
+        // Five literals followed by a four-byte match fit in ten bytes. Taking
+        // the earlier three-byte match needs another token and eleven bytes.
+        let raw = [0, 0, 0, 1, 0, 0, 0, 0, 0];
+        let stored = encode(&raw).unwrap();
+        assert_eq!(stored.len(), 10);
+        assert_eq!(decode(&stored, raw.len()).unwrap().bytes, raw);
     }
 }
 

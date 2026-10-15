@@ -637,6 +637,16 @@ pub fn unrender_tiles(
             }
         )));
     }
+    if !counted {
+        for i in sheet.tiles.len()..rows * sheet.columns {
+            let (tx, ty) = (i % sheet.columns * 8, i / sheet.columns * 8);
+            if (0..64).any(|p| get(image, tx + p % 8, ty + p / 8)[3] != 0) {
+                return Err(malformed(format!(
+                    "{id}: sheet padding outside the tile count must stay transparent"
+                )));
+            }
+        }
+    }
     // A counted set reads every cell; others keep their tile count.
     let cells = if counted {
         image.height as usize / 8 * sheet.columns

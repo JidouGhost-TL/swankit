@@ -944,3 +944,41 @@ fn font_image_edit_preserves_padding_and_column_order() {
         .errors
         .is_empty());
 }
+
+#[test]
+fn tile_sheet_padding_edits_are_refused_without_changing_tile_count() {
+    let rom = rom();
+    let mut value = map_json(&rom);
+    value["assets"][0]["format"]["width"] = json!(3);
+    let map = load(&value);
+    let cm = charmaps(&map);
+    let sheet = render_tiles(&map, &cm, &rom, "t").unwrap();
+    assert_eq!((sheet.width, sheet.height), (24, 8));
+    let noop = replace(
+        &map,
+        &cm,
+        &rom,
+        &Replacement {
+            id: "t".into(),
+            input: ReplaceInput::Image(sheet.clone()),
+        },
+    )
+    .unwrap();
+    assert_eq!(noop.rom, rom);
+    // The third cell is transparent sheet padding, outside the two tiles.
+    for alpha in [1, 255] {
+        let mut edited = sheet.clone();
+        edited.rgba[16 * 4..16 * 4 + 4].copy_from_slice(&[0, 0, 0, alpha]);
+        let error = replace(
+            &map,
+            &cm,
+            &rom,
+            &Replacement {
+                id: "t".into(),
+                input: ReplaceInput::Image(edited),
+            },
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("padding"), "{error}");
+    }
+}
