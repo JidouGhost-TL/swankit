@@ -1,6 +1,81 @@
 # swankit
 
-A private Rust workspace for WonderSwan formats, built on Formatkit mechanisms.
+A WonderSwan format toolkit with Rust libraries, a command-line tool and Python
+bindings, built on Formatkit mechanisms. Version 0.1 reads supported formats
+and provides checked save and mapped-asset editing. ROMs, save images and
+per-ROM asset maps are not included.
+
+## Quick start
+
+The prepared distributions are a Linux x86_64 CLI archive and a Python 3.11+
+abi3 wheel for Linux x86_64 with glibc 2.34 or newer. They are currently private;
+crates and packages have not been published to registries. Using these
+distributions does not require Rust.
+
+```sh
+tar -xzf swankit-0.1.0-linux-x86_64.tar.gz
+./swankit-0.1.0-linux-x86_64/swankit --version
+./swankit-0.1.0-linux-x86_64/swankit --help
+
+# Install into your chosen Python environment.
+python3 -m pip install --no-index ./swankit-0.1.0-cp311-abi3-manylinux_2_34_x86_64.whl
+```
+
+The following examples use `swankit` for the extracted executable. Keep original
+files and write edits to new paths. Choose a definition and field using their
+documented meaning; field zero below is an example, not a universal setting.
+
+```sh
+swankit info cartridge.wsc --json
+swankit save decode save-definition.json save.eeprom --json
+swankit save set save-definition.json save.eeprom --field 0 --value 1 --output edited.eeprom
+swankit save fix save-definition.json damaged.eeprom --output repaired.eeprom --json
+
+swankit assets verify cartridge.wsc assets.json --json
+swankit assets extract cartridge.wsc assets.json extracted
+swankit assets replace cartridge.wsc assets.json --id ASSET_ID --from edited.png \
+  -o edited.wsc --map-out edited-assets.json
+```
+
+Asset replacement takes the decoded representation appropriate to the mapped
+asset: PNG for supported images, text for mapped strings, or decoded bytes.
+Retain each output ROM with its returned map. The map preserves verified
+allocation capacity across compressed edits, including undo/redo, while stored
+length remains exact. Growth beyond that allocation requires declared free
+space and complete, expressible references.
+
+## Supported operations and limits
+
+| Area | Available in 0.1 | Limits |
+| --- | --- | --- |
+| Saves | Definition-driven decode, verification, stored-field edits and transactional repair through Rust, CLI and Python | Storage bounds and definition checks do not establish every game's menu ranges, unlock conditions or active-record selection. Some definitions require explicit context or companion images |
+| Asset maps | Verification, extraction, replacement, declared relocation and reserved-capacity editing through Rust and CLI | Requires a map matching the exact ROM. Full map operations are not exposed by the Python bindings |
+| Graphics, text and sound | Documented tile/palette/image, character-map/font, codec and sound operations | Supported formats and supplied definitions only; engine-specific composite formats need separate maps or implementation |
+| Discovery | Evidence-driven candidate maps with verification | Discovery is partial; captures alone do not establish original ROM storage or safe ownership |
+| Patches and connections | IPS operations and the documented serial/adapter interfaces | Connection and service support have their documented interoperability limits |
+
+A successful save edit or checksum repair does not prove that the game will
+accept the value or select the edited record. Repair can update protection
+values or other records beyond the selected field. Inspect decoded results,
+verification flags and the complete byte diff before using an edited save.
+
+Start with the [CLI guide](docs/cli.md), [save definitions and editing](docs/save-definitions.md),
+[asset maps and replacement](docs/asset-maps.md), and [Python API](docs/python.md).
+Schemas are provided for [save definitions](docs/save-definition.schema.json)
+and [asset maps](docs/asset-map.schema.json). Library APIs are introduced by the
+crate guides below.
+
+## License
+
+Most workspace code is declared `MIT OR Apache-2.0`; see [LICENSE-MIT](LICENSE-MIT)
+and [LICENSE-APACHE](LICENSE-APACHE). Components containing the MIT-only adapter
+port, and packages linking those components, declare `MIT AND (MIT OR Apache-2.0)`.
+[NOTICE](NOTICE) identifies the port and preserves its attribution and license.
+Distributed binaries and wheels include these texts; each crate's manifest
+states its license expression.
+
+## Libraries and development
+
 `ws-rom` parses cartridge metadata, checks checksums and maps banked ROM
 addresses. [ws-compress](crates/ws-compress/README.md) provides bounded
 compression streams with deterministic encoders. [ws-gfx](crates/ws-gfx/README.md)
