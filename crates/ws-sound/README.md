@@ -28,6 +28,12 @@ assert_eq!(pcm.frame_count(), 32);
 # Ok::<(), formatkit_core::Error>(())
 ```
 
+`Wave::to_pcm(rate)` emits one 32-frame mono cycle, mapping each four-bit
+sample `n` to `(n - 8) * 4096` (-32768..28672). It uses the requested positive
+rate without resampling. This preview convention does not establish hardware
+playback amplitude. `render::unsigned_pcm` maps unsigned byte `n` to
+`(n - 128) * 256` (-32768..32512) at the explicit source rate.
+
 Record locations, table counts, bank state, wave counts and tick duration are
 caller inputs. The crate performs no title detection. Untagged waves and driver
 bytes have explicit catalog identities and require a selected grammar; arbitrary

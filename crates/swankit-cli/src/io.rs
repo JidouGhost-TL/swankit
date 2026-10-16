@@ -42,9 +42,13 @@ pub fn write(path: &str, bytes: &[u8], force: bool) -> Result<()> {
     } else {
         options.create_new(true);
     }
-    let mut file = options
-        .open(Path::new(path))
-        .map_err(|e| format!("write {path}: {e}; use --force to replace an existing output"))?;
+    let mut file = options.open(Path::new(path)).map_err(|e| {
+        if !force && e.kind() == std::io::ErrorKind::AlreadyExists && Path::new(path).is_file() {
+            format!("write {path}: {e}; use --force to replace an existing output")
+        } else {
+            format!("write {path}: {e}")
+        }
+    })?;
     file.write_all(bytes)?;
     file.flush()?;
     Ok(())

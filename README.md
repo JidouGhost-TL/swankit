@@ -10,7 +10,8 @@ per-ROM asset maps are not included.
 The prepared distributions are a Linux x86_64 CLI archive and a Python 3.11+
 abi3 wheel for Linux x86_64 with glibc 2.34 or newer. They are currently private;
 crates and packages have not been published to registries. Using these
-distributions does not require Rust.
+distributions does not require Rust. The [offline distribution guide](docs/distribution.md)
+describes the complete packet, platform evidence and a synthetic first operation.
 
 ```sh
 tar -xzf swankit-0.1.0-linux-x86_64.tar.gz
@@ -40,9 +41,12 @@ swankit assets replace cartridge.wsc assets.json --id ASSET_ID --from edited.png
 Asset replacement takes the decoded representation appropriate to the mapped
 asset: PNG for supported images, text for mapped strings, or decoded bytes.
 Retain each output ROM with its returned map. The map preserves verified
-allocation capacity across compressed edits, including undo/redo, while stored
-length remains exact. Growth beyond that allocation requires declared free
-space and complete, expressible references.
+allocation capacity across compressed edits, including undo/redo. Self-delimited
+streams track consumed length; externally sized codecs such as Okumura can
+retain a declared carrier length that includes an unused tail. See the
+[extent and capacity rules](docs/asset-maps.md).
+Growth beyond the allocation requires declared free space and complete,
+expressible references.
 
 ## Supported operations and limits
 

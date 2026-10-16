@@ -36,8 +36,8 @@ hexadecimal strings. Unknown fields are errors.
 | --- | --- |
 | `id` | Stable id, `[A-Za-z0-9._-]`, unique in the map |
 | `kind` | `tiles`, `tilemap`, `palette`, `font`, `text`, `pointer-table`, `music`, `sound-effect`, `pcm`, `data-table`, `sprite-table`, `other` |
-| `offset`, `length` | File offset and stored length. `length` may be omitted for terminated codecs (the codec's end marker defines it) and for text (the charmap's end control) |
-| `reserved_capacity` | Optional proven total owned allocation in bytes from `offset`, independent of consumed `length`. Defaults to the current stored extent; retained across in-place edits and cleared on relocation |
+| `offset`, `length` | File offset and declared stored/carrier length (see extent rules below). `length` may be omitted for terminated codecs (the codec's end marker defines it) and for text (the charmap's end control) |
+| `reserved_capacity` | Optional proven total owned allocation in bytes from `offset`, independent of the consumed stream extent. Defaults to the current stored extent; retained across in-place edits and cleared on relocation |
 | `codec`, `codec_params` | `raw` (default) or a `ws-compress` id: `ws-lz-rle-7f`, `ws-lz-bits-16`, `ws-okumura-lzss` (with `decoded_length`, `bit_order`, `ring_fill`), `ws-lzss-u16-zero` or `ws-lzss-12` (parameters below) |
 | `address` | Descriptive CPU view (`window` c0/c2/c3, `bank`, `segment`, `offset`) |
 | `format` | Kind parameters (below) |
@@ -173,8 +173,8 @@ pixels in those cells. A counted tile set retains its declared growth behavior.
 
 Placement: the payload is re-encoded with the asset's codec. When it fits
 the owned allocation it is written in place (the tail is filled with `pad` when
-declared, otherwise left as it was; a terminated stream's declared length
-becomes its new extent). When it does not fit, it is relocated only if
+declared, otherwise left as it was; a self-delimited stream's declared length
+becomes its new consumed extent). When it does not fit, it is relocated only if
 `references_complete` holds and every reference can express a position in a
 declared free range (implied bits, alignment, far windows; a stream never newly
 crosses a 64 KiB bank), first fit. The references are rewritten, the old range
@@ -198,9 +198,22 @@ Old maps remain valid without this field: their current decoded stored extent
 is the placement budget. When a self-delimited stream shrinks, replacement
 records the original extent as `reserved_capacity` in the returned map. Later
 undo, redo or other replacements can use that same allocation. Explicit
-reservations are retained across in-place edits; `length` describes the new
-stored extent. Exact-consumption checks remain in force: increasing `length`
-to include unused trailing bytes is refused for codecs that require them.
+reservations are retained across in-place edits. For self-delimited codecs,
+`length` describes the new consumed extent. Exact-consumption checks remain in
+force for codecs that require them: increasing `length` to include unused
+trailing bytes is refused for those codecs.
+
+Okumura keeps a declared carrier length on an in-place replacement. Its
+`decoded_length` determines when decoding stops; consumed encoded bytes can
+be shorter than the carrier. For example, a 41-byte carrier may hold a 9-byte
+encoding after a smaller edit while map `length` and extraction `stored_length`
+stay 41. Those fields describe the carrier, not a promise of 41 consumed bytes.
+Its unchanged tail remains within the owned allocation, so restoring a larger
+encoding can still fit. This is distinct from a self-delimited stream, where
+replacement records consumed length and preserves the old allocation through
+`reserved_capacity`. Do not infer unused space as free space. Standalone codec
+`DecodeResult.consumed` measures consumed bytes; an external-length codec does
+not acquire a terminator merely because the caller supplies a carrier length.
 
 Relocation allocates only the new encoded extent from declared free space and
 clears the old reservation. Spare capacity at the old offset never follows a

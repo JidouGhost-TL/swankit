@@ -1,4 +1,5 @@
 use crate::{bad, error};
+use formatkit_core::Error;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 use swankit::compress::{self, BitOrder};
@@ -36,8 +37,17 @@ fn decode(
     fill: u8,
 ) -> PyResult<DecodeResult> {
     let history = history.unwrap_or_default();
-    if max_output > compress::MAX_DECODED || history.len() > compress::MAX_DECODED {
-        return Err(bad("codec output/history exceeds 65536 bytes"));
+    for (resource, requested) in [
+        ("codec output", max_output),
+        ("codec history", history.len()),
+    ] {
+        if requested > compress::MAX_DECODED {
+            return Err(error(Error::ResourceLimit {
+                resource,
+                requested: requested as u64,
+                limit: compress::MAX_DECODED as u64,
+            }));
+        }
     }
     let bit_order = order(bit_order)?;
     let decoded = match codec {
@@ -70,7 +80,11 @@ fn encode<'py>(
 ) -> PyResult<Bound<'py, PyBytes>> {
     let bit_order = order(bit_order)?;
     if data.len() > compress::MAX_DECODED {
-        return Err(bad("codec input exceeds 65536 bytes"));
+        return Err(error(Error::ResourceLimit {
+            resource: "codec input",
+            requested: data.len() as u64,
+            limit: compress::MAX_DECODED as u64,
+        }));
     }
     let result = match codec {
         "lz-rle-7f" => compress::lz_rle_7f::encode(data).map_err(error)?,

@@ -107,6 +107,14 @@ patch = swankit.ips_create(b"before", b"after")
 assert swankit.ips_apply(b"before", patch) == b"after"
 ```
 
+`Wave` unpacks the low nibble before the high nibble into 32 values in 0..15.
+`Wave.to_pcm(rate)` returns one mono cycle with signed samples `(n - 8) * 4096`
+(range -32768..28672). The rate labels that cycle; it does not resample it or
+establish hardware playback amplitude. This is the toolkit's preview convention.
+`unsigned_pcm(data, rate)` maps each unsigned byte with `(n - 128) * 256`
+(range -32768..32512), at the caller's explicit positive source rate.
+`Pcm.s16le()` serializes signed 16-bit little-endian samples without a WAV header.
+
 `waves` decodes complete wave banks. `unsigned_pcm` extracts unsigned 8-bit
 PCM at an explicit rate. `pcm_preview` renders a four-wave bank and ordered
 `(frame, port, value)` writes to bounded 24 kHz stereo PCM; `coupled=True`

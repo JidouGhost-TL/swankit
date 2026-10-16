@@ -273,3 +273,23 @@ def test_unsupported_and_contextual_errors():
     with pytest.raises(ws.SwankitError) as caught:
         ws.ips_apply(b"", b"PATCH\0\0\0")
     assert str(caught.value) == "record 0: unexpected end of input: needed 2 byte(s) at offset 8, 0 available"
+
+
+@pytest.mark.parametrize("codec", ["lz-bits-16", "lz-rle-7f", "okumura-lzss"])
+def test_codec_resource_subclasses(codec):
+    with pytest.raises(ws.ResourceLimitError, match="65536") as caught:
+        ws.encode(codec, bytes(65537))
+    assert isinstance(caught.value, ws.SwankitError)
+    for kwargs in ({"max_output": 65537}, {"history": bytes(65537)}):
+        with pytest.raises(ws.ResourceLimitError, match="65536"):
+            ws.decode(codec, b"", **kwargs)
+    # Malformed selectors/options remain distinct from resource exhaustion.
+    for call in (lambda: ws.encode("unknown", b""),
+                 lambda: ws.encode(codec, b"", bit_order="invalid")):
+        with pytest.raises(ws.SwankitError) as malformed:
+            call()
+        assert not isinstance(malformed.value, ws.ResourceLimitError)
+    raw = b"bounded valid input" * 4
+    encoded = ws.encode(codec, raw)
+    kwargs = {"decoded_size": len(raw)} if codec == "okumura-lzss" else {}
+    assert ws.decode(codec, encoded, **kwargs).data == raw

@@ -168,6 +168,19 @@ Byte sequences additionally accept `dialect` (`a`, `b` or `c`, default `a`),
 or false). Those fields are the explicit input mode for the owner instruction
 parser. Definitions reject unknown fields and schema versions.
 
+For a packed wave at the beginning of a caller-owned file, a minimal sound
+definition is:
+
+```json
+{"schema":"swankit-sound-def/1","format":"wave","offset":0,"length":16}
+```
+
+`extract sound` returns 32 values in 0..15 per wave, low nibble first. For
+unsigned PCM, select `"format":"unsigned-pcm"`, set the exact byte `length`
+and a positive `sample_rate`; samples become signed 16-bit values using
+`(n - 128) * 256`. The rate is supplied by the caller, not detected from bytes.
+These operations export JSON; Python's `Pcm.s16le()` supplies raw PCM bytes.
+
 ## IPS patches
 
 ```sh
@@ -297,3 +310,11 @@ capture, independently of the saved value of a mono-only/unavailable register.
 `tools/capture-scenes.lua` can capture existing states, input replays, RAM, ports,
 screenshots and (with `RASTER=1`) scanline ports through the emulator debugger API.
 Its environment inputs are described in the script; assets remain external.
+
+## Offline distributions
+
+The complete packet includes this guide, schemas and linked crate guides.
+See [offline installation and first operation](distribution.md) for platform
+requirements, artifact/source binding and a synthetic tile example. Use exact
+supported command paths such as `swankit extract sound --help` for syntax.
+Unknown actions and malformed option requests return an error.

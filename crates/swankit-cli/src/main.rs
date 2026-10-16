@@ -32,7 +32,8 @@ const HELP: &str = "swankit: WonderSwan format tools
   patch apply PATCH BASE --output FILE [--overlap reject|last-write-wins] [--growth reject|zero-fill]
   patch create BASE TARGET --output IPS
   assets discover|extract|replace|verify ROM MAP ... (see swankit assets --help)
-Options: --json, --force (replace output); integers accept decimal or 0x hexadecimal.
+Options: --json where listed; output-writing commands accept --force to replace files.
+Integers accept decimal or 0x hexadecimal.
 Experimental: interop --json [--server] (versioned JSON-lines requests on stdin).
   wg-server --data DIR --wire DIR [--bind IP] [--http-port N] [--bpl-port N]
             [--clock system|fixed:YYYYMMDDhhmmss] [--seed N]
@@ -85,7 +86,62 @@ fn text_definition(id: &str) -> Result<text::TextDefinition> {
         Ok(text::builtin_definition(id)?)
     }
 }
+// Help accepts an exact supported command path, so a malformed action or an
+// option missing its value cannot be mistaken for a successful help request.
+fn command_help(words: &[String]) -> Result<bool> {
+    let option_end = words.iter().position(|w| w == "--").unwrap_or(words.len());
+    if !words[..option_end]
+        .iter()
+        .any(|w| matches!(w.as_str(), "--help" | "-h"))
+    {
+        return Ok(false);
+    }
+    let path: Vec<_> = words[..words.len() - 1]
+        .iter()
+        .map(String::as_str)
+        .collect();
+    if !words
+        .last()
+        .is_some_and(|w| matches!(w.as_str(), "--help" | "-h"))
+    {
+        return Err("help requires an exact command path followed by --help or -h".into());
+    }
+    let lines = match path.as_slice() {
+        [] => HELP.to_owned(),
+        ["assets", "discover"] => return discover::run(words.to_vec()).map(|()| true),
+        ["assets"] | ["assets", "extract" | "replace" | "verify"] => assets::HELP.to_owned(),
+        ["link"] => link::HELP.to_owned(),
+        ["wg-adapter"] => wg::ADAPTER_HELP.to_owned(),
+        ["wg-decode"] => wg::DECODE_HELP.to_owned(),
+        ["info" | "detect" | "tiles" | "extract" | "patch" | "wg-server" | "interop"]
+        | ["extract", "text" | "font" | "sound" | "codec"]
+        | ["patch", "apply" | "create"] => {
+            let prefix = path.join(" ");
+            HELP.lines()
+                .filter(|line| {
+                    line.trim_start().starts_with(&format!("{prefix} "))
+                        || (prefix == "interop" && line.starts_with("Experimental:"))
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+        }
+        #[cfg(feature = "saves")]
+        ["save"] | ["save", "decode" | "set" | "fix"] => {
+            let prefix = path.join(" ");
+            HELP.lines()
+                .filter(|line| line.trim_start().starts_with(&format!("{prefix} ")))
+                .collect::<Vec<_>>()
+                .join("\n")
+        }
+        _ => return Err("unknown or malformed help command; see swankit --help".into()),
+    };
+    println!("{lines}\nSee docs/cli.md and the linked format guides for definitions and limits.");
+    Ok(true)
+}
 fn run(words: Vec<String>) -> Result<()> {
+    if command_help(&words)? {
+        return Ok(());
+    }
     if words == ["--version"] || words == ["-V"] {
         println!("swankit {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
