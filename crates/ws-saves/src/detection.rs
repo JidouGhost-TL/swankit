@@ -6,21 +6,39 @@ use std::collections::HashSet;
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct ValidityEvidence {
+    /// Positive semantic flags outside explicitly invalid or excluded regions.
     pub usable_flags: usize,
+    /// All passing checks in included regions, including unusable records.
     pub checks_passed: usize,
+    /// All failing checks in included regions, including unusable records.
     pub checks_failed: usize,
 }
-fn evidence(value: &Value, exclude: &HashSet<&str>, out: &mut ValidityEvidence) {
+// Return whether any included semantic validity flag was present, even if false.
+// An invalid region cannot contribute usable flags from itself or its children;
+// a separate valid record can still establish a usable image.
+fn evidence(
+    value: &Value,
+    exclude: &HashSet<&str>,
+    eligible: bool,
+    out: &mut ValidityEvidence,
+) -> bool {
+    let mut semantic_flags = false;
     match value {
         Value::Object(map) => {
+            let eligible = eligible
+                && !["valid", "global_valid"].iter().any(|key| {
+                    !exclude.contains(key) && map.get(*key) == Some(&Value::Bool(false))
+                });
             for (key, value) in map {
                 if exclude.contains(key.as_str()) {
                     continue;
                 }
                 if let Some(flag) = value.as_bool() {
-                    if matches!(key.as_str(), "valid" | "global_valid" | "signature_valid") && flag
-                    {
-                        out.usable_flags += 1;
+                    if matches!(key.as_str(), "valid" | "global_valid" | "signature_valid") {
+                        semantic_flags = true;
+                        if flag && eligible {
+                            out.usable_flags += 1;
+                        }
                     }
                     if matches!(
                         key.as_str(),
@@ -39,16 +57,17 @@ fn evidence(value: &Value, exclude: &HashSet<&str>, out: &mut ValidityEvidence) 
                         }
                     }
                 }
-                evidence(value, exclude, out);
+                semantic_flags |= evidence(value, exclude, eligible, out);
             }
         }
         Value::Array(values) => {
             for v in values {
-                evidence(v, exclude, out);
+                semantic_flags |= evidence(v, exclude, eligible, out);
             }
         }
         _ => {}
     }
+    semantic_flags
 }
 impl Format {
     pub fn accepts_size(&self, length: usize) -> bool {
@@ -130,8 +149,11 @@ impl Format {
             checks_passed: 0,
             checks_failed: 0,
         };
-        evidence(&value, &excludes, &mut out);
-        if out.usable_flags == 0 && out.checks_passed == 0 {
+        let semantic_flags = evidence(&value, &excludes, true, &mut out);
+        // Checksum-only programs retain their existing recognition behavior.
+        // When semantic flags exist, passing component checks cannot replace
+        // the program's decision that every stored record is unusable.
+        if out.usable_flags == 0 && (semantic_flags || out.checks_passed == 0) {
             Ok(None)
         } else {
             Ok(Some(out))

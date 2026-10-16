@@ -300,8 +300,6 @@ impl Format {
     ) -> Result<Json> {
         let mut engine = self.engine(bytes, name, context)?;
         let scope = engine.initialize(&self.program)?;
-        let main =
-            Environment::get(&scope, "main").ok_or_else(|| bad("save program lacks entry"))?;
         let argv = Value::list(vec![Value::Text("save".into()), Value::Text(name.into())]);
         Environment::set(&scope, "sys_argv", argv.clone())?;
         let result = if self.entry["mode"] == "direct" {
@@ -321,6 +319,8 @@ impl Format {
             engine.output.push(json);
             Value::None
         } else {
+            let main =
+                Environment::get(&scope, "main").ok_or_else(|| bad("save program lacks entry"))?;
             let args = match self.entry["mode"].as_str() {
                 Some("sys-argv") => vec![],
                 Some("arguments") => vec![Value::list(vec![Value::Text(name.into())])],
@@ -358,8 +358,6 @@ impl Format {
     ) -> Result<()> {
         let mut engine = self.engine(bytes, name, context)?;
         let scope = engine.initialize(&self.program)?;
-        let main =
-            Environment::get(&scope, "main").ok_or_else(|| bad("save program lacks entry"))?;
         let argv = Value::list(vec![
             Value::Text("save".into()),
             Value::Text("--fix".into()),
@@ -380,6 +378,8 @@ impl Format {
                 .raw()?;
             engine.files.insert("repaired".into(), fixed);
         } else {
+            let main =
+                Environment::get(&scope, "main").ok_or_else(|| bad("save program lacks entry"))?;
             let args = match self.entry["mode"].as_str() {
                 Some("sys-argv") => vec![],
                 Some("arguments") => vec![Value::list(vec![
