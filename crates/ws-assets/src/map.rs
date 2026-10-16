@@ -519,6 +519,9 @@ pub struct Asset {
     /// Stored length; absent means codec-terminated.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub length: Option<Num>,
+    /// Proven total allocation from offset, independent of consumed length.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reserved_capacity: Option<Num>,
     #[serde(default)]
     pub codec: Codec,
     #[serde(default, skip_serializing_if = "is_default")]

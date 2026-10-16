@@ -2,7 +2,7 @@
 //! when the new stored bytes fit, otherwise relocate into declared free space
 //! when every reference is known. Nothing is written outside the asset's own
 //! range, a declared free range or a declared reference.
-use crate::data::{decode_asset, encode_payload};
+use crate::data::{allocation_capacity, decode_asset, encode_payload, validate_reservations};
 use crate::gfx::{unrender_tilemap_with, unrender_tiles, Allocation};
 use crate::map::{AssetMap, Codec, FreeRange, Kind, Num, TileRange};
 use crate::refs::{encode_reference, references_for};
@@ -186,6 +186,7 @@ pub fn replace_with(
     options: &ReplaceOptions,
 ) -> Result<ReplaceOutcome> {
     check_identity(map, rom)?;
+    validate_reservations(map, charmaps, rom)?;
     let mut allocated = Vec::new();
     let (decoded, approximated_pixels) =
         payloads(map, charmaps, rom, replacement, options, &mut allocated)?;
@@ -221,24 +222,36 @@ pub fn replace_with(
             continue;
         }
         let stored = encode_payload(asset, payload)?;
-        if stored.len() <= old.length {
+        let capacity = allocation_capacity(asset, old.offset, old.length, rom.len())?;
+        if stored.len() <= capacity {
             out[old.offset..old.offset + stored.len()].copy_from_slice(&stored);
             if let Some(pad) = asset.format.pad {
                 let pad = u8::try_from(pad.0).map_err(|_| malformed("pad must be a byte"))?;
-                out[old.offset + stored.len()..old.offset + old.length].fill(pad);
+                out[old.offset + stored.len()..old.offset + capacity].fill(pad);
             }
             // A self-delimited stream's declared length is its consumed extent.
             if let Some(a) = new_map.assets.iter_mut().find(|a| a.id == *id) {
-                if a.length.is_some() && (asset.codec.terminated() || asset.codec == Codec::Lzss12)
+                if asset.reserved_capacity.is_some()
+                    || (a.length.is_some()
+                        && (asset.codec.terminated() || asset.codec == Codec::Lzss12))
                 {
                     a.length = Some(Num(stored.len() as u64));
+                }
+                if capacity > stored.len()
+                    && (asset.reserved_capacity.is_some()
+                        || asset.codec.terminated()
+                        || asset.codec == Codec::Lzss12)
+                {
+                    // The verified original stored extent is an allocation
+                    // proof even when its length was inferred from a terminator.
+                    a.reserved_capacity = Some(Num(capacity as u64));
                 }
             }
             actions.push(format!(
                 "{id}: in place at {:#x}, {} of {} stored bytes",
                 old.offset,
                 stored.len(),
-                old.length
+                capacity
             ));
             continue;
         }
@@ -327,6 +340,9 @@ pub fn replace_with(
         new_map.free_space.sort_by_key(|f| f.offset);
         if let Some(a) = new_map.assets.iter_mut().find(|a| a.id == *id) {
             a.offset = Num(at as u64);
+            // The new allocation proves only the encoded extent. Old spare
+            // capacity belongs to the old location and never follows a pointer.
+            a.reserved_capacity = None;
             if a.length.is_some() {
                 a.length = Some(Num(stored.len() as u64));
             }
@@ -342,6 +358,7 @@ pub fn replace_with(
     let sum = fix_checksum(&mut out)?;
     actions.push(format!("footer checksum {sum:#06x}"));
     new_map.rom.sha256 = sha256_hex(&out);
+    validate_reservations(&new_map, charmaps, &out)?;
     Ok(ReplaceOutcome {
         rom: out,
         map: new_map,

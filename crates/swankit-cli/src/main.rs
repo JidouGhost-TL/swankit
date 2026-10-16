@@ -17,6 +17,7 @@ use swankit_cli::wg;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 const MAX_FILE: usize = 64 * 1024 * 1024;
 const HELP: &str = "swankit: WonderSwan format tools
+  --version, -V (show package version)
   info ROM [--json]
   detect FILE... [--json]
   tiles FILE --format 2bpp|4bpp-planar|4bpp-packed --offset N --length N --output PNG
@@ -85,6 +86,10 @@ fn text_definition(id: &str) -> Result<text::TextDefinition> {
     }
 }
 fn run(words: Vec<String>) -> Result<()> {
+    if words == ["--version"] || words == ["-V"] {
+        println!("swankit {}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
     if words.first().is_some_and(|s| s == "wg-adapter") {
         return wg::adapter(words.into_iter().skip(1).collect());
     }

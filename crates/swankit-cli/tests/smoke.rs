@@ -58,6 +58,19 @@ fn value(args: &[&str]) -> Value {
 }
 
 #[test]
+fn version_flags_report_package_version() {
+    let expected = format!("swankit {}\n", env!("CARGO_PKG_VERSION"));
+    for flag in ["--version", "-V"] {
+        let output = ok(&[flag]);
+        assert_eq!(String::from_utf8(output.stdout).unwrap(), expected);
+        assert!(output.stderr.is_empty());
+    }
+    let help = String::from_utf8(ok(&["--help"]).stdout).unwrap();
+    assert!(help.contains("--version"));
+    assert!(help.contains("-V"));
+}
+
+#[test]
 fn interop_server_keeps_running_after_a_bad_request() {
     use std::io::Write;
     use std::process::Stdio;

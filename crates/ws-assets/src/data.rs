@@ -148,11 +148,84 @@ pub fn decode_asset(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -
         return Err(malformed(format!("{id}: decoded asset too large")));
     }
     let decoded = strip_header(asset, decoded)?;
+    allocation_capacity(asset, offset, length, rom.len())?;
     Ok(Stored {
         offset,
         length,
         decoded,
     })
+}
+
+/// Validate explicit placement ownership without changing codec consumption.
+pub(crate) fn allocation_capacity(
+    asset: &Asset,
+    offset: usize,
+    length: usize,
+    rom_len: usize,
+) -> Result<usize> {
+    let Some(capacity) = asset.reserved_capacity else {
+        return Ok(length);
+    };
+    let capacity = capacity.usize()?;
+    let end = offset
+        .checked_add(capacity)
+        .ok_or_else(|| malformed("reserved capacity overflow"))?;
+    if capacity < length || capacity == 0 || end > rom_len.saturating_sub(ws_rom::FOOTER_SIZE) {
+        return Err(malformed(format!(
+            "{}: reserved capacity is smaller than stored length, empty, outside ROM or in footer",
+            asset.id
+        )));
+    }
+    Ok(capacity)
+}
+
+/// Additional reserved bytes cannot share ownership, even when stored aliases
+/// are explicitly allowed to overlap. Old maps retain their existing policy.
+pub(crate) fn validate_reservations(map: &AssetMap, charmaps: &Charmaps, rom: &[u8]) -> Result<()> {
+    if !map.assets.iter().any(|a| a.reserved_capacity.is_some()) {
+        return Ok(());
+    }
+    let mut ranges = Vec::new();
+    for asset in &map.assets {
+        let stored = decode_asset(map, charmaps, rom, &asset.id)?;
+        let capacity = allocation_capacity(asset, stored.offset, stored.length, rom.len())?;
+        ranges.push((
+            asset,
+            stored.offset,
+            stored.offset + stored.length,
+            stored.offset + capacity,
+        ));
+    }
+    for (asset, start, stored_end, end) in &ranges {
+        if asset.reserved_capacity.is_none() {
+            continue;
+        }
+        for (other, other_start, _, other_end) in &ranges {
+            if stored_end < end
+                && asset.id != other.id
+                && stored_end < other_end
+                && other_start < end
+            {
+                return Err(malformed(format!(
+                    "{}: reserved tail overlaps asset {}",
+                    asset.id, other.id
+                )));
+            }
+        }
+        for free in &map.free_space {
+            let fs = free.offset.usize()?;
+            let fe = fs
+                .checked_add(free.length.usize()?)
+                .ok_or_else(|| malformed("free range overflow"))?;
+            if fs < *end && *start < fe {
+                return Err(malformed(format!(
+                    "{}: reserved capacity overlaps free space",
+                    asset.id
+                )));
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Stored range without keeping the payload.

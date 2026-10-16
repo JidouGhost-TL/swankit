@@ -37,6 +37,7 @@ hexadecimal strings. Unknown fields are errors.
 | `id` | Stable id, `[A-Za-z0-9._-]`, unique in the map |
 | `kind` | `tiles`, `tilemap`, `palette`, `font`, `text`, `pointer-table`, `music`, `sound-effect`, `pcm`, `data-table`, `sprite-table`, `other` |
 | `offset`, `length` | File offset and stored length. `length` may be omitted for terminated codecs (the codec's end marker defines it) and for text (the charmap's end control) |
+| `reserved_capacity` | Optional proven total owned allocation in bytes from `offset`, independent of consumed `length`. Defaults to the current stored extent; retained across in-place edits and cleared on relocation |
 | `codec`, `codec_params` | `raw` (default) or a `ws-compress` id: `ws-lz-rle-7f`, `ws-lz-bits-16`, `ws-okumura-lzss` (with `decoded_length`, `bit_order`, `ring_fill`), `ws-lzss-u16-zero` or `ws-lzss-12` (parameters below) |
 | `address` | Descriptive CPU view (`window` c0/c2/c3, `bank`, `segment`, `offset`) |
 | `format` | Kind parameters (below) |
@@ -171,7 +172,7 @@ are padding. Replacement keeps the original tile count and refuses nontransparen
 pixels in those cells. A counted tile set retains its declared growth behavior.
 
 Placement: the payload is re-encoded with the asset's codec. When it fits
-the stored range it is written in place (the tail is filled with `pad` when
+the owned allocation it is written in place (the tail is filled with `pad` when
 declared, otherwise left as it was; a terminated stream's declared length
 becomes its new extent). When it does not fit, it is relocated only if
 `references_complete` holds and every reference can express a position in a
@@ -182,6 +183,32 @@ Otherwise the command refuses and writes nothing. Nothing is written outside
 the asset's range, a free range or a declared reference. The footer checksum is
 always recomputed. `--ips` writes an IPS patch against the input; `--map-out`
 writes the map updated for the patched image (identity, offsets, free space).
+
+`reserved_capacity` separates placement budget from exact stream consumption.
+It is a total allocation from the asset's offset, not additional bytes after
+`length`. Declare extra capacity only with evidence that the asset owns the
+entire allocation. It must contain the stored extent, stay inside the ROM and
+outside the footer, and may not overlap declared free space. Its extra tail may
+not overlap another asset or reservation, even when stored aliases have an
+`overlaps` declaration. No capacity is inferred from padding or byte patterns.
+Reservation checks require the other mapped assets to decode so their owned
+ranges can be established.
+
+Old maps remain valid without this field: their current decoded stored extent
+is the placement budget. When a self-delimited stream shrinks, replacement
+records the original extent as `reserved_capacity` in the returned map. Later
+undo, redo or other replacements can use that same allocation. Explicit
+reservations are retained across in-place edits; `length` describes the new
+stored extent. Exact-consumption checks remain in force: increasing `length`
+to include unused trailing bytes is refused for codecs that require them.
+
+Relocation allocates only the new encoded extent from declared free space and
+clears the old reservation. Spare capacity at the old offset never follows a
+relocated asset. The old stored extent becomes free; an unused reserved tail is
+conservatively left unallocated rather than advertised as new free space.
+Always retain the returned map with its corresponding ROM. Preserve the
+pristine pair as a backup and review shared tiles or overlapping assets when
+applying several edits. Version 1 has no general editing-session manager.
 
 `verify` checks that every asset decodes and renders or parses, every range
 lies in the ROM, ranges overlap only where declared, free space lies outside

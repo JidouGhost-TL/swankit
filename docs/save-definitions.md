@@ -124,24 +124,27 @@ All constants and the round count come from the definition or its program.
 use serde_json::json;
 use ws_saves::{DecodeContext, Format};
 
-fn edit(definition_json: &str, image: &mut [u8], field_index: usize)
-    -> formatkit_core::Result<serde_json::Value>
+fn prepare_edit(definition_json: &str, image: &[u8], field_index: usize)
+    -> formatkit_core::Result<(Vec<u8>, serde_json::Value, serde_json::Value)>
 {
     let format = Format::from_json(definition_json)?;
     let context = DecodeContext::default();
-    let before = format.decode_with_context(image, "save.eeprom", &context)?;
     let mut candidate = image.to_vec();
     format.set_field(&mut candidate, field_index, &json!(1))?;
     format.fix_with_context(&mut candidate, "save.eeprom", &context)?;
     let checks = format.verify_with_context(&candidate, "save.eeprom", &context)?;
     let after = format.decode_with_context(&candidate, "save.eeprom", &context)?;
-    // Apply the definition's record-selection policy to checks and review after.
-    // Commit the candidate only when the edited record is valid.
-    let _ = (before, checks);
-    image.copy_from_slice(&candidate);
-    Ok(after)
+    // Return for review; this function does not commit the candidate.
+    Ok((candidate, checks, after))
 }
 ```
+
+The caller must validate the selected medium's full image length, then inspect
+the returned checks and decoded record-selection state before committing the
+candidate. The low-level `Format` methods above do not require a usable record
+after repair. The composed `Toolkit::set_save` and `Toolkit::fix_save` methods
+add declared-length and usable-record checks; those checks still do not prove
+that the particular edited field belongs to the record the game will select.
 
 1. Load the JSON with `Format::from_json`, or select a bundled definition by
    `ws_saves::format(id)`. `definition()` exposes the complete JSON.
@@ -166,6 +169,23 @@ fn edit(definition_json: &str, image: &mut [u8], field_index: usize)
 8. Write the candidate bytes at the application boundary. Preserve a backup;
    an editor can replace its destination atomically. The engine itself returns
    or modifies memory and does not open host files.
+
+### Editing limits
+
+Stored-field range checks enforce representation size, signedness where
+applicable, and raw byte-array length. They do not infer game menu ranges,
+enumerations, unlock prerequisites or relationships between fields. For example,
+a byte-sized field can accept an undocumented value even when a game's menu
+offers only a few choices. Use the field evidence and decoded program to
+establish semantic constraints; an accepted write is not evidence that the
+game supports the value.
+
+Repair follows the definition's program and may update checksums or other
+records beyond the selected field. A same-value `set` can therefore change an
+image whose stored protection values need repair. Compare the complete original
+and candidate images, including copies, rather than assuming that only the
+selected field will differ. Neither raw field edits nor a successful checksum
+repair establishes that the edited record is the active one.
 
 ## Read and write from any language
 

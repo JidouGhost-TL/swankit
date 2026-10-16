@@ -982,3 +982,249 @@ fn tile_sheet_padding_edits_are_refused_without_changing_tile_count() {
         assert!(error.to_string().contains("padding"), "{error}");
     }
 }
+
+#[test]
+fn compressed_edit_undo_redo_retains_verified_allocation() {
+    let original = rom();
+    let map = load(&map_json(&original));
+    let c = charmaps(&map);
+    let original_len = decode_asset(&map, &c, &original, "z").unwrap().length;
+    let edit = |m: &AssetMap, r: &[u8], data: Vec<u8>| {
+        replace(
+            m,
+            &c,
+            r,
+            &Replacement {
+                id: "z".into(),
+                input: ReplaceInput::Bytes(data),
+            },
+        )
+        .unwrap()
+    };
+    let short = edit(&map, &original, vec![0; 96]);
+    assert!(short.map.asset("z").unwrap().length.unwrap().0 < original_len as u64);
+    assert_eq!(
+        short.map.asset("z").unwrap().reserved_capacity.unwrap().0,
+        original_len as u64
+    );
+    let restored = edit(&short.map, &short.rom, packed_payload());
+    let again = edit(&restored.map, &restored.rom, vec![0; 96]);
+    let redo = edit(&again.map, &again.rom, packed_payload());
+    assert_eq!(redo.rom, original);
+    assert!(checksum_ok(&short.rom) && checksum_ok(&redo.rom));
+    for output in [&short, &restored, &again, &redo] {
+        assert!(verify(&output.map, &c, &output.rom).unwrap().ok());
+        assert_eq!(&output.rom[..PACKED], &original[..PACKED]);
+        assert_eq!(
+            &output.rom[PACKED + original_len..original.len() - 2],
+            &original[PACKED + original_len..original.len() - 2]
+        );
+    }
+    let unchanged = edit(&short.map, &short.rom, vec![0; 96]);
+    assert_eq!(unchanged.rom, short.rom);
+    assert_eq!(unchanged.map, short.map);
+    let mut padded = short.map.clone();
+    padded.assets[5].length = Some(ws_assets::map::Num(original_len as u64));
+    assert!(decode_asset(&padded, &c, &short.rom, "z").is_err());
+    let mut no_reservation = short.map.clone();
+    no_reservation.assets[5].reserved_capacity = None;
+    assert!(replace(
+        &no_reservation,
+        &c,
+        &short.rom,
+        &Replacement {
+            id: "z".into(),
+            input: ReplaceInput::Bytes(packed_payload())
+        }
+    )
+    .is_err());
+}
+
+#[test]
+fn reservation_rejects_invalid_bounds_and_conflicting_ownership() {
+    let original = rom();
+    let base = map_json(&original);
+    let stored_len = base["assets"][5]["length"].as_u64().unwrap();
+    for capacity in [0, stored_len - 1, 0x10000, u64::MAX] {
+        let mut value = base.clone();
+        value["assets"][5]["reserved_capacity"] = json!(capacity);
+        let map = load(&value);
+        let c = charmaps(&map);
+        assert!(!verify(&map, &c, &original).unwrap().ok(), "{capacity}");
+        assert!(
+            replace(
+                &map,
+                &c,
+                &original,
+                &Replacement {
+                    id: "z".into(),
+                    input: ReplaceInput::Bytes(vec![0; 96])
+                }
+            )
+            .is_err(),
+            "{capacity}"
+        );
+    }
+    for conflict in ["asset", "reservation", "free"] {
+        let mut value = base.clone();
+        value["assets"][5]["reserved_capacity"] = json!(64);
+        match conflict {
+            "asset" => value["assets"].as_array_mut().unwrap().push(json!({
+                "id":"tail", "kind":"other", "offset":PACKED+32, "length":1,
+                "overlaps":["z"]
+            })),
+            "reservation" => value["assets"].as_array_mut().unwrap().push(json!({
+                "id":"before", "kind":"other", "offset":PACKED-8, "length":1,
+                "reserved_capacity":16
+            })),
+            _ => value["free_space"]
+                .as_array_mut()
+                .unwrap()
+                .push(json!({"offset":PACKED+32,"length":1})),
+        }
+        let map = load(&value);
+        let c = charmaps(&map);
+        assert!(!verify(&map, &c, &original).unwrap().ok(), "{conflict}");
+        assert!(
+            replace(
+                &map,
+                &c,
+                &original,
+                &Replacement {
+                    id: "z".into(),
+                    input: ReplaceInput::Bytes(vec![0; 96])
+                }
+            )
+            .is_err(),
+            "{conflict}"
+        );
+    }
+}
+
+#[test]
+fn relocation_does_not_inherit_old_reservation() {
+    let original = rom();
+    let mut value = map_json(&original);
+    let stored_len = value["assets"][5]["length"].as_u64().unwrap();
+    value["assets"][5]["reserved_capacity"] = json!(stored_len + 1);
+    value["assets"][5]["references_complete"] = json!(true);
+    value["assets"][5]["references"] = json!([{"at":0x520,"width":2}]);
+    let map = load(&value);
+    let c = charmaps(&map);
+    let output = replace(
+        &map,
+        &c,
+        &original,
+        &Replacement {
+            id: "z".into(),
+            input: ReplaceInput::Bytes((0..96u8).collect()),
+        },
+    )
+    .unwrap();
+    assert_ne!(
+        output.map.asset("z").unwrap().offset,
+        map.asset("z").unwrap().offset
+    );
+    assert_eq!(output.map.asset("z").unwrap().reserved_capacity, None);
+    assert_eq!(
+        output
+            .map
+            .free_space
+            .iter()
+            .find(|f| f.offset.0 == PACKED as u64)
+            .unwrap()
+            .length
+            .0,
+        stored_len
+    );
+    let no_op = replace(
+        &output.map,
+        &c,
+        &output.rom,
+        &Replacement {
+            id: "z".into(),
+            input: ReplaceInput::Bytes((0..96u8).collect()),
+        },
+    )
+    .unwrap();
+    assert_eq!(no_op.rom, output.rom);
+    assert!(checksum_ok(&output.rom));
+}
+
+#[test]
+fn cross_bank_implicit_and_explicit_streams_retain_original_allocation() {
+    let payload: Vec<u8> = (0..32).collect();
+    let stored = ws_compress::lz_rle_7f::encode(&payload).unwrap();
+    assert!(stored.len() > 16);
+    for explicit_length in [false, true] {
+        let mut original = vec![0u8; 0x20000];
+        original[0xfff0..0xfff0 + stored.len()].copy_from_slice(&stored);
+        fix_checksum(&mut original).unwrap();
+        let mut value = json!({
+            "schema":"swankit-asset-map/1",
+            "rom":{"sha256":sha256_hex(&original),"size":original.len()},
+            "assets":[{"id":"stream","kind":"other","offset":0xfff0,"codec":"ws-lz-rle-7f"}]
+        });
+        if explicit_length {
+            value["assets"][0]["length"] = json!(stored.len());
+        }
+        let map = load(&value);
+        let c = charmaps(&map);
+        let short = replace(
+            &map,
+            &c,
+            &original,
+            &Replacement {
+                id: "stream".into(),
+                input: ReplaceInput::Bytes(vec![0; 32]),
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            short.map.assets[0].reserved_capacity.unwrap().0,
+            stored.len() as u64
+        );
+        let restored = replace(
+            &short.map,
+            &c,
+            &short.rom,
+            &Replacement {
+                id: "stream".into(),
+                input: ReplaceInput::Bytes(payload.clone()),
+            },
+        )
+        .unwrap();
+        assert_eq!(restored.rom, original);
+        assert!(verify(&restored.map, &c, &restored.rom).unwrap().ok());
+    }
+}
+
+#[test]
+fn explicit_reservation_allows_growth_and_preserves_unwritten_tail() {
+    let original = rom();
+    let mut value = map_json(&original);
+    value["assets"][5]["reserved_capacity"] = json!(64);
+    let map = load(&value);
+    let c = charmaps(&map);
+    let changed = replace(
+        &map,
+        &c,
+        &original,
+        &Replacement {
+            id: "z".into(),
+            input: ReplaceInput::Bytes((0..40).collect()),
+        },
+    )
+    .unwrap();
+    let extent = decode_asset(&changed.map, &c, &changed.rom, "z")
+        .unwrap()
+        .length;
+    assert!(extent > map.assets[5].length.unwrap().0 as usize);
+    assert_eq!(changed.map.assets[5].reserved_capacity.unwrap().0, 64);
+    assert_eq!(
+        &changed.rom[PACKED + extent..original.len() - 2],
+        &original[PACKED + extent..original.len() - 2]
+    );
+    assert!(checksum_ok(&changed.rom));
+    assert!(verify(&changed.map, &c, &changed.rom).unwrap().ok());
+}

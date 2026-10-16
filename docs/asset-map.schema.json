@@ -73,6 +73,7 @@
         "kind": {"enum": ["tiles", "tilemap", "palette", "font", "text", "pointer-table", "music", "sound-effect", "pcm", "data-table", "sprite-table", "other"]},
         "offset": {"$ref": "#/$defs/num"},
         "length": {"$ref": "#/$defs/num", "description": "Stored bytes; omit for codec-terminated streams or end-terminated text."},
+        "reserved_capacity": {"$ref": "#/$defs/num", "description": "Optional proven total allocation from offset; never less than consumed stored length. Retained for in-place edits, cleared on relocation."},
         "codec": {"enum": ["raw", "ws-lz-rle-7f", "ws-lz-bits-16", "ws-okumura-lzss", "ws-lzss-u16-zero", "ws-lzss-12"]},
         "codec_params": {
           "type": "object", "additionalProperties": false,

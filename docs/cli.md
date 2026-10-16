@@ -7,7 +7,8 @@ excomm use and tap inspection. The matching `swankit wg-adapter` and
 configuration, EOF behavior and the lossless byte log.
 
 Build the private binary with `cargo build -p swankit-cli --locked`. The
-examples assume the resulting `swankit` is on PATH. Use `--help` for syntax.
+examples assume the resulting `swankit` is on PATH. Use `--help` for syntax
+and `--version` (or `-V`) to print the package version.
 Hardware interpretation comes from the owner crates and
 [hardware sources](hardware.md); extraction definitions supply offsets and
 formats, never game detection from a filename.

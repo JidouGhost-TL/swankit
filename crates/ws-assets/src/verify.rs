@@ -1,7 +1,7 @@
 //! Map verification against its ROM: decoding, ranges, overlaps, free space,
 //! references, plus coverage statistics.
 use crate::check_identity;
-use crate::data::decode_asset;
+use crate::data::{decode_asset, validate_reservations};
 use crate::extract::extract_one;
 use crate::map::{AssetMap, Kind};
 use crate::refs::{reference_matches, references_for};
@@ -67,6 +67,9 @@ pub fn verify(map: &AssetMap, charmaps: &Charmaps, rom: &[u8]) -> Result<VerifyR
         })
     };
     let mut ranges: Vec<(usize, usize, &str)> = Vec::new();
+    if let Err(e) = validate_reservations(map, charmaps, rom) {
+        err("reserved_capacity", e.to_string());
+    }
     for asset in &map.assets {
         match decode_asset(map, charmaps, rom, &asset.id) {
             Ok(s) => {
