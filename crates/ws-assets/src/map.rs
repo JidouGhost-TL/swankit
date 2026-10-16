@@ -30,16 +30,27 @@ impl Serialize for Num {
 
 impl<'de> Deserialize<'de> for Num {
     fn deserialize<D: Deserializer<'de>>(d: D) -> std::result::Result<Self, D::Error> {
-        #[derive(Deserialize)]
-        #[serde(untagged)]
-        enum Raw {
-            Int(u64),
-            Text(String),
+        struct Unsigned;
+        impl<'de> de::Visitor<'de> for Unsigned {
+            type Value = Num;
+
+            fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.write_str("an unsigned 64-bit integer or decimal/0x hexadecimal string")
+            }
+
+            fn visit_u64<E: de::Error>(self, v: u64) -> std::result::Result<Num, E> {
+                Ok(Num(v))
+            }
+
+            fn visit_str<E: de::Error>(self, s: &str) -> std::result::Result<Num, E> {
+                parse_num(s).map(Num).map_err(|_| {
+                    E::custom(format!(
+                        "invalid unsigned 64-bit integer {s:?}; use decimal or 0x hexadecimal"
+                    ))
+                })
+            }
         }
-        match Raw::deserialize(d)? {
-            Raw::Int(v) => Ok(Num(v)),
-            Raw::Text(s) => parse_num(&s).map(Num).map_err(de::Error::custom),
-        }
+        d.deserialize_any(Unsigned)
     }
 }
 

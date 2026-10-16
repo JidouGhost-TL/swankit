@@ -1,4 +1,6 @@
 //! `swankit assets`: per-ROM asset maps (docs/asset-maps.md).
+mod output;
+
 use crate::{args::Args, io, png, png_read, Result};
 use serde_json::json;
 use std::path::{Path, PathBuf};
@@ -43,6 +45,18 @@ fn load(rom: &str, map_path: &str) -> Result<(Vec<u8>, AssetMap, Charmaps)> {
     Ok((rom, map, charmaps))
 }
 
+fn input_paths(rom: &str, map_path: &str, map: &AssetMap) -> Vec<PathBuf> {
+    let base = Path::new(map_path).parent().unwrap_or(Path::new("."));
+    let mut inputs = vec![PathBuf::from(rom), PathBuf::from(map_path)];
+    inputs.extend(
+        map.charmaps
+            .values()
+            .filter_map(|source| source.file.as_ref())
+            .map(|file| base.join(file)),
+    );
+    inputs
+}
+
 pub fn run(words: Vec<String>) -> Result<()> {
     if words.len() < 2 || matches!(words[1].as_str(), "--help" | "-h" | "help") {
         println!("{HELP}");
@@ -62,16 +76,21 @@ pub fn run(words: Vec<String>) -> Result<()> {
             let out = Path::new(&a.positional[4]);
             std::fs::create_dir_all(out).map_err(|e| format!("create {}: {e}", out.display()))?;
             let result = extract(&map, &charmaps, &rom)?;
+            let mut files = Vec::new();
             for (name, file) in &result.files {
                 let bytes = match file {
                     ExtractedFile::Image(image) => png::encode(image)?,
                     ExtractedFile::Bytes(bytes) => bytes.clone(),
                 };
-                io::write(&out.join(name).to_string_lossy(), &bytes, force)?;
+                files.push((out.join(name), bytes));
             }
-            io::write(
-                &out.join("index.json").to_string_lossy(),
-                &serde_json::to_vec_pretty(&result.index)?,
+            files.push((
+                out.join("index.json"),
+                serde_json::to_vec_pretty(&result.index)?,
+            ));
+            output::write(
+                files,
+                &input_paths(&a.positional[2], &a.positional[3], &map),
                 force,
             )?;
             let summary = json!({"files": result.files.len(), "failures": result.failures});
@@ -117,13 +136,20 @@ pub fn run(words: Vec<String>) -> Result<()> {
             let options = ReplaceOptions { force, allocate };
             let outcome =
                 replace_with(&map, &charmaps, &rom, &Replacement { id, input }, &options)?;
-            io::write(&output, &outcome.rom, force)?;
+            let mut files = Vec::new();
             if let Some(path) = &ips {
-                io::write(path, &swankit::patch::create(&rom, &outcome.rom)?, force)?;
+                files.push((
+                    PathBuf::from(path),
+                    swankit::patch::create(&rom, &outcome.rom)?,
+                ));
             }
             if let Some(path) = &map_out {
-                io::write(path, &outcome.map.to_json()?, force)?;
+                files.push((PathBuf::from(path), outcome.map.to_json()?));
             }
+            files.insert(0, (PathBuf::from(&output), outcome.rom));
+            let mut inputs = input_paths(&a.positional[2], &a.positional[3], &map);
+            inputs.push(PathBuf::from(&from));
+            output::write(files, &inputs, force)?;
             let summary = json!({
                 "output": output, "ips": ips, "map": map_out,
                 "actions": outcome.actions, "approximated_pixels": outcome.approximated_pixels,

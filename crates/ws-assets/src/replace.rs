@@ -41,7 +41,8 @@ pub struct ReplaceOptions {
 #[derive(Debug)]
 pub struct ReplaceOutcome {
     pub rom: Vec<u8>,
-    /// The map rewritten for the patched ROM (identity, moved offsets, free space).
+    /// The map rewritten for the patched ROM (identity, moved offsets, free
+    /// space), with file-backed character maps inlined for portable reuse.
     pub map: AssetMap,
     /// Human-readable actions taken.
     pub actions: Vec<String>,
@@ -262,7 +263,7 @@ pub fn replace_with(
                 "{id}: needs {} stored bytes but has {}; relocation requires references_complete \
                  with every reference listed",
                 stored.len(),
-                old.length
+                capacity
             )));
         }
         let crosses_before = bank(old.offset) != bank(old.offset + old.length - 1);
@@ -359,6 +360,7 @@ pub fn replace_with(
     actions.push(format!("footer checksum {sum:#06x}"));
     new_map.rom.sha256 = sha256_hex(&out);
     validate_reservations(&new_map, charmaps, &out)?;
+    charmaps.inline_files(&mut new_map)?;
     Ok(ReplaceOutcome {
         rom: out,
         map: new_map,

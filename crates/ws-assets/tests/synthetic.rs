@@ -1228,3 +1228,100 @@ fn explicit_reservation_allows_growth_and_preserves_unwritten_tail() {
     assert!(checksum_ok(&changed.rom));
     assert!(verify(&changed.map, &c, &changed.rom).unwrap().ok());
 }
+
+#[test]
+fn map_numbers_report_unsigned_limits_and_accept_decimal_and_hex() {
+    use ws_assets::map::Num;
+    for (text, expected) in [
+        ("0", 0),
+        ("48", 48),
+        ("\"48\"", 48),
+        ("\"0x30\"", 48),
+        ("18446744073709551615", u64::MAX),
+        ("\"0xffffffffffffffff\"", u64::MAX),
+    ] {
+        assert_eq!(serde_json::from_str::<Num>(text).unwrap().0, expected);
+    }
+    for text in [
+        "-1",
+        "\"-1\"",
+        "\"-0x1\"",
+        "\"not-a-number\"",
+        "18446744073709551616",
+        "\"18446744073709551616\"",
+        "\"0x10000000000000000\"",
+        "1.5",
+        "true",
+        "null",
+        "[]",
+    ] {
+        let error = serde_json::from_str::<Num>(text).unwrap_err().to_string();
+        assert!(error.contains("unsigned"), "{text}: {error}");
+        assert!(!error.contains("Raw"), "{text}: {error}");
+    }
+}
+
+#[test]
+fn returned_library_maps_inline_all_compiled_file_formats_even_when_unchanged() {
+    let original = rom();
+    let initial = map_json(&original);
+    let alphabet = initial["charmaps"]["abc"]["inline"].clone();
+    for (name, bytes, unit) in [
+        (
+            "alphabet.json",
+            serde_json::to_vec(&alphabet).unwrap(),
+            None,
+        ),
+        (
+            "definition.json",
+            serde_json::to_vec(&json!({
+                "schema":"swankit-text-def/1", "id":"synthetic", "map":alphabet
+            }))
+            .unwrap(),
+            None,
+        ),
+        (
+            "alphabet.tsv",
+            b"bytes\ttext\n01\t\"A\"\n02\t\"B\"\nff\t\"!\"\n00\t\"Z\"\n".to_vec(),
+            Some("byte"),
+        ),
+    ] {
+        let mut value = initial.clone();
+        value["charmaps"]["abc"] = json!({"file":name});
+        if let Some(unit) = unit {
+            value["charmaps"]["abc"]["unit"] = json!(unit);
+        }
+        let map = load(&value);
+        let compiled = Charmaps::load(&map, |path| {
+            assert_eq!(path, name);
+            Ok(bytes.clone())
+        })
+        .unwrap();
+        let outcome = replace(
+            &map,
+            &compiled,
+            &original,
+            &Replacement {
+                id: "s".into(),
+                input: ReplaceInput::Bytes(original[TEXT..TEXT + 4].to_vec()),
+            },
+        )
+        .unwrap();
+        assert_eq!(outcome.rom, original);
+        let returned = AssetMap::from_json(&outcome.map.to_json().unwrap()).unwrap();
+        assert!(returned.charmaps["abc"].file.is_none());
+        assert!(returned.charmaps["abc"].inline.is_some());
+        let portable =
+            Charmaps::load(&returned, |_| panic!("returned map must be self-contained")).unwrap();
+        assert_eq!(
+            compiled
+                .decode(map.asset("s").unwrap(), &original[TEXT..TEXT + 4])
+                .unwrap()
+                .text,
+            portable
+                .decode(returned.asset("s").unwrap(), &original[TEXT..TEXT + 4])
+                .unwrap()
+                .text
+        );
+    }
+}

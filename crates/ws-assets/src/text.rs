@@ -77,6 +77,26 @@ impl Charmaps {
         Ok(Self { maps })
     }
 
+    /// Make file-backed character maps independent of the map's directory.
+    /// The compiled definition preserves TSV units and full text definitions'
+    /// character-map semantics in the existing inline representation.
+    pub(crate) fn inline_files(&self, map: &mut AssetMap) -> Result<()> {
+        for (name, source) in &mut map.charmaps {
+            if source.file.is_some() {
+                let compiled = self.maps.get(name).ok_or_else(|| {
+                    malformed(format!("charmap {name:?} not loaded for returned map"))
+                })?;
+                source.inline = Some(
+                    serde_json::to_value(compiled.definition())
+                        .map_err(|e| malformed(e.to_string()))?,
+                );
+                source.file = None;
+                source.unit = None;
+            }
+        }
+        Ok(())
+    }
+
     pub fn for_asset(&self, asset: &Asset) -> Result<&CharacterMap> {
         let name = asset
             .relations
