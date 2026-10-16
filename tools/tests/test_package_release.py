@@ -49,6 +49,20 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "missing or unsafe"):
                 PACKAGE.guide_payload(root)
 
+    def test_encoded_absolute_links_are_refused_before_reading(self):
+        from urllib.parse import quote
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "docs").mkdir()
+            (root / "crates").mkdir()
+            for name in ["CONTRIBUTING.md", *PACKAGE.NOTICES]:
+                (root / name).write_text("text")
+            target = root / "unlinked.txt"
+            target.write_text("must not enter the payload")
+            (root / "README.md").write_text("[absolute](" + quote(str(target), safe="") + ")")
+            with self.assertRaisesRegex(ValueError, "absolute guide link"):
+                PACKAGE.guide_payload(root)
+
     def test_repeatable_archive_and_modes(self):
         payload = {"swankit": b"binary", "README.md": b"guide", "docs/cli.md": b"syntax"}
         archive = PACKAGE.archive_bytes(payload, "release")

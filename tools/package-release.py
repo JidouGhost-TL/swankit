@@ -48,10 +48,11 @@ def local_links(payload):
             link = urlsplit(target.strip("<>"))
             if link.scheme or link.netloc or not link.path:
                 continue
-            if link.path.startswith("/"):
+            decoded_path = unquote(link.path)
+            if decoded_path.startswith("/"):
                 raise ValueError(f"absolute guide link: {name}: {target}")
             parts = list(Path(name).parent.parts)
-            for part in Path(unquote(link.path)).parts:
+            for part in Path(decoded_path).parts:
                 if part == "..":
                     if not parts:
                         raise ValueError(f"guide link escapes packet: {name}: {target}")
@@ -66,7 +67,14 @@ def guide_payload(root):
     names.update(p.relative_to(root).as_posix() for p in (root / "docs").rglob("*")
                  if p.is_file() and p.suffix in (".md", ".json"))
     names.update(p.relative_to(root).as_posix() for p in (root / "crates").rglob("README.md"))
-    payload = {name: (root / name).read_bytes() for name in sorted(names)}
+    def read_guide(name):
+        path = root / name
+        if (not path.is_file() or path.is_symlink()
+                or not path.resolve().is_relative_to(root.resolve())):
+            raise ValueError(f"missing or unsafe offline guide target: {name}")
+        return path.read_bytes()
+
+    payload = {name: read_guide(name) for name in sorted(names)}
     # Follow local documentation links transitively, including linked definition
     # JSON and nested crate guides, instead of guessing a fixed guide inventory.
     while True:
@@ -74,10 +82,7 @@ def guide_payload(root):
         if not missing:
             break
         for name in sorted(missing):
-            path = root / name
-            if not path.is_file() or path.is_symlink():
-                raise ValueError(f"missing or unsafe offline guide target: {name}")
-            payload[name] = path.read_bytes()
+            payload[name] = read_guide(name)
     validate_links(payload)
     return payload
 
