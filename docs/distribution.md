@@ -23,8 +23,8 @@ python3 -m pip install --no-index --no-deps ./swankit-0.1.0-cp311-abi3-manylinux
 ```
 
 The optional `swankit.to_pil` helper needs a separately supplied Pillow package.
-Core tile decoding returns RGBA bytes without that dependency. No ROMs, saves,
-per-ROM maps or game-specific content are distributed.
+Core tile decoding returns RGBA bytes without that dependency. No ROMs, save
+images or per-ROM asset maps are included.
 
 ## A synthetic first operation
 

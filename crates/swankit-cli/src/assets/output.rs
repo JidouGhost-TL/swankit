@@ -149,6 +149,9 @@ fn write_with(
     force: bool,
     mut before_publish: impl FnMut(usize) -> Result<()>,
 ) -> Result<()> {
+    if cfg!(not(unix)) {
+        return Err("safe asset output publication is unsupported on this platform: file identity checks require Unix".into());
+    }
     let protected = inputs
         .iter()
         .map(|path| Ok((fs::canonicalize(path)?, fs::metadata(path)?)))
