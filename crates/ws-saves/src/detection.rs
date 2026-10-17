@@ -13,6 +13,11 @@ pub struct ValidityEvidence {
     /// All failing checks in included regions, including unusable records.
     pub checks_failed: usize,
 }
+#[derive(Default)]
+struct ExplicitDecisions {
+    present: bool,
+    usable: bool,
+}
 // Return whether any included semantic validity flag was present, even if false.
 // An invalid region cannot contribute usable flags from itself or its children;
 // a separate valid record can still establish a usable image.
@@ -21,6 +26,7 @@ fn evidence(
     exclude: &HashSet<&str>,
     eligible: bool,
     out: &mut ValidityEvidence,
+    decisions: &mut ExplicitDecisions,
 ) -> bool {
     let mut semantic_flags = false;
     match value {
@@ -34,6 +40,10 @@ fn evidence(
                     continue;
                 }
                 if let Some(flag) = value.as_bool() {
+                    if matches!(key.as_str(), "valid" | "global_valid") {
+                        decisions.present = true;
+                        decisions.usable |= flag && eligible;
+                    }
                     if matches!(key.as_str(), "valid" | "global_valid" | "signature_valid") {
                         semantic_flags = true;
                         if flag && eligible {
@@ -57,12 +67,12 @@ fn evidence(
                         }
                     }
                 }
-                semantic_flags |= evidence(value, exclude, eligible, out);
+                semantic_flags |= evidence(value, exclude, eligible, out, decisions);
             }
         }
         Value::Array(values) => {
             for v in values {
-                semantic_flags |= evidence(v, exclude, eligible, out);
+                semantic_flags |= evidence(v, exclude, eligible, out, decisions);
             }
         }
         _ => {}
@@ -149,14 +159,16 @@ impl Format {
             checks_passed: 0,
             checks_failed: 0,
         };
-        let semantic_flags = evidence(&value, &excludes, true, &mut out);
-        // Checksum-only programs retain their existing recognition behavior.
-        // When semantic flags exist, passing component checks cannot replace
-        // the program's decision that every stored record is unusable.
-        if out.usable_flags == 0 && (semantic_flags || out.checks_passed == 0) {
-            Ok(None)
+        let mut decisions = ExplicitDecisions::default();
+        let semantic_flags = evidence(&value, &excludes, true, &mut out, &mut decisions);
+        // Included explicit program decisions take precedence over signatures
+        // anywhere in the tree. Keep diagnostic counts independent of admission.
+        let usable = if decisions.present {
+            decisions.usable
         } else {
-            Ok(Some(out))
-        }
+            // Signature/checksum-only programs retain their existing fallback.
+            out.usable_flags > 0 || (!semantic_flags && out.checks_passed > 0)
+        };
+        Ok(usable.then_some(out))
     }
 }

@@ -11,13 +11,19 @@ Load external data with `Format::from_json`, or select a bundled definition usin
 `DecodeContext` supplies required lookup tables and companion images explicitly.
 The library has no host I/O; application code owns reading and writing files.
 
-`recognize_with_context` requires a positive semantic validity flag when the
-decoded tree includes such flags. A region with `valid: false` or
-`global_valid: false` cannot contribute usable flags from itself or its
+`recognize_with_context` requires an eligible positive `valid` or `global_valid`
+decision whenever the included decoded tree contains either explicit boolean
+decision. An ancestor or sibling signature cannot override explicit invalidity;
+a positive overall program decision remains authoritative. A region with
+`valid: false` or `global_valid: false` cannot contribute usable flags from itself or its
 descendants. A separate valid record may still qualify, and named validity
-exclusions omit working regions. Passing checksums alone qualify only when
-the included tree has no semantic validity flags. `fix` remains a low-level
-mechanical repair; callers must check usability before writing its result.
+exclusions omit working regions from both positive and negative evidence. A root
+`valid: false` or `global_valid: false` vetoes recognition even if excluded.
+Without included explicit decisions, positive signatures qualify; passing
+checksums alone qualify only when there are no included signature flags either. Diagnostic
+counts still include all included checks, even those in unusable records.
+`fix` remains a low-level mechanical repair; callers must check usability before
+writing its result.
 
 The generator consumes external field tables, packed records and owned semantic
 sources. Shared record adapters and all binary reads/edits use Formatkit.

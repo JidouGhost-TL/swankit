@@ -64,6 +64,31 @@ fn signature_cannot_rescue_an_explicitly_invalid_record() {
 }
 
 #[test]
+fn ancestor_signature_does_not_rescue_invalid_profiles() {
+    let format = direct(
+        "def decode_image(image, name):\n return {'signature_valid': image[:4] == b'CK42', 'checksum_ok': sum(image[:11]) % 256 == image[11], 'profiles': [{'valid': image[5] < 10, 'signature_valid': True, 'checksum_ok': True}, {'valid': image[6] < 10, 'signature_valid': True, 'checksum_ok': True}]}\ndef repair_image(image):\n out = list(image)\n out[11] = sum(out[:11]) % 256\n return bytes(out)\n",
+    );
+    let mut definition = format.definition().clone();
+    definition["media"][0]["sizes"] = json!([12]);
+    let format = Format::from_json(&definition.to_string()).unwrap();
+    let image = [
+        0x43, 0x4b, 0x34, 0x32, 0x0c, 0xc9, 0xd3, 0x11, 0x22, 0x33, 0x44, 0x46,
+    ];
+    let decoded = format.decode(&image, "sample.sav").unwrap();
+    assert_eq!(decoded["signature_valid"], true);
+    assert_eq!(decoded["checksum_ok"], true);
+    assert_eq!(decoded["profiles"][0]["valid"], false);
+    assert_eq!(decoded["profiles"][1]["valid"], false);
+    let actual = format
+        .recognize_with_context(&image, "sample.sav", &Default::default())
+        .unwrap();
+    assert!(
+        actual.is_none(),
+        "invalid profiles were admitted: {actual:?}"
+    );
+}
+
+#[test]
 fn recursive_record_validity_and_exclusions_preserve_any_record_semantics() {
     let cases = [
         ("{'valid': False, 'records': [{'valid': True}]}", false),
