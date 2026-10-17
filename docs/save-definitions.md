@@ -11,6 +11,102 @@ using [Draft 2020-12](https://json-schema.org/draft/2020-12/json-schema-core).
 Its `$id` is `urn:swankit:save-def:1`. Resolve its `$ref` values within that file;
 validation needs no network. A new incompatible grammar requires a new version.
 
+## Run complete synthetic examples
+
+The [single-record definition](../examples/saves/single.json),
+[redundant-copy definition](../examples/saves/redundant.json) and
+[executable example](../examples/saves/run.py) are complete, self-contained
+teaching examples. Keep these files together under `examples/saves/`. They
+contain no game data and need no companion images or lookup tables. Their
+16-byte and 32-byte image lengths are teaching layouts, not physical EEPROM
+geometry or definitions for an existing game.
+
+Install the supplied Python wheel as described in the
+[distribution guide](distribution.md). From the extracted CLI distribution
+directory, run:
+
+```sh
+python3 examples/saves/run.py --cli ./swankit --out save-example-output
+```
+
+For a source build, pass `--cli target/debug/swankit` instead. The output
+directory must be new. The script creates both save images, decodes them using
+the actual CLI and installed Python package, edits field zero to 7, repairs
+damaged checksums, and compares every output byte against independent expected
+images. `RESULT.json` lists exact byte differences; `COMMANDS.json` records CLI
+arguments, exits and Python calls, with CLI stdout/stderr beside it. Missing
+definition files, malformed programs and unexpected bytes cause failure.
+
+Once the script has created the inputs, individual CLI operations are:
+
+```sh
+./swankit save decode examples/saves/single.json save-example-output/single.eep --json
+./swankit save set examples/saves/single.json save-example-output/single.eep \
+  --field 0 --value 7 --output my-single-edited.eep --json
+./swankit save fix examples/saves/single.json save-example-output/single-damaged.eep \
+  --output my-single-fixed.eep --json
+
+./swankit save decode examples/saves/redundant.json save-example-output/redundant.eep --json
+./swankit save set examples/saves/redundant.json save-example-output/redundant.eep \
+  --field 0 --value 7 --output my-redundant-edited.eep --json
+./swankit save fix examples/saves/redundant.json save-example-output/redundant.eep \
+  --output my-redundant-fixed.eep --json
+```
+
+Every record is 16 bytes:
+
+| Bytes | Meaning |
+| --- | --- |
+| 0 | Signature `0xa5`. Repair does not initialize or change it. |
+| 1 | Unsigned setting, with a synthetic semantic range of 0..9. |
+| 2 | Generation counter used only for selection; repair preserves it. |
+| 3..14 | Reserved bytes, preserved exactly. |
+| 15 | Sum of bytes 0..14 modulo 256. |
+
+A record's `valid` flag requires its signature, setting range and checksum
+to pass. The redundant definition has two records at offsets 0 and 16.
+Decode selects the valid record with the higher generation; equal generations
+prefer the first. With no valid record, `selected` is null. Field zero edits
+the first record's setting; field one edits the second's. Repair recomputes
+both checksums, preserving each copy's distinct value, generation and reserved
+bytes. It does not synchronize the copies or advance generations. Check
+`selected` to see whether the edited copy is the selected one.
+
+The created single record has setting 3, generation 2 and checksum `0xdd`.
+The redundant image adds a second record with setting 2, generation 1 and a
+deliberately damaged checksum `0x5b` (correct value `0xdb`). Expected changes,
+using zero-based byte offsets, are:
+
+| Operation | Single image | Redundant image |
+| --- | --- | --- |
+| Set field zero to 7 with default repair | 1: `03` → `07`; 15: `dd` → `e1` | Same changes, plus 31: `5b` → `db` |
+| Fix the script's damaged input | 15: `5d` → `dd` | 31: `5b` → `db` |
+| Python `set_field(..., repair=False)` | Only byte 1 | Only byte 1; the second checksum remains damaged |
+
+All other bytes and original files must remain unchanged. The script also
+checks selection of the second copy when the first has an invalid signature.
+It exercises refused edits above the `u8` storage range and refused fix/set
+operations when every signature is invalid. Fresh destinations stay absent;
+existing sentinel files survive the same semantic refusals with `--force`.
+`--force` permits replacing a destination; it does not make invalid records
+usable. A usable sibling can coexist with an invalid edited record, so inspect
+the individual decoded flags as well as overall verification.
+
+The [definition generator](../examples/saves/make_definitions.py) contains the
+short, import-free programs in readable form and regenerates the two JSON
+files using Python's standard library. It is optional for running the examples:
+
+```sh
+python3 examples/saves/make_definitions.py
+```
+
+The generator serializes those programs to the version 1 AST, including empty
+`FunctionDef.type_params`, full argument metadata and explicit null/default
+properties. It omits Python parser context/location metadata. It is a small
+authoring aid for these examples, not a converter for arbitrary Python.
+`Import`/`ImportFrom` are unsupported program nodes; native operations such as
+`bytes` and `sum` are already available in the save runtime.
+
 ## Top-level fields
 
 | Field | Meaning |
@@ -235,7 +331,7 @@ error. Preserve evaluation order and aliasing of mutable lists/bytes/maps.
 | `BoolOp`, `Compare` | Short-circuit `values` with And/Or, returning the selected value. Compare `left` along `ops`/`comparators`; Eq/NotEq, Is/IsNot (value equality), Lt/LtE/Gt/GtE, In/NotIn. |
 | `IfExp`, `NamedExpr` | Evaluate `test`, then `body` or `orelse`; or evaluate `value`, assign `target`, return the value. |
 | `JoinedStr`, `FormattedValue` | Concatenate `values`; formatted children evaluate `value` and optional `format_spec`. `conversion` is metadata. Supported formatting is decimal/hex/binary/string/fixed-point, width, zero fill, precision and alternate base prefixes. |
-| `FunctionDef`, `Lambda`, `arguments`, `arg` | Define a closure using `name`, `args`, `body`; lambda body is an expression. Bind positional `args` (`arg` names), trailing `defaults`, then supplied named arguments. Defaults cannot outnumber parameters. Additional argument metadata is retained; unsupported calling conventions fail. |
+| `FunctionDef`, `Lambda`, `arguments`, `arg` | Define a closure using `name`, `args`, `body`; lambda body is an expression. `FunctionDef` includes `type_params: []`. Bind positional `args` (`arg` names), trailing `defaults`, then supplied named arguments. Defaults cannot outnumber parameters. Additional argument metadata is retained; unsupported calling conventions fail. |
 | `Assign`, `AnnAssign`, `AugAssign`, `Delete` | Assign `value` to `targets`/`target`, or apply `op` to the target's old value; delete names or indexed entries. Tuple/list targets destructure. |
 | `Expr`, `Return`, `Raise`, `Assert` | Evaluate `value`, return it, raise evaluated `exc`, or require truthy `test`; `msg`/`cause` are metadata. A null return is null. |
 | `If`, `For`, `While` | Evaluate `test` or `iter`, execute `body`; `For` assigns `target`. Execute `orelse` when no break occurs. Break/Continue transfer loop control. |

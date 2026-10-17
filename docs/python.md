@@ -95,13 +95,16 @@ pcm = wave.to_pcm(24000)
 print(pcm.samples, pcm.sample_rate, pcm.channels)
 Path("preview.raw").write_bytes(pcm.s16le())
 
-save = swankit.SaveDefinition(Path("save-definition.json").read_text())
-path = Path("save-image.dat")
+# First create this synthetic input with the linked runnable save example.
+save = swankit.SaveDefinition(Path("examples/saves/single.json").read_text(encoding="utf-8"))
+path = Path("save-example-output/single.eep")
 original = path.read_bytes()
 print(save.fields, save.decode(original), save.verify(original))
 changed = save.set_field(original, field=0, value=7)
-path.with_name("edited-image.dat").write_bytes(changed)
-assert save.verify(changed) is not None
+assert save.decode(changed)["valid"] and save.decode(changed)["value"] == 7
+assert [i for i, (a, b) in enumerate(zip(original, changed)) if a != b] == [1, 15]
+with Path("my-python-edited.eep").open("xb") as output:
+    output.write(changed)
 
 patch = swankit.ips_create(b"before", b"after")
 assert swankit.ips_apply(b"before", patch) == b"after"
@@ -128,6 +131,13 @@ images. Pass it to save operations and `detect` when semantic candidates are
 needed. `verify` returns positive validity evidence or `None`; some invalid
 redundant records can coexist with a usable record. Inspect `checks_failed`
 and the decoded validity fields when evaluating all records.
+
+For the save snippet above, first run the
+[synthetic CLI/Python example](../examples/saves/run.py) using the commands in
+the [complete save walkthrough](save-definitions.md#run-complete-synthetic-examples).
+It supplies the [single definition](../examples/saves/single.json), the
+[redundant definition](../examples/saves/redundant.json) and generated input
+images, and checks exact bytes and refused writes through both interfaces.
 
 Edits and repairs return new `bytes`; callers choose their write destination.
 `set_field` repairs transactionally by default. `repair=False` changes only

@@ -1,0 +1,487 @@
+{
+  "schema": "swankit-save-def/1",
+  "id": "example-single",
+  "implementation": "generated",
+  "media": [
+    {
+      "kind": "cartridge-eeprom",
+      "sizes": [
+        16
+      ]
+    }
+  ],
+  "fields": [
+    {
+      "name": "value",
+      "medium": "cartridge EEPROM",
+      "offset": 1,
+      "size": 1,
+      "type": "unsigned",
+      "encoding": "u8",
+      "meaning": "Teaching setting: integers 0 through 9.",
+      "confidence": "synthetic",
+      "evidence": "Defined by this example."
+    }
+  ],
+  "records": [],
+  "blocks": [],
+  "checksums": {},
+  "primitives": {},
+  "validity": {
+    "policy": "program",
+    "exclude": []
+  },
+  "entry": {
+    "mode": "direct",
+    "decode": "decode_image",
+    "fix": "repair_image"
+  },
+  "program": {
+    "t": "Module",
+    "body": [
+      {
+        "t": "FunctionDef",
+        "name": "record",
+        "args": {
+          "t": "arguments",
+          "posonlyargs": [],
+          "args": [
+            {
+              "t": "arg",
+              "arg": "data"
+            }
+          ],
+          "vararg": null,
+          "kwonlyargs": [],
+          "kw_defaults": [],
+          "kwarg": null,
+          "defaults": []
+        },
+        "body": [
+          {
+            "t": "Assign",
+            "targets": [
+              {
+                "t": "Name",
+                "id": "signature_valid"
+              }
+            ],
+            "value": {
+              "t": "Compare",
+              "left": {
+                "t": "Subscript",
+                "value": {
+                  "t": "Name",
+                  "id": "data"
+                },
+                "slice": {
+                  "t": "Constant",
+                  "value": 0,
+                  "kind": null
+                }
+              },
+              "ops": [
+                {
+                  "t": "Eq"
+                }
+              ],
+              "comparators": [
+                {
+                  "t": "Constant",
+                  "value": 165,
+                  "kind": null
+                }
+              ]
+            }
+          },
+          {
+            "t": "Assign",
+            "targets": [
+              {
+                "t": "Name",
+                "id": "range_ok"
+              }
+            ],
+            "value": {
+              "t": "Compare",
+              "left": {
+                "t": "Subscript",
+                "value": {
+                  "t": "Name",
+                  "id": "data"
+                },
+                "slice": {
+                  "t": "Constant",
+                  "value": 1,
+                  "kind": null
+                }
+              },
+              "ops": [
+                {
+                  "t": "LtE"
+                }
+              ],
+              "comparators": [
+                {
+                  "t": "Constant",
+                  "value": 9,
+                  "kind": null
+                }
+              ]
+            }
+          },
+          {
+            "t": "Assign",
+            "targets": [
+              {
+                "t": "Name",
+                "id": "checksum_ok"
+              }
+            ],
+            "value": {
+              "t": "Compare",
+              "left": {
+                "t": "Subscript",
+                "value": {
+                  "t": "Name",
+                  "id": "data"
+                },
+                "slice": {
+                  "t": "Constant",
+                  "value": 15,
+                  "kind": null
+                }
+              },
+              "ops": [
+                {
+                  "t": "Eq"
+                }
+              ],
+              "comparators": [
+                {
+                  "t": "BinOp",
+                  "left": {
+                    "t": "Call",
+                    "func": {
+                      "t": "Name",
+                      "id": "sum"
+                    },
+                    "args": [
+                      {
+                        "t": "Subscript",
+                        "value": {
+                          "t": "Name",
+                          "id": "data"
+                        },
+                        "slice": {
+                          "t": "Slice",
+                          "lower": null,
+                          "upper": {
+                            "t": "Constant",
+                            "value": 15,
+                            "kind": null
+                          },
+                          "step": null
+                        }
+                      }
+                    ],
+                    "keywords": []
+                  },
+                  "op": {
+                    "t": "Mod"
+                  },
+                  "right": {
+                    "t": "Constant",
+                    "value": 256,
+                    "kind": null
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "t": "Return",
+            "value": {
+              "t": "Dict",
+              "keys": [
+                {
+                  "t": "Constant",
+                  "value": "value",
+                  "kind": null
+                },
+                {
+                  "t": "Constant",
+                  "value": "generation",
+                  "kind": null
+                },
+                {
+                  "t": "Constant",
+                  "value": "signature_valid",
+                  "kind": null
+                },
+                {
+                  "t": "Constant",
+                  "value": "range_ok",
+                  "kind": null
+                },
+                {
+                  "t": "Constant",
+                  "value": "checksum_ok",
+                  "kind": null
+                },
+                {
+                  "t": "Constant",
+                  "value": "valid",
+                  "kind": null
+                }
+              ],
+              "values": [
+                {
+                  "t": "Subscript",
+                  "value": {
+                    "t": "Name",
+                    "id": "data"
+                  },
+                  "slice": {
+                    "t": "Constant",
+                    "value": 1,
+                    "kind": null
+                  }
+                },
+                {
+                  "t": "Subscript",
+                  "value": {
+                    "t": "Name",
+                    "id": "data"
+                  },
+                  "slice": {
+                    "t": "Constant",
+                    "value": 2,
+                    "kind": null
+                  }
+                },
+                {
+                  "t": "Name",
+                  "id": "signature_valid"
+                },
+                {
+                  "t": "Name",
+                  "id": "range_ok"
+                },
+                {
+                  "t": "Name",
+                  "id": "checksum_ok"
+                },
+                {
+                  "t": "BoolOp",
+                  "op": {
+                    "t": "And"
+                  },
+                  "values": [
+                    {
+                      "t": "Name",
+                      "id": "signature_valid"
+                    },
+                    {
+                      "t": "Name",
+                      "id": "range_ok"
+                    },
+                    {
+                      "t": "Name",
+                      "id": "checksum_ok"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "type_params": []
+      },
+      {
+        "t": "FunctionDef",
+        "name": "protect",
+        "args": {
+          "t": "arguments",
+          "posonlyargs": [],
+          "args": [
+            {
+              "t": "arg",
+              "arg": "data"
+            }
+          ],
+          "vararg": null,
+          "kwonlyargs": [],
+          "kw_defaults": [],
+          "kwarg": null,
+          "defaults": []
+        },
+        "body": [
+          {
+            "t": "Return",
+            "value": {
+              "t": "BinOp",
+              "left": {
+                "t": "Subscript",
+                "value": {
+                  "t": "Name",
+                  "id": "data"
+                },
+                "slice": {
+                  "t": "Slice",
+                  "lower": null,
+                  "upper": {
+                    "t": "Constant",
+                    "value": 15,
+                    "kind": null
+                  },
+                  "step": null
+                }
+              },
+              "op": {
+                "t": "Add"
+              },
+              "right": {
+                "t": "Call",
+                "func": {
+                  "t": "Name",
+                  "id": "bytes"
+                },
+                "args": [
+                  {
+                    "t": "List",
+                    "elts": [
+                      {
+                        "t": "BinOp",
+                        "left": {
+                          "t": "Call",
+                          "func": {
+                            "t": "Name",
+                            "id": "sum"
+                          },
+                          "args": [
+                            {
+                              "t": "Subscript",
+                              "value": {
+                                "t": "Name",
+                                "id": "data"
+                              },
+                              "slice": {
+                                "t": "Slice",
+                                "lower": null,
+                                "upper": {
+                                  "t": "Constant",
+                                  "value": 15,
+                                  "kind": null
+                                },
+                                "step": null
+                              }
+                            }
+                          ],
+                          "keywords": []
+                        },
+                        "op": {
+                          "t": "Mod"
+                        },
+                        "right": {
+                          "t": "Constant",
+                          "value": 256,
+                          "kind": null
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "keywords": []
+              }
+            }
+          }
+        ],
+        "type_params": []
+      },
+      {
+        "t": "FunctionDef",
+        "name": "decode_image",
+        "args": {
+          "t": "arguments",
+          "posonlyargs": [],
+          "args": [
+            {
+              "t": "arg",
+              "arg": "data"
+            },
+            {
+              "t": "arg",
+              "arg": "name"
+            }
+          ],
+          "vararg": null,
+          "kwonlyargs": [],
+          "kw_defaults": [],
+          "kwarg": null,
+          "defaults": []
+        },
+        "body": [
+          {
+            "t": "Return",
+            "value": {
+              "t": "Call",
+              "func": {
+                "t": "Name",
+                "id": "record"
+              },
+              "args": [
+                {
+                  "t": "Name",
+                  "id": "data"
+                }
+              ],
+              "keywords": []
+            }
+          }
+        ],
+        "type_params": []
+      },
+      {
+        "t": "FunctionDef",
+        "name": "repair_image",
+        "args": {
+          "t": "arguments",
+          "posonlyargs": [],
+          "args": [
+            {
+              "t": "arg",
+              "arg": "data"
+            }
+          ],
+          "vararg": null,
+          "kwonlyargs": [],
+          "kw_defaults": [],
+          "kwarg": null,
+          "defaults": []
+        },
+        "body": [
+          {
+            "t": "Return",
+            "value": {
+              "t": "Call",
+              "func": {
+                "t": "Name",
+                "id": "protect"
+              },
+              "args": [
+                {
+                  "t": "Name",
+                  "id": "data"
+                }
+              ],
+              "keywords": []
+            }
+          }
+        ],
+        "type_params": []
+      }
+    ],
+    "type_ignores": []
+  }
+}
