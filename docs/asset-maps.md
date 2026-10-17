@@ -135,9 +135,15 @@ map header or a marker byte) without changing the asset's own range.
 
 ## Commands
 
+Replacement requires a ROM of at least 64 KiB (65,536 bytes). Smaller mapped
+buffers can verify and extract, but cannot be replaced as cartridge images.
+Replacement recomputes the sum of all bytes except the final two, modulo
+65,536, and writes that little-endian checksum into those two bytes. This does not validate every
+footer field or require the original checksum to be correct.
+
 ```text
 swankit assets extract ROM MAP OUTDIR [--force] [--json]
-swankit assets replace ROM MAP --id ID --from FILE -o PATCHED [--ips PATCH] [--map-out MAP] [--force] [--json]
+swankit assets replace ROM MAP --id ID --from FILE -o PATCHED [--text-framing lf] [--ips PATCH] [--map-out MAP] [--force] [--json]
 swankit assets verify ROM MAP [--json]
 ```
 
@@ -149,6 +155,42 @@ PCM; raw bytes for the rest and for decoded compressed graphics; and
 reference count per asset). A tilemap without a tile relation is extracted as
 its words and marked `rendered: false`. Failing assets are listed in the index
 and the command exits non-zero.
+
+Each text asset's `.txt` contains one decoded string followed by one framing
+LF byte (`0a`), including when the string is empty or already ends in CR or LF.
+It is not a line-per-string table. The `.codes.tsv` companion records source
+code units and their spellings; it is not replacement binary data.
+
+Default `.txt` import keeps the legacy behavior: remove one optional final LF,
+then one optional final CR, even if there was no LF. This accepts editor CRLF
+endings, but can remove a content CR: payload `41 0d 00` representing `A`, CR,
+terminator exports as `41 0d 0a` and default import produces `41 00` before slot
+padding. Use `--text-framing lf` to remove only one optional final LF and retain
+all remaining CR and LF characters. A file without a final LF is kept intact in
+this mode. To encode a content LF at the end, keep the extra framing LF after
+it; for content CRLF, end the file with CR LF LF. Configure the editor to
+preserve these bytes. The option accepts only `lf` and applies only to `.txt`
+replacement of a text asset; other values and uses are refused before writing.
+
+For a map with a text asset named `message`, extract, edit its string while
+retaining the framing LF, then reinsert it:
+
+```sh
+swankit assets extract cartridge.wsc assets.json extracted
+# Edit extracted/message.txt with byte-preserving newline settings.
+swankit assets replace cartridge.wsc assets.json --id message \
+  --from extracted/message.txt --text-framing lf \
+  -o edited.wsc --map-out edited-assets.json
+swankit assets extract edited.wsc edited-assets.json checked
+```
+
+For exact decoded payload bytes, supply a file with an extension other than
+`.txt` or `.png`, such as `message.bin`, without `--text-framing`. Include the
+encoded character/control bytes, terminator and any required payload data;
+for compressed assets these are the decoded bytes, before recompression.
+Renaming a UTF-8 export does not turn it into those bytes. The binary path skips
+text framing and character encoding; placement, codec and checksum rules still
+apply. Text assets do not automatically export a `.bin` alongside their text.
 
 `replace` takes the asset's decoded form: a PNG laid out as `extract` wrote it
 (tiles sheet, tilemap rendering, rgb444 swatch), a `.txt` in the charmap's
@@ -179,10 +221,11 @@ becomes its new consumed extent). When it does not fit, it is relocated only if
 declared free range (implied bits, alignment, far windows; a stream never newly
 crosses a 64 KiB bank), first fit. The references are rewritten, the old range
 is added to the output map's free space and the used free range shrinks.
-Otherwise the command refuses and writes nothing. Nothing is written outside
-the asset's range, a free range or a declared reference. The footer checksum is
-always recomputed. `--ips` writes an IPS patch against the input; `--map-out`
-writes the map updated for the patched image (identity, offsets, free space).
+Otherwise the command refuses and writes nothing. Apart from the final two
+checksum bytes, nothing is written outside the asset's range, a free range or
+a declared reference. The checksum is always recomputed. `--ips` writes an IPS
+patch against the input; `--map-out` writes the map updated for the patched
+image (identity, offsets, free space).
 
 `reserved_capacity` separates placement budget from exact stream consumption.
 It is a total allocation from the asset's offset, not additional bytes after

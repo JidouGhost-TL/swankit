@@ -113,6 +113,38 @@ A synthetic definition for the byte `41` followed by a zero terminator:
 }
 ```
 
+## Mapped assets
+
+Replacement needs a ROM of at least 64 KiB (65,536 bytes); smaller mapped
+buffers can verify and extract. It rewrites the final two bytes with the
+little-endian sum of all preceding bytes modulo 65,536. It does not validate every footer
+field or require a correct input checksum.
+
+```sh
+swankit assets verify cartridge.wsc assets.json --json
+swankit assets extract cartridge.wsc assets.json extracted
+swankit assets replace cartridge.wsc assets.json --id message \
+  --from extracted/message.txt --text-framing lf \
+  -o edited.wsc --map-out edited-assets.json
+```
+
+Each mapped text `.txt` is one decoded string plus one framing LF, including
+empty strings and strings containing CR or LF. Default `.txt` replacement
+removes one optional final LF and then one optional CR, even without an LF.
+This preserves legacy CRLF handling but can drop a content CR. The explicit
+`--text-framing lf` mode removes only one optional final LF and preserves all
+remaining CR and LF characters; without a final LF, it keeps the whole string.
+Retain the framing LF when editing, including after a content LF or CRLF.
+Other values and uses outside `.txt` text replacement are refused before writes.
+
+PNG supplies supported image edits. Files with other extensions, such as
+`.bin`, supply decoded payload bytes directly, including encoded character and
+control bytes and terminators; they must omit `--text-framing`. Renaming a text
+export is not a conversion to those bytes. Compressed assets are re-encoded by
+their codec. Keep the output ROM with its returned map. See [asset maps and
+replacement](asset-maps.md) for text framing examples, code unit tables,
+allocation, relocation, layout limits and output safety.
+
 ## Codec extraction
 
 ```sh

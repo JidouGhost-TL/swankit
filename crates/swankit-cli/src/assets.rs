@@ -11,13 +11,17 @@ use ws_assets::{
 
 pub const HELP: &str = "swankit assets: per-ROM asset maps (swankit-asset-map/1)
   assets extract ROM MAP OUTDIR [--force] [--json]
-  assets replace ROM MAP --id ID --from FILE -o PATCHED [--ips PATCH] [--map-out MAP] [--allocate] [--force] [--json]
+  assets replace ROM MAP --id ID --from FILE -o PATCHED [--text-framing lf] [--ips PATCH] [--map-out MAP] [--allocate] [--force] [--json]
   assets verify ROM MAP [--json]
 --from: .png (tiles/font sheet, tilemap or palette swatch as extracted), .txt (text in
-the charmap's spelling; one trailing newline is ignored) or any other file
+the charmap's spelling) or any other file
 (decoded payload bytes). Replacement re-encodes with the asset's codec, writes
 in place when it fits, relocates into declared free space only when every
-reference is listed, and always recomputes the footer checksum. Text that breaks
+reference is listed, and always recomputes the final two checksum bytes (minimum
+ROM size: 64 KiB). Text export appends one framing LF. Default .txt import removes
+one optional final LF, then one optional CR (even without LF). --text-framing lf
+is for .txt replacement only: remove one optional final LF, preserve content CR
+and LF. Without a final LF, this mode preserves the whole string. Text that breaks
 its declared line limits (line_width, lines) is refused; --force writes it and
 reports warnings (and overwrites existing output files). --allocate gives cells of
 a shared tile that were edited differently new tiles from declared free tile
@@ -121,15 +125,30 @@ pub fn run(words: Vec<String>) -> Result<()> {
             let ips = a.value("--ips");
             let map_out = a.value("--map-out");
             let allocate = a.flag("--allocate");
+            let text_framing = a.value("--text-framing");
             a.finish(4)?;
+            let extension = Path::new(&from).extension().and_then(|e| e.to_str());
+            if let Some(framing) = text_framing.as_deref() {
+                if framing != "lf" {
+                    return Err("--text-framing must be lf".into());
+                }
+                if extension != Some("txt") {
+                    return Err("--text-framing lf requires a .txt replacement file".into());
+                }
+            }
             let (rom, map, charmaps) = load(&a.positional[2], &a.positional[3])?;
             let raw = io::read(&from, MAX_ROM)?;
-            let input = match Path::new(&from).extension().and_then(|e| e.to_str()) {
+            let input = match extension {
                 Some("png") => ReplaceInput::Image(png_read::decode(&raw)?),
                 Some("txt") => {
                     let text = String::from_utf8(raw).map_err(|_| "text file is not UTF-8")?;
                     let text = text.strip_suffix('\n').unwrap_or(&text);
-                    ReplaceInput::Text(text.strip_suffix('\r').unwrap_or(text).to_owned())
+                    let text = if text_framing.is_some() {
+                        text
+                    } else {
+                        text.strip_suffix('\r').unwrap_or(text)
+                    };
+                    ReplaceInput::Text(text.to_owned())
                 }
                 _ => ReplaceInput::Bytes(raw),
             };
