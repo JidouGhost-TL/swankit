@@ -182,3 +182,40 @@ fn corpus_additional_codecs() {
     let n = run_dir("ws-compress-extra", &AdditionalCodecDigest);
     eprintln!("ws-compress-extra: {n} game-decompressor witnesses equal; encoders round-trip");
 }
+
+struct U8ZeroDigest;
+impl Digest for U8ZeroDigest {
+    fn digest(&self, bytes: &[u8], args: &Args) -> Result<Value> {
+        let pair =
+            Pair::from_bytes(bytes).ok_or_else(|| Error::Malformed("invalid codec pair".into()))?;
+        if pair.codec != "lz-u8-zero"
+            || args.get("codec").and_then(Value::as_str) != Some(&pair.codec)
+        {
+            return Err(Error::Malformed("unexpected byte-command codec".into()));
+        }
+        let decoded = ws_compress::lz_u8_zero::decode(&pair.stored, pair.raw.len())?;
+        if decoded.bytes != pair.raw || decoded.consumed != pair.stored.len() {
+            return Err(Error::Malformed(
+                "byte-command output/extent mismatch".into(),
+            ));
+        }
+        let encoded = ws_compress::lz_u8_zero::encode(&pair.raw)?;
+        let back = ws_compress::lz_u8_zero::decode(&encoded, pair.raw.len())?;
+        if back.bytes != pair.raw || back.consumed != encoded.len() {
+            return Err(Error::Malformed("byte-command encoder round trip".into()));
+        }
+        Ok(
+            json!({"codec":pair.codec,"raw_sha256":hash_bytes(&decoded.bytes),
+            "stored_sha256":hash_bytes(&pair.stored),"consumed":decoded.consumed,"round_trip":true}),
+        )
+    }
+}
+
+#[test]
+fn corpus_zero_terminated_byte_codec() {
+    assert_ne!(std::env::var("FORMATKIT_CORPUS_WRITE").as_deref(), Ok("1"));
+    let n = run_dir("ws-compress-u8-zero", &U8ZeroDigest);
+    eprintln!(
+        "ws-compress-u8-zero: {n} source streams equal independent complete output and extent"
+    );
+}

@@ -158,13 +158,15 @@ A `swankit-codec-def/1` definition selects one headerless stream. For example:
  "offset":4096,"length":128,"max_output":512}
 ```
 
-`codec` is `lz-rle-7f`, `lz-bits-16`, `okumura-lzss`, `lzss-u16-zero`
-or `lzss-12`. The length-prefixed grammar accepts `destination` (default 8192)
+`codec` is `lz-rle-7f`, `lz-bits-16`, `lz-u8-zero`, `okumura-lzss`, `lzss-u16-zero`
+or `lzss-12`. `lz-u8-zero` uses literal blocks and backward matches terminated
+by a zero command; its consumed length includes that command and excludes any
+following carrier bytes. The length-prefixed grammar accepts `destination` (default 8192)
 and `prehistory` (`low5-prefix`, `low8-prefix`, `zero-until-start`). The
 external-length grammar requires `decoded_size` and accepts explicit `history`. `offset` defaults to
 zero; `length` and `max_output` are required. The output bound is at most
 65,536 bytes. Optional `history` is an array of known preceding RAM bytes for
-the two terminated grammars. The library reports consumed stream bytes through
+the terminated grammars. The library reports consumed stream bytes through
 the terminator; trailing carrier data remains available. JSON artifact metadata
 includes `consumed`.
 

@@ -5,6 +5,7 @@
 pub mod catalog;
 pub mod lz_bits_16;
 pub mod lz_rle_7f;
+pub mod lz_u8_zero;
 pub mod lzss_12;
 pub mod lzss_u16_zero;
 pub mod okumura;
@@ -12,7 +13,7 @@ pub mod okumura;
 pub use formatkit_codec::{BitOrder, DecodeOutcome};
 use formatkit_core::{Error, Result};
 
-/// Maximum decoded size supported by the two terminated stream grammars.
+/// Maximum decoded size supported by the stream grammars.
 pub const MAX_DECODED: usize = 0x10000;
 
 /// Check growth before allocating or copying an entire token.

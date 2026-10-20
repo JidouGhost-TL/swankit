@@ -24,6 +24,7 @@ pub enum Codec {
     LzRle7f,
     #[serde(rename = "lz-bits-16")]
     LzBits16,
+    LzU8Zero,
     OkumuraLzss,
     #[serde(rename = "lzss-u16-zero")]
     LzssU16Zero,
@@ -93,6 +94,9 @@ impl CodecDefinition {
             }
             Codec::LzBits16 => {
                 compress::lz_bits_16::decode_with_history(source, &self.history, self.max_output)
+            }
+            Codec::LzU8Zero => {
+                compress::lz_u8_zero::decode_with_history(source, &self.history, self.max_output)
             }
             Codec::OkumuraLzss => {
                 if !self.history.is_empty() {

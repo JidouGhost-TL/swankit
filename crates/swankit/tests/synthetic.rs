@@ -92,6 +92,28 @@ fn codec_definitions_dispatch_all_grammars_and_bound_outputs() {
     }
 }
 #[test]
+fn zero_terminated_byte_codec_dispatch() {
+    let value = json!({"schema":"swankit-codec-def/1","codec":"lz-u8-zero",
+        "offset":1,"length":7,"max_output":8});
+    let mut def: extract::CodecDefinition =
+        extract::definition(&serde_json::to_vec(&value).unwrap()).unwrap();
+    let source = [0xee, 2, b'A', b'B', 0x83, 1, 0, 0xaa];
+    let out = Toolkit::new()
+        .unwrap()
+        .extract_codec(&source, &def)
+        .unwrap();
+    assert_eq!(out.bytes, b"ABABABAB");
+    assert_eq!(out.consumed, 6);
+    def.max_output = 7;
+    assert!(def.decode(&source).is_err());
+    def.max_output = 8;
+    def.length = 5;
+    assert!(def.decode(&source).is_err());
+    def.length = 8;
+    assert!(def.decode(&source).is_err());
+}
+
+#[test]
 fn sound_definitions_produce_structured_records_and_reject_truncation() {
     for (kind, bytes) in [
         ("sdk-sequence", vec![0xff, 0]),
