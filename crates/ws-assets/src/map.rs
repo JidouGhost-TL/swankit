@@ -172,6 +172,8 @@ pub enum Codec {
     LzBits16,
     #[serde(rename = "ws-lz-u8-zero")]
     LzU8Zero,
+    #[serde(rename = "ws-lz-word16-msb")]
+    LzWord16Msb,
     #[serde(rename = "ws-okumura-lzss")]
     Okumura,
     #[serde(rename = "ws-lzss-u16-zero")]
@@ -185,7 +187,11 @@ impl Codec {
     pub fn terminated(self) -> bool {
         matches!(
             self,
-            Codec::LzRle7f | Codec::LzBits16 | Codec::LzU8Zero | Codec::LzssU16Zero
+            Codec::LzRle7f
+                | Codec::LzBits16
+                | Codec::LzU8Zero
+                | Codec::LzWord16Msb
+                | Codec::LzssU16Zero
         )
     }
 }

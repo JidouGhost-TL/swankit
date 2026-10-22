@@ -10,6 +10,7 @@ bytes through the terminator. Trailing carrier data remains unconsumed.
 | `lz_rle_7f` | 10-bit backward distance, literals, zero-prefixed words, runs, zeros; `7f ff` terminator | Minimum encoded-byte dynamic programming |
 | `lz_bits_16` | LSB-first 16-bit little-endian flags, short/long matches, extended zero-length terminator | Reference-compatible minimum-bit dynamic programming with bounded match search |
 | `lz_u8_zero` | Byte commands: 1–127 literal bytes, 3–130 byte matches with distance 1–256, zero terminator | Minimum encoded-byte dynamic programming |
+| `lz_word16_msb` | Mode0: u16LE count/literals; nonzero: lazy MSB-first u16LE flags, distance12/length4 tokens, optional length extension, zero-word terminator | Counted literals through65535 bytes, literal-only flags for65536 |
 | `lzss_u16_zero` | u16 length, LSB byte flags, length4/distance12 tokens, destination-dependent zero prefix | Minimum-byte parse over literals and backward matches |
 | `lzss_12` | External length, LSB byte flags, distance12-minus-one/length4 tokens | Deterministic backward-match encoder |
 | `okumura` | 4 KiB initialized ring, flag bytes, external decoded length | Formatkit's original tree matcher |
@@ -31,6 +32,15 @@ bytes preceding the destination; unknown prehistory is never invented.
 Matches may overlap their own output. `lz_u8_zero` distinguishes its zero command
 from literal zero bytes and uses no implicit initial fill. `lz_bits_16` fetches the next flag word
 immediately after consuming bit 16, before that token's operand bytes.
+
+`lz_word16_msb` starts at a mode byte and excludes carrier prefixes. Mode zero
+copies a little-endian u16 count of literal bytes. Any nonzero mode reads
+little-endian flag words MSB first, refilling lazily before the next command.
+One means literal; zero means a little-endian token, with zero terminating.
+Other tokens have distance `4096 - (token >> 4)` and length `(token & 15) + 3`;
+low bits 15 add a further unsigned byte. Overlapping copies use produced bytes
+only. Encoding emits counted literals through 65,535 bytes and literal flags
+at 65,536 bytes, with no compression or original-slot fit guarantee.
 
 Okumura delegates the complete mechanism to `formatkit-codec`, with explicit
 bit order, ring fill, output size and limit. It rejects token overshoot rather

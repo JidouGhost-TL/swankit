@@ -6,6 +6,7 @@ use formatkit_catalog::{
 pub const LZ_RLE_7F_ID: FormatId = FormatId::new("ws-lz-rle-7f");
 pub const LZ_BITS_16_ID: FormatId = FormatId::new("ws-lz-bits-16");
 pub const LZ_U8_ZERO_ID: FormatId = FormatId::new("ws-lz-u8-zero");
+pub const LZ_WORD16_MSB_ID: FormatId = FormatId::new("ws-lz-word16-msb");
 pub const LZSS_12_ID: FormatId = FormatId::new("ws-lzss-12");
 
 pub const LZSS_U16_ZERO_ID: FormatId = FormatId::new("ws-lzss-u16-zero");
@@ -50,6 +51,11 @@ pub const FORMATS: &[FormatDescriptor] = &[
     descriptor(LZ_BITS_16_ID, "ws-lz-bits-16", Confidence::CorpusBacked),
     descriptor(OKUMURA_ID, "ws-okumura-lzss", Confidence::Structural),
     descriptor(LZ_U8_ZERO_ID, "ws-lz-u8-zero", Confidence::CorpusBacked),
+    descriptor(
+        LZ_WORD16_MSB_ID,
+        "ws-lz-word16-msb",
+        Confidence::CorpusBacked,
+    ),
 ];
 
 use formatkit_catalog::catalog::{ContextRequirement, EmbeddedFormatSupport};
@@ -195,6 +201,30 @@ pub const EMBEDDED: &[EmbeddedFormatSupport] = &[
         },
         corpus_evidence: Some(CorpusEvidence {
             handler: "ws-compress-u8-zero",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: LZ_WORD16_MSB_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "lz-word16-msb",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-word16-msb",
             sample_floor: 1,
         }),
     },

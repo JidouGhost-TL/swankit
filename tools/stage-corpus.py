@@ -377,6 +377,8 @@ def main():
     selection = parser.add_mutually_exclusive_group(required=True)
     selection.add_argument("--titles", type=Path)
     selection.add_argument("--codec-manifest", type=Path)
+    selection.add_argument("--terminated-manifest", type=Path,
+                           help="freeze original ROM spans and independent full outputs in a NEW terminated-codec selection")
     selection.add_argument("--wondergate-manifest", type=Path,
                            help="enroll independent adapter taps and TCP peers in a NEW frozen adapter selection")
     selection.add_argument("--wondergate-server-manifest", type=Path,
@@ -417,7 +419,11 @@ def main():
     args = parser.parse_args()
     log(args.progress_log, "corpus staging start", "0 samples enrolled", "validate independent inputs")
     try:
-        if args.wondergate_manifest:
+        if args.terminated_manifest:
+            from stage_terminated import stage_terminated
+            count = stage_terminated(args.terminated_manifest, args.output)
+            log(args.progress_log, "terminated codec staging", f"{count} original source pairs, 1 frozen spec", "run serialized required corpus gate")
+        elif args.wondergate_manifest:
             from stage_wondergate_adapter import stage_wondergate_adapter
             count = stage_wondergate_adapter(args.wondergate_manifest, args.output)
             log(args.progress_log, "adapter corpus staging", f"{count} independent taps, 1 frozen spec", "run safe adapter replay gate")

@@ -119,6 +119,60 @@ fn byte_command_map(rom: &[u8], length: Option<usize>) -> AssetMap {
 }
 
 #[test]
+fn map_word_flags_owns_mode_stream_and_preserves_external_prefix() {
+    let mut rom = rom();
+    rom[PACKED - 2..PACKED].copy_from_slice(&[0x34, 0x12]);
+    let stream = [1, 0, 0x80, 42, 0xf0, 0xff, 0, 0, 0xaa];
+    rom[PACKED..PACKED + stream.len()].copy_from_slice(&stream);
+    let mut value = map_json(&rom);
+    value["assets"][5]["codec"] = json!("ws-lz-word16-msb");
+    value["assets"][5]["kind"] = json!("other");
+    value["assets"][5]["length"] = json!(8);
+    let map = load(&value);
+    let c = charmaps(&map);
+    let decoded = decode_asset(&map, &c, &rom, "z").unwrap();
+    assert_eq!(decoded.decoded, [42; 4]);
+    assert_eq!(decoded.length, 8);
+    for length in [7, 9] {
+        value["assets"][5]["length"] = json!(length);
+        let wrong = load(&value);
+        assert!(decode_asset(&wrong, &charmaps(&wrong), &rom, "z").is_err());
+    }
+    let changed = replace(
+        &map,
+        &c,
+        &rom,
+        &Replacement {
+            id: "z".into(),
+            input: ReplaceInput::Bytes(vec![7; 4]),
+        },
+    )
+    .unwrap();
+    assert_eq!(&changed.rom[PACKED - 2..PACKED], &[0x34, 0x12]);
+    assert_eq!(
+        decode_asset(&changed.map, &charmaps(&changed.map), &changed.rom, "z")
+            .unwrap()
+            .decoded,
+        [7; 4]
+    );
+    assert!(verify(&changed.map, &charmaps(&changed.map), &changed.rom)
+        .unwrap()
+        .ok());
+    assert!(checksum_ok(&changed.rom));
+    // Literal encoding can grow; ordinary capacity/reference rules still apply.
+    assert!(replace(
+        &map,
+        &c,
+        &rom,
+        &Replacement {
+            id: "z".into(),
+            input: ReplaceInput::Bytes(vec![7; 100]),
+        }
+    )
+    .is_err());
+}
+
+#[test]
 fn map_byte_commands_extract_exact_extent_and_depend_on_source() {
     let mut rom = rom();
     let stream = [3, b'A', b'B', b'C', 0x80, 2, 0, 0xde, 0xad];

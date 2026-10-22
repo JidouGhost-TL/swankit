@@ -183,24 +183,33 @@ fn corpus_additional_codecs() {
     eprintln!("ws-compress-extra: {n} game-decompressor witnesses equal; encoders round-trip");
 }
 
-struct U8ZeroDigest;
-impl Digest for U8ZeroDigest {
+struct TerminatedLiteralDigest;
+impl Digest for TerminatedLiteralDigest {
     fn digest(&self, bytes: &[u8], args: &Args) -> Result<Value> {
         let pair =
             Pair::from_bytes(bytes).ok_or_else(|| Error::Malformed("invalid codec pair".into()))?;
-        if pair.codec != "lz-u8-zero"
-            || args.get("codec").and_then(Value::as_str) != Some(&pair.codec)
-        {
+        if args.get("codec").and_then(Value::as_str) != Some(&pair.codec) {
             return Err(Error::Malformed("unexpected byte-command codec".into()));
         }
-        let decoded = ws_compress::lz_u8_zero::decode(&pair.stored, pair.raw.len())?;
+        let (decode, encode): (Decoder, Encoder) = match pair.codec.as_str() {
+            "lz-u8-zero" => (
+                ws_compress::lz_u8_zero::decode,
+                ws_compress::lz_u8_zero::encode,
+            ),
+            "lz-word16-msb" => (
+                ws_compress::lz_word16_msb::decode,
+                ws_compress::lz_word16_msb::encode,
+            ),
+            _ => return Err(Error::Malformed("unknown terminated codec".into())),
+        };
+        let decoded = decode(&pair.stored, pair.raw.len())?;
         if decoded.bytes != pair.raw || decoded.consumed != pair.stored.len() {
             return Err(Error::Malformed(
                 "byte-command output/extent mismatch".into(),
             ));
         }
-        let encoded = ws_compress::lz_u8_zero::encode(&pair.raw)?;
-        let back = ws_compress::lz_u8_zero::decode(&encoded, pair.raw.len())?;
+        let encoded = encode(&pair.raw)?;
+        let back = decode(&encoded, pair.raw.len())?;
         if back.bytes != pair.raw || back.consumed != encoded.len() {
             return Err(Error::Malformed("byte-command encoder round trip".into()));
         }
@@ -214,8 +223,20 @@ impl Digest for U8ZeroDigest {
 #[test]
 fn corpus_zero_terminated_byte_codec() {
     assert_ne!(std::env::var("FORMATKIT_CORPUS_WRITE").as_deref(), Ok("1"));
-    let n = run_dir("ws-compress-u8-zero", &U8ZeroDigest);
+    let n = run_dir("ws-compress-u8-zero", &TerminatedLiteralDigest);
     eprintln!(
         "ws-compress-u8-zero: {n} source streams equal independent complete output and extent"
+    );
+}
+
+type Decoder = fn(&[u8], usize) -> Result<DecodeOutcome>;
+type Encoder = fn(&[u8]) -> Result<Vec<u8>>;
+
+#[test]
+fn corpus_mode_selected_word_flags() {
+    assert_ne!(std::env::var("FORMATKIT_CORPUS_WRITE").as_deref(), Ok("1"));
+    let n = run_dir("ws-compress-word16-msb", &TerminatedLiteralDigest);
+    eprintln!(
+        "ws-compress-word16-msb: {n} source streams equal independent complete output and extent"
     );
 }

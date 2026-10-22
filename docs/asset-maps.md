@@ -38,7 +38,7 @@ hexadecimal strings. Unknown fields are errors.
 | `kind` | `tiles`, `tilemap`, `palette`, `font`, `text`, `pointer-table`, `music`, `sound-effect`, `pcm`, `data-table`, `sprite-table`, `other` |
 | `offset`, `length` | File offset and declared stored/carrier length (see extent rules below). `length` may be omitted for terminated codecs (the codec's end marker defines it) and for text (the charmap's end control) |
 | `reserved_capacity` | Optional proven total owned allocation in bytes from `offset`, independent of the consumed stream extent. Defaults to the current stored extent; retained across in-place edits and cleared on relocation |
-| `codec`, `codec_params` | `raw` (default) or a `ws-compress` id: `ws-lz-rle-7f`, `ws-lz-bits-16`, `ws-lz-u8-zero`, `ws-okumura-lzss` (with `decoded_length`, `bit_order`, `ring_fill`), `ws-lzss-u16-zero` or `ws-lzss-12` (parameters below) |
+| `codec`, `codec_params` | `raw` (default) or a `ws-compress` id: `ws-lz-rle-7f`, `ws-lz-bits-16`, `ws-lz-u8-zero`, `ws-lz-word16-msb`, `ws-okumura-lzss` (with `decoded_length`, `bit_order`, `ring_fill`), `ws-lzss-u16-zero` or `ws-lzss-12` (parameters below) |
 | `address` | Descriptive CPU view (`window` c0/c2/c3, `bank`, `segment`, `offset`) |
 | `format` | Kind parameters (below) |
 | `relations` | `tiles` (tile sets with their VRAM slot `at`, optional `skip`), `palette` / `palettes`, `charmap`, `font`, `pointer_table`, `targets` (pointer table entries) |
@@ -55,6 +55,16 @@ command; a declared length must equal the consumed extent, excluding any
 following carrier bytes. Asset-map decoding uses no external history and
 refuses references before the produced output. Replacement uses the existing
 deterministic encoder and the map's normal allocation and reference rules.
+
+`ws-lz-word16-msb` starts at the mode byte, excluding any carrier prefix.
+Mode zero contains a u16 literal count; nonzero mode uses MSB-first flag words
+and a zero match token to end the stream. Declared `length` must equal its
+consumed extent. Matches require already produced bytes. The deterministic
+encoder emits counted literals through 65,535 bytes, or literal flags for
+65,536 bytes. It does not promise compressed size: growth needs the map's
+usual capacity or relocation declarations. Extraction and codec round trips
+alone do not establish compatible carrier metadata or game-side replacement;
+unknown external fields stay outside the mapped allocation.
 
 `ws-lzss-u16-zero` requires the original `destination` (u16 offset) and an
 explicit `prehistory` policy: `low5-prefix`, `low8-prefix`, or

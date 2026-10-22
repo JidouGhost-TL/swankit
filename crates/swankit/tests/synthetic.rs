@@ -52,6 +52,11 @@ fn composed_detection_and_typed_info_preserve_rom_policy() {
 fn codec_definitions_dispatch_all_grammars_and_bound_outputs() {
     for (codec, stored, size) in [
         (
+            "lz-word16-msb",
+            swankit::compress::lz_word16_msb::encode(b"abcabc").unwrap(),
+            None,
+        ),
+        (
             "lz-rle-7f",
             swankit::compress::lz_rle_7f::encode(b"abcabc").unwrap(),
             None,
@@ -90,6 +95,23 @@ fn codec_definitions_dispatch_all_grammars_and_bound_outputs() {
         def.offset = usize::MAX;
         assert!(def.decode(&stored).is_err());
     }
+}
+#[test]
+fn word_flag_definition_starts_at_mode_and_refuses_external_history() {
+    let value = json!({"schema":"swankit-codec-def/1","codec":"lz-word16-msb",
+        "offset":2,"length":8,"max_output":4});
+    let mut def: extract::CodecDefinition =
+        extract::definition(&serde_json::to_vec(&value).unwrap()).unwrap();
+    let src = [0x34, 0x12, 1, 0, 0x80, 42, 0xf0, 0xff, 0, 0, 0xaa];
+    let t = Toolkit::new().unwrap();
+    let got = t.extract_codec(&src, &def).unwrap();
+    assert_eq!(got.bytes, [42; 4]);
+    assert_eq!(got.consumed, 8);
+    def.history = vec![42];
+    assert!(t.extract_codec(&src, &def).is_err());
+    def.history.clear();
+    def.length = 7;
+    assert!(t.extract_codec(&src, &def).is_err());
 }
 #[test]
 fn zero_terminated_byte_codec_dispatch() {

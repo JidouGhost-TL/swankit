@@ -158,7 +158,7 @@ A `swankit-codec-def/1` definition selects one headerless stream. For example:
  "offset":4096,"length":128,"max_output":512}
 ```
 
-`codec` is `lz-rle-7f`, `lz-bits-16`, `lz-u8-zero`, `okumura-lzss`, `lzss-u16-zero`
+`codec` is `lz-rle-7f`, `lz-bits-16`, `lz-u8-zero`, `lz-word16-msb`, `okumura-lzss`, `lzss-u16-zero`
 or `lzss-12`. `lz-u8-zero` uses literal blocks and backward matches terminated
 by a zero command; its consumed length includes that command and excludes any
 following carrier bytes. The length-prefixed grammar accepts `destination` (default 8192)
@@ -169,6 +169,12 @@ zero; `length` and `max_output` are required. The output bound is at most
 the terminated grammars. The library reports consumed stream bytes through
 the terminator; trailing carrier data remains available. JSON artifact metadata
 includes `consumed`.
+
+`lz-word16-msb` starts at its mode byte. Mode zero reads a little-endian u16
+literal count and those bytes. A nonzero mode uses little-endian flag words,
+consumed most-significant bit first with refill only before the next command.
+It refuses external history. Its extent ends after the counted payload or
+zero match token; any carrier prefix belongs outside the definition's offset.
 
 Okumura requires `decoded_size`; optional `bit_order` is `lsb-first` (default)
 or `msb-first`, and `fill` defaults to zero. It uses ring fill and rejects an
