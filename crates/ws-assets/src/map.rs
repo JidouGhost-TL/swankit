@@ -170,6 +170,8 @@ pub enum Codec {
     LzRle7f,
     #[serde(rename = "ws-lz-bits-16")]
     LzBits16,
+    #[serde(rename = "ws-lz-u8-zero")]
+    LzU8Zero,
     #[serde(rename = "ws-okumura-lzss")]
     Okumura,
     #[serde(rename = "ws-lzss-u16-zero")]
@@ -181,7 +183,10 @@ pub enum Codec {
 impl Codec {
     /// Whether the stream carries its own end marker or decoded size.
     pub fn terminated(self) -> bool {
-        matches!(self, Codec::LzRle7f | Codec::LzBits16 | Codec::LzssU16Zero)
+        matches!(
+            self,
+            Codec::LzRle7f | Codec::LzBits16 | Codec::LzU8Zero | Codec::LzssU16Zero
+        )
     }
 }
 

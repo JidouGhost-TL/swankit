@@ -3,7 +3,9 @@ use crate::map::{Asset, Codec, Kind, Num};
 use crate::text::Charmaps;
 use crate::{malformed, AssetMap};
 use formatkit_core::{bytes_at, Result};
-use ws_compress::{lz_bits_16, lz_rle_7f, lzss_12, lzss_u16_zero, okumura, BitOrder, MAX_DECODED};
+use ws_compress::{
+    lz_bits_16, lz_rle_7f, lz_u8_zero, lzss_12, lzss_u16_zero, okumura, BitOrder, MAX_DECODED,
+};
 
 /// Upper bound on the decoded bytes of one asset.
 pub const MAX_ASSET_BYTES: usize = 4 * 1024 * 1024;
@@ -114,10 +116,11 @@ pub fn decode_asset(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -
             }
             None => return Err(malformed(format!("{id}: raw asset needs a length"))),
         },
-        Codec::LzRle7f | Codec::LzBits16 | Codec::LzssU16Zero | Codec::Lzss12 => {
+        Codec::LzRle7f | Codec::LzBits16 | Codec::LzU8Zero | Codec::LzssU16Zero | Codec::Lzss12 => {
             let outcome = match asset.codec {
                 Codec::LzRle7f => lz_rle_7f::decode(window, MAX_DECODED)?,
                 Codec::LzBits16 => lz_bits_16::decode(window, MAX_DECODED)?,
+                Codec::LzU8Zero => lz_u8_zero::decode(window, MAX_DECODED)?,
                 Codec::LzssU16Zero => {
                     let (destination, policy) = lzss_u16_params(asset)?;
                     lzss_u16_zero::decode_with_policy(window, MAX_ASSET_BYTES, destination, policy)?
@@ -355,6 +358,7 @@ pub fn encode_payload(asset: &Asset, decoded: &[u8]) -> Result<Vec<u8>> {
         Codec::Raw => Ok(decoded.to_vec()),
         Codec::LzRle7f => lz_rle_7f::encode(decoded),
         Codec::LzBits16 => lz_bits_16::encode(decoded),
+        Codec::LzU8Zero => lz_u8_zero::encode(decoded),
         Codec::LzssU16Zero => {
             lzss_u16_params(asset)?;
             lzss_u16_zero::encode(decoded)

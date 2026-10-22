@@ -106,6 +106,99 @@ fn checksum_ok(rom: &[u8]) -> bool {
     rom[n..] == sum.to_le_bytes()
 }
 
+fn byte_command_map(rom: &[u8], length: Option<usize>) -> AssetMap {
+    let mut value = map_json(rom);
+    value["assets"][5]["codec"] = json!("ws-lz-u8-zero");
+    value["assets"][5]["kind"] = json!("other");
+    if let Some(length) = length {
+        value["assets"][5]["length"] = json!(length);
+    } else {
+        value["assets"][5].as_object_mut().unwrap().remove("length");
+    }
+    load(&value)
+}
+
+#[test]
+fn map_byte_commands_extract_exact_extent_and_depend_on_source() {
+    let mut rom = rom();
+    let stream = [3, b'A', b'B', b'C', 0x80, 2, 0, 0xde, 0xad];
+    rom[PACKED..PACKED + stream.len()].copy_from_slice(&stream);
+    let map = byte_command_map(&rom, None);
+    let c = charmaps(&map);
+    assert!(map.asset("z").unwrap().codec.terminated());
+    let decoded = decode_asset(&map, &c, &rom, "z").unwrap();
+    assert_eq!(decoded.length, 7);
+    assert_eq!(decoded.decoded, b"ABCABC");
+    let extracted = extract(&map, &c, &rom).unwrap();
+    assert_eq!(extracted.failures, 0);
+    assert!(extracted.files.iter().any(|(name, file)| {
+        name == "z.bin" && matches!(file, ExtractedFile::Bytes(bytes) if bytes == b"ABCABC")
+    }));
+
+    rom[PACKED + 1] = b'X';
+    assert!(extract(&map, &c, &rom).is_err());
+    let rebound = byte_command_map(&rom, Some(7));
+    assert_eq!(
+        decode_asset(&rebound, &charmaps(&rebound), &rom, "z")
+            .unwrap()
+            .decoded,
+        b"XBCXBC"
+    );
+}
+
+#[test]
+fn map_byte_commands_refuse_wrong_extents_unknown_history_and_overflow() {
+    let mut rom = rom();
+    rom[PACKED..PACKED + 9].copy_from_slice(&[3, b'A', b'B', b'C', 0x80, 2, 0, 7, 8]);
+    for length in [6, 9] {
+        let map = byte_command_map(&rom, Some(length));
+        assert!(decode_asset(&map, &charmaps(&map), &rom, "z").is_err());
+    }
+    for malformed in [&[2, b'A'][..], &[1, b'A'][..], &[0x80, 0, 0][..]] {
+        rom[PACKED..PACKED + malformed.len()].copy_from_slice(malformed);
+        let map = byte_command_map(&rom, Some(malformed.len()));
+        assert!(decode_asset(&map, &charmaps(&map), &rom, "z").is_err());
+    }
+    let mut oversized = vec![1, b'A'];
+    for _ in 0..505 {
+        oversized.extend_from_slice(&[0xff, 0]);
+    }
+    oversized.push(0);
+    rom[PACKED..PACKED + oversized.len()].copy_from_slice(&oversized);
+    let map = byte_command_map(&rom, Some(oversized.len()));
+    assert!(decode_asset(&map, &charmaps(&map), &rom, "z").is_err());
+}
+
+#[test]
+fn map_byte_commands_replace_routes_to_existing_encoder() {
+    let mut rom = rom();
+    rom[PACKED..PACKED + 7].copy_from_slice(&[3, b'A', b'B', b'C', 0x80, 2, 0]);
+    let map = byte_command_map(&rom, Some(7));
+    let c = charmaps(&map);
+    let replacement = vec![b'Z'; 6];
+    let changed = replace(
+        &map,
+        &c,
+        &rom,
+        &Replacement {
+            id: "z".into(),
+            input: ReplaceInput::Bytes(replacement.clone()),
+        },
+    )
+    .unwrap();
+    let decoded = decode_asset(&changed.map, &charmaps(&changed.map), &changed.rom, "z").unwrap();
+    assert_eq!(decoded.decoded, replacement);
+    assert_eq!(
+        changed.map.asset("z").unwrap().length.unwrap().0,
+        decoded.length as u64
+    );
+    assert!(decoded.length <= 7);
+    assert!(verify(&changed.map, &charmaps(&changed.map), &changed.rom)
+        .unwrap()
+        .ok());
+    assert!(checksum_ok(&changed.rom));
+}
+
 #[test]
 fn map_lzss_codecs_render_and_replace_with_explicit_parameters() {
     for (codec, params, stored, expected) in [
