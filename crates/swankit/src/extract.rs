@@ -26,6 +26,7 @@ pub enum Codec {
     LzBits16,
     LzU8Zero,
     LzWord16Msb,
+    LzWordCounted,
     OkumuraLzss,
     #[serde(rename = "lzss-u16-zero")]
     LzssU16Zero,
@@ -90,6 +91,12 @@ impl CodecDefinition {
         }
         let source = bytes_at(bytes, self.offset, self.length)?;
         match self.codec {
+            Codec::LzWordCounted => {
+                if !self.history.is_empty() {
+                    return Err(bad("counted word streams require produced history"));
+                }
+                compress::lz_word_counted::decode_at(source, self.max_output, self.offset)
+            }
             Codec::LzWord16Msb => {
                 if !self.history.is_empty() {
                     return Err(bad("word-flag streams require produced-byte history"));

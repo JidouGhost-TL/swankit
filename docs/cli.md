@@ -158,7 +158,7 @@ A `swankit-codec-def/1` definition selects one headerless stream. For example:
  "offset":4096,"length":128,"max_output":512}
 ```
 
-`codec` is `lz-rle-7f`, `lz-bits-16`, `lz-u8-zero`, `lz-word16-msb`, `okumura-lzss`, `lzss-u16-zero`
+`codec` is `lz-rle-7f`, `lz-bits-16`, `lz-u8-zero`, `lz-word16-msb`, `lz-word-counted`, `okumura-lzss`, `lzss-u16-zero`
 or `lzss-12`. `lz-u8-zero` uses literal blocks and backward matches terminated
 by a zero command; its consumed length includes that command and excludes any
 following carrier bytes. The length-prefixed grammar accepts `destination` (default 8192)
@@ -358,3 +358,5 @@ See [offline installation and first operation](distribution.md) for platform
 requirements, artifact/source binding and a synthetic tile example. Use exact
 supported command paths such as `swankit extract sound --help` for syntax.
 Unknown actions and malformed option requests return an error.
+
+`lz-word-counted` uses a nonzero little-endian command count, a word-command table and a separate literal pool. It refuses missing produced history, source-window crossing and decoded output overflow. The definition offset anchors the 64 KiB source window. This selects logical software word expansion only; it does not establish hardware transfer behavior or runtime banking.

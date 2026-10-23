@@ -7,6 +7,7 @@ pub mod lz_bits_16;
 pub mod lz_rle_7f;
 pub mod lz_u8_zero;
 pub mod lz_word16_msb;
+pub mod lz_word_counted;
 pub mod lzss_12;
 pub mod lzss_u16_zero;
 pub mod okumura;

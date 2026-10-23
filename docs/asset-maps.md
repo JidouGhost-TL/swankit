@@ -38,7 +38,7 @@ hexadecimal strings. Unknown fields are errors.
 | `kind` | `tiles`, `tilemap`, `palette`, `font`, `text`, `pointer-table`, `music`, `sound-effect`, `pcm`, `data-table`, `sprite-table`, `other` |
 | `offset`, `length` | File offset and declared stored/carrier length (see extent rules below). `length` may be omitted for terminated codecs (the codec's end marker defines it) and for text (the charmap's end control) |
 | `reserved_capacity` | Optional proven total owned allocation in bytes from `offset`, independent of the consumed stream extent. Defaults to the current stored extent; retained across in-place edits and cleared on relocation |
-| `codec`, `codec_params` | `raw` (default) or a `ws-compress` id: `ws-lz-rle-7f`, `ws-lz-bits-16`, `ws-lz-u8-zero`, `ws-lz-word16-msb`, `ws-okumura-lzss` (with `decoded_length`, `bit_order`, `ring_fill`), `ws-lzss-u16-zero` or `ws-lzss-12` (parameters below) |
+| `codec`, `codec_params` | `raw` (default) or a `ws-compress` id: `ws-lz-rle-7f`, `ws-lz-bits-16`, `ws-lz-u8-zero`, `ws-lz-word16-msb`, `ws-lz-word-counted`, `ws-okumura-lzss` (with `decoded_length`, `bit_order`, `ring_fill`), `ws-lzss-u16-zero` or `ws-lzss-12` (parameters below) |
 | `address` | Descriptive CPU view (`window` c0/c2/c3, `bank`, `segment`, `offset`) |
 | `format` | Kind parameters (below) |
 | `relations` | `tiles` (tile sets with their VRAM slot `at`, optional `skip`), `palette` / `palettes`, `charmap`, `font`, `pointer_table`, `targets` (pointer table entries) |
@@ -300,3 +300,5 @@ Font PNG replacements use the extracted sheet geometry. Glyph row/column order,
 explicit tile offsets and stride padding are preserved. Pixels use the same
 nearest-palette policy as tile sheets; contradictory edits to aliased source
 bytes are rejected. Partially used sheet cells remain outside the font count.
+
+`ws-lz-word-counted` expands counted little-endian word commands with a separate literal pool. Commands select literal words, literals followed by a match, or a match in produced word history. Zero command counts and missing initial history are refused. Consumption includes the header, command table and used pool bytes; maps require the exact declared extent. Decoding and literal-only encoding must fit the current 64 KiB source window and the output is bounded to 64 KiB. The encoder may grow beyond the original allocation. This is logical software expansion; hardware transfers, runtime branch selection and game-compatible replacement are not established.

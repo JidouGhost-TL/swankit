@@ -92,6 +92,12 @@ pub static MODULES: &[FormatModule] = &[
         Some(&ws_compress::catalog::EMBEDDED[6]),
     ),
     row(
+        ws_compress::catalog::LZ_WORD_COUNTED_ID,
+        "ws-compress",
+        None,
+        Some(&ws_compress::catalog::EMBEDDED[7]),
+    ),
+    row(
         ws_gfx::catalog::TILE_2BPP,
         "ws-gfx",
         None,

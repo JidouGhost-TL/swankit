@@ -200,9 +200,23 @@ impl Digest for TerminatedLiteralDigest {
                 ws_compress::lz_word16_msb::decode,
                 ws_compress::lz_word16_msb::encode,
             ),
+            "lz-word-counted" => (
+                ws_compress::lz_word_counted::decode,
+                ws_compress::lz_word_counted::encode,
+            ),
             _ => return Err(Error::Malformed("unknown terminated codec".into())),
         };
-        let decoded = decode(&pair.stored, pair.raw.len())?;
+        let decoded = if pair.codec == "lz-word-counted" {
+            let offset = args
+                .get("source_offset")
+                .and_then(Value::as_u64)
+                .ok_or_else(|| Error::Malformed("counted stream source offset missing".into()))?;
+            let offset = usize::try_from(offset)
+                .map_err(|_| Error::Malformed("counted stream source offset overflow".into()))?;
+            ws_compress::lz_word_counted::decode_at(&pair.stored, pair.raw.len(), offset)?
+        } else {
+            decode(&pair.stored, pair.raw.len())?
+        };
         if decoded.bytes != pair.raw || decoded.consumed != pair.stored.len() {
             return Err(Error::Malformed(
                 "byte-command output/extent mismatch".into(),
@@ -239,4 +253,11 @@ fn corpus_mode_selected_word_flags() {
     eprintln!(
         "ws-compress-word16-msb: {n} source streams equal independent complete output and extent"
     );
+}
+
+#[test]
+fn corpus_counted_word_streams() {
+    assert_ne!(std::env::var("FORMATKIT_CORPUS_WRITE").as_deref(), Ok("1"));
+    let n = run_dir("ws-compress-word-counted", &TerminatedLiteralDigest);
+    eprintln!("ws-compress-word-counted: {n} logical software streams equal complete original output and extent");
 }

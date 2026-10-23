@@ -7,6 +7,7 @@ pub const LZ_RLE_7F_ID: FormatId = FormatId::new("ws-lz-rle-7f");
 pub const LZ_BITS_16_ID: FormatId = FormatId::new("ws-lz-bits-16");
 pub const LZ_U8_ZERO_ID: FormatId = FormatId::new("ws-lz-u8-zero");
 pub const LZ_WORD16_MSB_ID: FormatId = FormatId::new("ws-lz-word16-msb");
+pub const LZ_WORD_COUNTED_ID: FormatId = FormatId::new("ws-lz-word-counted");
 pub const LZSS_12_ID: FormatId = FormatId::new("ws-lzss-12");
 
 pub const LZSS_U16_ZERO_ID: FormatId = FormatId::new("ws-lzss-u16-zero");
@@ -41,6 +42,11 @@ const fn descriptor(
 }
 
 pub const FORMATS: &[FormatDescriptor] = &[
+    descriptor(
+        LZ_WORD_COUNTED_ID,
+        "ws-lz-word-counted",
+        Confidence::CorpusBacked,
+    ),
     descriptor(LZSS_12_ID, "ws-lzss-12", Confidence::CorpusBacked),
     descriptor(
         LZSS_U16_ZERO_ID,
@@ -225,6 +231,30 @@ pub const EMBEDDED: &[EmbeddedFormatSupport] = &[
         },
         corpus_evidence: Some(CorpusEvidence {
             handler: "ws-compress-word16-msb",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: LZ_WORD_COUNTED_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "lz-word-counted",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-word-counted",
             sample_floor: 1,
         }),
     },

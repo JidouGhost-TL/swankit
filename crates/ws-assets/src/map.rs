@@ -174,6 +174,8 @@ pub enum Codec {
     LzU8Zero,
     #[serde(rename = "ws-lz-word16-msb")]
     LzWord16Msb,
+    #[serde(rename = "ws-lz-word-counted")]
+    LzWordCounted,
     #[serde(rename = "ws-okumura-lzss")]
     Okumura,
     #[serde(rename = "ws-lzss-u16-zero")]
@@ -191,6 +193,7 @@ impl Codec {
                 | Codec::LzBits16
                 | Codec::LzU8Zero
                 | Codec::LzWord16Msb
+                | Codec::LzWordCounted
                 | Codec::LzssU16Zero
         )
     }

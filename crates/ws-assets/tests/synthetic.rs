@@ -1472,3 +1472,31 @@ fn returned_library_maps_inline_all_compiled_file_formats_even_when_unchanged() 
         );
     }
 }
+
+#[test]
+fn map_counted_words_tracks_consumption_and_preserves_carrier_tail() {
+    let mut rom = rom();
+    let stream = [2, 0, 1, 0, 1, 0x80, 0x34, 0x12, 0xaa];
+    rom[PACKED..PACKED + stream.len()].copy_from_slice(&stream);
+    let mut value = map_json(&rom);
+    value["assets"][5]["codec"] = json!("ws-lz-word-counted");
+    value["assets"][5]["kind"] = json!("other");
+    value["assets"][5]["length"] = json!(8);
+    let map = load(&value);
+    let decoded = decode_asset(&map, &charmaps(&map), &rom, "z").unwrap();
+    assert_eq!(decoded.decoded, [0x34, 0x12].repeat(3));
+    assert_eq!(decoded.length, 8);
+    for length in [7, 9] {
+        value["assets"][5]["length"] = json!(length);
+        let wrong = load(&value);
+        assert!(decode_asset(&wrong, &charmaps(&wrong), &rom, "z").is_err());
+    }
+    value["assets"][5].as_object_mut().unwrap().remove("length");
+    let map = load(&value);
+    assert_eq!(
+        decode_asset(&map, &charmaps(&map), &rom, "z")
+            .unwrap()
+            .length,
+        8
+    );
+}

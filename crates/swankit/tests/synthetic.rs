@@ -264,3 +264,26 @@ fn save_definition() -> Value {
             ]))
         ],"type_ignores":[]}})
 }
+
+#[test]
+fn counted_word_definition_anchors_source_window_and_refuses_history() {
+    let value = json!({"schema":"swankit-codec-def/1","codec":"lz-word-counted", "offset":0xfffa,"length":6,"max_output":2});
+    let mut def: extract::CodecDefinition =
+        extract::definition(&serde_json::to_vec(&value).unwrap()).unwrap();
+    let mut src = vec![0; 0x10001];
+    src[0xfffa..0x10000].copy_from_slice(&[1, 0, 1, 0, 7, 9]);
+    assert_eq!(
+        Toolkit::new()
+            .unwrap()
+            .extract_codec(&src, &def)
+            .unwrap()
+            .bytes,
+        [7, 9]
+    );
+    def.history = vec![0, 0];
+    assert!(def.decode(&src).is_err());
+    def.history.clear();
+    def.offset = 0xfffb;
+    src[0xfffb..0x10001].copy_from_slice(&[1, 0, 1, 0, 7, 9]);
+    assert!(def.decode(&src).is_err());
+}

@@ -14,7 +14,7 @@ def stage_terminated(manifest_path, output):
     manifest_bytes = manifest_path.read_bytes()
     manifest = json.loads(manifest_bytes)
     codec = manifest['codec']
-    if codec not in ('lz-u8-zero', 'lz-word16-msb'):
+    if codec not in ('lz-u8-zero', 'lz-word16-msb', 'lz-word-counted'):
         raise ValueError('unknown terminated codec')
     namespace = 'ws-compress-' + codec.removeprefix('lz-')
     records = manifest['samples']
@@ -38,7 +38,10 @@ def stage_terminated(manifest_path, output):
         label, provenance = codec.encode(), record['provenance'].encode()
         pair = (b'SCEPAIR1' + struct.pack('<IIQQ', len(label), len(provenance), len(raw), len(stored))
                 + label + provenance + raw + stored)
-        prepared.append((pair, {'args': {'codec': codec}, 'expect': {
+        sample_args = {'codec': codec}
+        if codec == 'lz-word-counted':
+            sample_args['source_offset'] = offset
+        prepared.append((pair, {'args': sample_args, 'expect': {
             'codec': codec, 'raw_sha256': record['raw']['sha256'],
             'stored_sha256': record['stored_sha256'], 'consumed': length, 'round_trip': True}}))
     output.mkdir(parents=True, exist_ok=True)
