@@ -55,6 +55,7 @@ expressible references.
 | Saves | Definition-driven decode, verification, stored-field edits and transactional repair through Rust, CLI and Python | Storage bounds and definition checks do not establish every game's menu ranges, unlock conditions or active-record selection. Some definitions require explicit context or companion images |
 | Asset maps | Verification, extraction, replacement, declared relocation and reserved-capacity editing through Rust and CLI | Requires a map matching the exact ROM. Full map operations are not exposed by the Python bindings |
 | Graphics, text and sound | Documented tile/palette/image, character-map/font, codec and sound operations | Supported formats and supplied definitions only; engine-specific composite formats need separate maps or implementation |
+| Format search | Read-only ranked leads, bounded codec/layout probes, reference patterns and resumable parallel manifest batches | Leads require reader/source/output validation; see [format search](docs/format-search.md) |
 | Discovery | Evidence-driven candidate maps with verification | Discovery is partial; captures alone do not establish original ROM storage or safe ownership |
 | Patches and connections | IPS operations and the documented serial/adapter interfaces | Connection and service support have their documented interoperability limits |
 

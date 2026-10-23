@@ -1,5 +1,7 @@
 //! `swankit assets`: per-ROM asset maps (docs/asset-maps.md).
 mod output;
+mod search;
+pub use search::run as search_command;
 
 use crate::{args::Args, io, png, png_read, Result};
 use serde_json::json;
@@ -10,6 +12,8 @@ use ws_assets::{
 };
 
 pub const HELP: &str = "swankit assets: per-ROM asset maps (swankit-asset-map/1)
+  assets search ROM [--config JSON] [--output JSON] [--json]
+  assets search-corpus MANIFEST --output DIR [--config JSON] [--jobs N] [--resume] [--json]
   assets extract ROM MAP OUTDIR [--force] [--json]
   assets replace ROM MAP --id ID --from FILE -o PATCHED [--text-framing lf] [--ips PATCH] [--map-out MAP] [--allocate] [--force] [--json]
   assets verify ROM MAP [--json]

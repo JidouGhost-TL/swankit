@@ -10,6 +10,7 @@ use formatkit_core::{Error, Result};
 use formatkit_runtime::ModuleCatalog;
 use serde::Serialize;
 pub use ws_compress as compress;
+pub use ws_discover as discover;
 pub use ws_gfx as gfx;
 pub use ws_patch as patch;
 pub use ws_rom as rom;

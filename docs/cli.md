@@ -360,3 +360,11 @@ supported command paths such as `swankit extract sound --help` for syntax.
 Unknown actions and malformed option requests return an error.
 
 `lz-word-counted` uses a nonzero little-endian command count, a word-command table and a separate literal pool. It refuses missing produced history, source-window crossing and decoded output overflow. The definition offset anchors the 64 KiB source window. This selects logical software word expansion only; it does not establish hardware transfer behavior or runtime banking.
+
+## Common format search
+
+Use `swankit assets search ROM --output leads.json` for one input, or
+`swankit assets search-corpus MANIFEST --output DIRECTORY --jobs 8` for a
+checkpointed batch. These produce leads, not verified asset maps. See the
+[format-search guide](format-search.md) for strict options, capture/reader
+patterns, resource budgets and resume identity checks.

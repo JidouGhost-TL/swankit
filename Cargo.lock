@@ -458,6 +458,7 @@ dependencies = [
  "serde",
  "serde_json",
  "ws-compress",
+ "ws-discover",
  "ws-gfx",
  "ws-patch",
  "ws-rom",
@@ -652,6 +653,7 @@ version = "0.1.0"
 dependencies = [
  "formatkit-core",
  "formatkit-corpus-test",
+ "memchr",
  "serde",
  "serde_json",
  "ws-assets",
