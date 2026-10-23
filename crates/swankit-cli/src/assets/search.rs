@@ -337,9 +337,10 @@ fn batch(mut args: Args) -> Result<()> {
                     complete_for_configured_scan: false,
                     error: Some(error.to_string()),
                 });
+                let mut completed = entries.lock().expect("worker result lock");
                 eprintln!(
                     "format search {}/{}: {} {}",
-                    index + 1,
+                    completed.len() + 1,
                     inputs.len(),
                     input.id,
                     if entry.error.is_none() {
@@ -348,7 +349,7 @@ fn batch(mut args: Args) -> Result<()> {
                         "FAILED"
                     }
                 );
-                entries.lock().expect("worker result lock").push(entry);
+                completed.push(entry);
             });
         }
     });

@@ -69,7 +69,17 @@ fn batch_parallel_checkpoints_resume_and_failure_are_actionable() {
         "2",
         "--json",
     ];
-    let first = ok(&args);
+    let completed = command(&args);
+    assert!(completed.status.success());
+    let progress = String::from_utf8_lossy(&completed.stderr);
+    let progress: Vec<_> = progress
+        .lines()
+        .filter(|line| line.starts_with("format search "))
+        .collect();
+    assert_eq!(progress.len(), 2);
+    assert!(progress[0].starts_with("format search 1/2:"));
+    assert!(progress[1].starts_with("format search 2/2:"));
+    let first: Value = serde_json::from_slice(&completed.stdout).unwrap();
     assert_eq!(first["succeeded"], 2);
     assert_eq!(first["failed"], 0);
     assert_eq!(first["leads"], 2);
