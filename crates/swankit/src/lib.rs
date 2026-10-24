@@ -8,6 +8,8 @@ pub mod save;
 use formatkit_catalog::DetectionContext;
 use formatkit_core::{Error, Result};
 use formatkit_runtime::ModuleCatalog;
+#[cfg(feature = "saves")]
+pub use save::SaveEditOptions;
 use serde::Serialize;
 pub use ws_compress as compress;
 pub use ws_discover as discover;

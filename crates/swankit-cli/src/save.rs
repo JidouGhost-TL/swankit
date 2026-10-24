@@ -51,22 +51,40 @@ pub fn run(mut a: Args, json_mode: bool) -> Result<()> {
         "set" | "fix" => {
             let output = a.require("--output")?;
             let force = a.flag("--force");
+            let mut validation_skipped = false;
             let updated = if action == "set" {
                 let index = args::number(&a.require("--field")?)?;
                 let value: Value = serde_json::from_str(&a.require("--value")?)?;
+                let all_copies = a.flag("--all-copies");
+                let skip_validation = a.flag("--skip-validation");
+                validation_skipped = skip_validation;
+                let repair = !a.flag("--no-repair");
                 a.finish(4)?;
-                toolkit.set_save(definition, &bytes, &name, &context, index, &value)?
+                io::ensure_distinct_path(&output, &source)?;
+                toolkit.set_save_with_options(
+                    definition,
+                    &bytes,
+                    &name,
+                    &context,
+                    index,
+                    &value,
+                    swankit::SaveEditOptions {
+                        all_copies,
+                        skip_validation,
+                        repair,
+                    },
+                )?
             } else {
                 a.finish(4)?;
+                io::ensure_distinct_path(&output, &source)?;
                 toolkit.fix_save(definition, &bytes, &name, &context)?
             };
-            crate::artifact(
-                &output,
-                &updated,
-                force,
-                json_mode,
-                json!({"definition":definition.id,"checks":definition.verify_with_context(&updated,&name,&context)?}),
-            )
+            let details = if validation_skipped {
+                json!({"definition":definition.id,"validation":"skipped"})
+            } else {
+                json!({"definition":definition.id,"checks":definition.verify_with_context(&updated,&name,&context)?})
+            };
+            crate::artifact(&output, &updated, force, json_mode, details)
         }
         _ => Err("unknown save action".into()),
     }

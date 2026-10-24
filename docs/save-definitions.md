@@ -1,15 +1,35 @@
-# Save definitions, version 1
+# Save definitions, versions 1 and 2
 
 Each file in `crates/ws-saves/data/` describes one game's save. The engine has
 no game-specific Rust modules. A definition contains layout data and a bounded
 semantic program, so checksums, conditional records, redundant copies, text
 codes and derived values can be represented without native game code.
 
-The version identifier is `"schema": "swankit-save-def/1"`.
+The version identifiers are `"schema": "swankit-save-def/1"` and
+`"schema": "swankit-save-def/2"`. Version 1 behavior remains unchanged.
 [save-definition.schema.json](save-definition.schema.json) is its JSON Schema,
 using [Draft 2020-12](https://json-schema.org/draft/2020-12/json-schema-core).
-Its `$id` is `urn:swankit:save-def:1`. Resolve its `$ref` values within that file;
+Its `$id` is `urn:swankit:save-def:2`. Resolve its `$ref` values within that file;
 validation needs no network. A new incompatible grammar requires a new version.
+
+Version 2 definitions can attach an optional `constraint` to a field:
+
+```json
+{"kind":"unsigned-range","minimum":0,"maximum":1079}
+{"kind":"enum","values":[0,1,2]}
+{"kind":"packed-bcd","digits":8,"byte_order":"little","minimum":0,"maximum":99999999}
+```
+
+Constraints validate values presented to edits. Packed BCD uses the existing
+byte-array field representation; byte order describes the order of packed
+digits across bytes. `skip_validation` bypasses semantic checks and the
+post-edit usability check while retaining storage extent and representation
+checks.
+
+Version 2 may also declare `copy_groups`, each with a unique name and at least
+two unique field names. Groups describe explicit physical copies; they do not
+choose a preferred copy for reads. An all-copies edit stages each member before
+repair, then returns one complete candidate.
 
 ## Run complete synthetic examples
 

@@ -1,4 +1,4 @@
-use crate::{bad, error, json};
+use crate::{error, json};
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 use serde_json::{json, Value};
@@ -95,7 +95,7 @@ impl SaveDefinition {
             .map_err(error)?;
         json(py, &result)
     }
-    #[pyo3(signature = (data, field, value, *, repair=true, name="save", context=None))]
+    #[pyo3(signature = (data, field, value, *, all_copies=false, skip_validation=false, repair=true, name="save", context=None))]
     #[allow(clippy::too_many_arguments)]
     fn set_field<'py>(
         &self,
@@ -103,6 +103,8 @@ impl SaveDefinition {
         data: &[u8],
         field: usize,
         value: &Bound<'_, PyAny>,
+        all_copies: bool,
+        skip_validation: bool,
         repair: bool,
         name: &str,
         context: Option<&SaveContext>,
@@ -113,26 +115,35 @@ impl SaveDefinition {
             .extract()?;
         let value: Value = swankit::extract::definition(serialized.as_bytes()).map_err(error)?;
         let empty = saves::DecodeContext::default();
+        let options = swankit::SaveEditOptions {
+            all_copies,
+            skip_validation,
+            repair,
+        };
         let result = if repair {
             crate::toolkit()?
-                .set_save(
+                .set_save_with_options(
                     self.owner(),
                     data,
                     name,
                     context.map_or(&empty, |c| &c.0),
                     field,
                     &value,
+                    options,
                 )
                 .map_err(error)?
         } else {
-            if !self.owner().accepts_size(data.len()) {
-                return Err(bad("image length is not declared by the save definition"));
-            }
-            let mut candidate = data.to_vec();
-            self.owner()
-                .set_field(&mut candidate, field, &value)
-                .map_err(error)?;
-            candidate
+            crate::toolkit()?
+                .set_save_unrepaired(
+                    self.owner(),
+                    data,
+                    name,
+                    context.map_or(&empty, |c| &c.0),
+                    field,
+                    &value,
+                    options,
+                )
+                .map_err(error)?
         };
         Ok(PyBytes::new(py, &result))
     }

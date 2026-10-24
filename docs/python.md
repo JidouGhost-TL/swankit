@@ -110,6 +110,13 @@ patch = swankit.ips_create(b"before", b"after")
 assert swankit.ips_apply(b"before", patch) == b"after"
 ```
 
+Version 2 save definitions may enforce a field constraint. Use
+`set_field(..., all_copies=True)` only for a declared copy group;
+`skip_validation=True` explicitly bypasses semantic constraints and the
+post-edit usability check while keeping representation bounds. The default
+`repair=True` repairs the save; `repair=False` leaves stored repair bytes alone
+while still enforcing constraints unless `skip_validation=True` is also set.
+
 `Wave` unpacks the low nibble before the high nibble into 32 values in 0..15.
 `Wave.to_pcm(rate)` returns one mono cycle with signed samples `(n - 8) * 4096`
 (range -32768..28672). The rate labels that cycle; it does not resample it or

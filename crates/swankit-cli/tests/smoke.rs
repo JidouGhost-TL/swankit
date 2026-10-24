@@ -351,6 +351,177 @@ fn save_decode_set_fix_and_auto_errors() {
         .status
         .success());
 }
+
+#[cfg(feature = "saves")]
+#[test]
+fn save_v2_flags_are_independent_atomic_and_protect_input_aliases() {
+    let f = Fixture::new();
+    let mut definition = save_definition();
+    definition["schema"] = json!("swankit-save-def/2");
+    definition["fields"][0]["constraint"] =
+        json!({"kind":"unsigned-range","minimum":0,"maximum":9});
+    definition["fields"].as_array_mut().unwrap().push(json!({"name":"setting.copy_b","medium":"cart EEPROM","offset":10,"size":1,"encoding":"u8"}));
+    definition["fields"].as_array_mut().unwrap().push(json!({"name":"setting.copy_c","medium":"cart EEPROM","offset":40,"size":1,"encoding":"u8"}));
+    definition["copy_groups"] =
+        json!([{"name":"setting.copies","fields":["setting","setting.copy_b","setting.copy_c"]}]);
+    let def = f.json("save-v2.json", definition);
+    let mut bytes = vec![0; 128];
+    bytes[0] = 165;
+    bytes[10] = 11;
+    bytes[40] = 13;
+    let input = f.put("input.save", &bytes);
+
+    // Default refusal must not create or overwrite an output, including --force.
+    let absent = f.path("absent.save");
+    assert!(!command(&[
+        "save", "set", &def, &input, "--field", "0", "--value", "10", "--output", &absent
+    ])
+    .status
+    .success());
+    assert!(!std::path::Path::new(&absent).exists());
+    let sentinel = f.put("sentinel.save", b"keep");
+    assert!(!command(&[
+        "save", "set", &def, &input, "--field", "0", "--value", "10", "--output", &sentinel,
+        "--force"
+    ])
+    .status
+    .success());
+    assert_eq!(fs::read(&sentinel).unwrap(), b"keep");
+
+    let scalar = f.path("scalar.save");
+    ok(&[
+        "save", "set", &def, &input, "--field", "0", "--value", "7", "--output", &scalar,
+    ]);
+    let scalar = fs::read(scalar).unwrap();
+    assert_eq!((scalar[1], scalar[10], scalar[40]), (7, 11, 13));
+    let copies = f.path("copies.save");
+    ok(&[
+        "save",
+        "set",
+        &def,
+        &input,
+        "--field",
+        "0",
+        "--value",
+        "7",
+        "--all-copies",
+        "--no-repair",
+        "--output",
+        &copies,
+        "--json",
+    ]);
+    let report = fs::read(&copies).unwrap();
+    assert_eq!((report[1], report[10], report[40]), (7, 7, 7));
+    let skipped = f.path("skipped.save");
+    let out = ok(&[
+        "save",
+        "set",
+        &def,
+        &input,
+        "--field",
+        "0",
+        "--value",
+        "10",
+        "--skip-validation",
+        "--no-repair",
+        "--output",
+        &skipped,
+        "--json",
+    ]);
+    assert!(String::from_utf8_lossy(&out.stdout).contains("\"validation\":\"skipped\""));
+    assert_eq!(fs::read(&skipped).unwrap()[1], 10);
+    let skipped_plain = f.path("skipped-plain.save");
+    let out = ok(&[
+        "save",
+        "set",
+        &def,
+        &input,
+        "--field",
+        "0",
+        "--value",
+        "10",
+        "--skip-validation",
+        "--no-repair",
+        "--output",
+        &skipped_plain,
+    ]);
+    assert!(String::from_utf8_lossy(&out.stdout).contains("validation skipped"));
+
+    // --skip-validation keeps byte representation and input identity protections.
+    assert!(!command(&[
+        "save",
+        "set",
+        &def,
+        &input,
+        "--field",
+        "0",
+        "--value",
+        "256",
+        "--skip-validation",
+        "--output",
+        &f.path("overflow")
+    ])
+    .status
+    .success());
+    assert!(!command(&[
+        "save",
+        "set",
+        &def,
+        &input,
+        "--field",
+        "0",
+        "--value",
+        "7",
+        "--skip-validation",
+        "--output",
+        &input,
+        "--force"
+    ])
+    .status
+    .success());
+    assert_eq!(fs::read(&input).unwrap(), bytes);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::symlink;
+        let alias = f.path("symlink.save");
+        symlink(&input, &alias).unwrap();
+        assert!(!command(&[
+            "save",
+            "set",
+            &def,
+            &input,
+            "--field",
+            "0",
+            "--value",
+            "7",
+            "--skip-validation",
+            "--output",
+            &alias,
+            "--force"
+        ])
+        .status
+        .success());
+        let hard = f.path("hardlink.save");
+        fs::hard_link(&input, &hard).unwrap();
+        assert!(!command(&[
+            "save",
+            "set",
+            &def,
+            &input,
+            "--field",
+            "0",
+            "--value",
+            "7",
+            "--skip-validation",
+            "--output",
+            &hard,
+            "--force"
+        ])
+        .status
+        .success());
+        assert_eq!(fs::read(&input).unwrap(), bytes);
+    }
+}
 #[cfg(not(feature = "saves"))]
 #[test]
 fn disabled_saves_returns_a_clear_error() {

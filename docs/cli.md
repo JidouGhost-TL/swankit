@@ -253,16 +253,24 @@ swankit save fix save-definition.json damaged.eeprom --output repaired.eeprom --
 swankit detect save.eeprom --context context.json --json
 ```
 
-Definitions are external `swankit-save-def/1` JSON files or bundled IDs read
+Definitions are external `swankit-save-def/1` or `/2` JSON files or bundled IDs read
 from those definitions. Decode returns the owner's complete JSON tree, including
 invalid and empty record flags. It does not invent a successful semantic state
 from a parse. See [save definitions](save-definitions.md) for the full schema.
 
 `set` selects a stored field by its zero-based index; `--value` is a JSON scalar
-or byte array matching the stored encoding. It edits a copy and invokes the
-owner's transactional repair. `fix` invokes that repair directly. Both require
-a usable post-repair record according to the definition's program and excluded
-working regions, preserve the image length and write only after success.
+or byte array matching the stored encoding. Version 2 definitions may add an
+unsigned range, numeric enum or packed BCD constraint. `--all-copies` applies
+the value to every explicitly named member of its copy group in one staged edit.
+By default, `set` repairs the candidate and requires a usable post-repair record
+according to the definition's program and excluded working regions.
+`--no-repair` disables checksum and record repair while keeping validation and
+the usability check enabled. `--skip-validation` explicitly bypasses semantic
+constraints and the post-edit usability check while keeping storage bounds and
+byte representation checks; the output report says `"validation":"skipped"`.
+These two options work independently. `fix` invokes the owner's repair and
+requires a usable post-repair record. All operations preserve image length and
+write only after success.
 Some definitions have no meaningful protection rewrite; their owner repair
 rules apply. Fixed-field edits do not interpret arbitrary semantic encodings
 or choose another image for an internal/companion field. Select the appropriate

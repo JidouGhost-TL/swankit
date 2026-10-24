@@ -1,7 +1,7 @@
 # ws-saves
 
 A generic engine interpreting one JSON definition per game in `data/`.
-Definitions use `swankit-save-def/1`; no per-game Rust code is required.
+Definitions use `swankit-save-def/1` or `/2`; no per-game Rust code is required.
 See [the format, read/write instructions and worked example](../../docs/save-definitions.md)
 and [JSON Schema](../../docs/save-definition.schema.json).
 

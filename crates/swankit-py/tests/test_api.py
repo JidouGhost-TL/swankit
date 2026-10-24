@@ -236,6 +236,21 @@ def test_save_transaction_and_write_back(tmp_path):
     assert ids and ws.SaveDefinition.builtin(ids[0]).id == ids[0]
 
 
+def test_save_v2_constraints_and_skip_validation_are_explicit():
+    definition = save_definition().to_dict()
+    definition["schema"] = "swankit-save-def/2"
+    definition["fields"][0]["type"] = "unsigned"
+    definition["fields"][0]["constraint"] = {"kind": "unsigned-range", "minimum": 0, "maximum": 9}
+    definition = ws.SaveDefinition(json.dumps(definition))
+    original = bytes([165, 1]) + bytes(126)
+    with pytest.raises(ws.SwankitError):
+        definition.set_field(original, 0, 10, repair=False)
+    changed = definition.set_field(original, 0, 10, repair=False, skip_validation=True)
+    assert changed == bytes([165, 10]) + bytes(126)
+    with pytest.raises(ws.SwankitError):
+        definition.set_field(original, 0, 256, repair=False, skip_validation=True)
+
+
 @pytest.mark.parametrize("target", [b"abc", b"ab", b"abcdef", b"aaaaaa", b""])
 def test_ips_roundtrip(target):
     base = b"abc"

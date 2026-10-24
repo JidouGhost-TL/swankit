@@ -23,7 +23,7 @@ def stage_product_saves(output):
     definitions = {}
     for path in (repository / "crates/ws-saves/data").glob("*.json"):
         value = json.loads(path.read_bytes())
-        if (value.get("schema") != "swankit-save-def/1"
+        if (value.get("schema") not in ("swankit-save-def/1", "swankit-save-def/2")
                 or value["validity"].get("policy") != "program"
                 or not isinstance(value["validity"].get("exclude"), list)
                 or any(not isinstance(n, str) or not n for n in value["validity"]["exclude"])):

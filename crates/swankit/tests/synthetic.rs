@@ -238,6 +238,143 @@ fn save_media_validity_exclusions_and_transactional_edits() {
     .is_err());
 }
 
+#[test]
+fn v2_constraint_rejects_by_default_and_explicit_override_keeps_storage_checks() {
+    let toolkit = Toolkit::new().unwrap();
+    let mut definition = save_definition();
+    definition["schema"] = json!("swankit-save-def/2");
+    definition["fields"][0]["size"] = json!(2);
+    definition["fields"][0]["encoding"] = json!("u16le");
+    definition["fields"][0]["constraint"] =
+        json!({"kind":"unsigned-range","minimum":0,"maximum":1079});
+    let format = swankit::saves::Format::from_json(&definition.to_string()).unwrap();
+    let context = swankit::saves::DecodeContext::default();
+    let bytes = [165, 1].repeat(64);
+    assert!(toolkit
+        .set_save(&format, &bytes, "save.eeprom", &context, 0, &json!(1080))
+        .is_err());
+    let valid = toolkit
+        .set_save(&format, &bytes, "save.eeprom", &context, 0, &json!(720))
+        .unwrap();
+    assert_eq!(&valid[1..3], &[0xd0, 0x02]);
+    let updated = toolkit
+        .set_save_with_options(
+            &format,
+            &bytes,
+            "save.eeprom",
+            &context,
+            0,
+            &json!(1080),
+            swankit::SaveEditOptions {
+                skip_validation: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    assert_eq!(&updated[1..3], &[0x38, 0x04]);
+    assert!(toolkit
+        .set_save_with_options(
+            &format,
+            &bytes,
+            "save.eeprom",
+            &context,
+            0,
+            &json!(65536),
+            swankit::SaveEditOptions {
+                skip_validation: true,
+                ..Default::default()
+            }
+        )
+        .is_err());
+}
+
+#[test]
+fn v2_enum_bcd_and_named_copy_group_have_explicit_semantics() {
+    let toolkit = Toolkit::new().unwrap();
+    let context = swankit::saves::DecodeContext::default();
+    let bytes = [165, 1].repeat(64);
+    let mut enum_def = save_definition();
+    enum_def["schema"] = json!("swankit-save-def/2");
+    enum_def["fields"][0]["constraint"] = json!({"kind":"enum","values":[0,1,2]});
+    let enum_format = swankit::saves::Format::from_json(&enum_def.to_string()).unwrap();
+    assert!(toolkit
+        .set_save(&enum_format, &bytes, "save.eeprom", &context, 0, &json!(3))
+        .is_err());
+    assert!(toolkit
+        .set_save(&enum_format, &bytes, "save.eeprom", &context, 0, &json!(2))
+        .is_ok());
+
+    let mut bcd_def = save_definition();
+    bcd_def["schema"] = json!("swankit-save-def/2");
+    bcd_def["fields"][0]["size"] = json!(4);
+    bcd_def["fields"][0]["encoding"] = json!("packed BCD, low byte first");
+    bcd_def["fields"][0]["type"] = json!("bytes");
+    bcd_def["fields"][0]["constraint"] = json!({"kind":"packed-bcd","digits":8,"byte_order":"little","minimum":0,"maximum":99999999});
+    let bcd_format = swankit::saves::Format::from_json(&bcd_def.to_string()).unwrap();
+    let valid_bcd = json!([0x20, 0x07, 0, 0]);
+    assert!(toolkit
+        .set_save(&bcd_format, &bytes, "save.eeprom", &context, 0, &valid_bcd)
+        .is_ok());
+    let invalid_bcd = json!([0xa0, 0, 0, 0]);
+    assert!(toolkit
+        .set_save(
+            &bcd_format,
+            &bytes,
+            "save.eeprom",
+            &context,
+            0,
+            &invalid_bcd
+        )
+        .is_err());
+    assert!(toolkit
+        .set_save_with_options(
+            &bcd_format,
+            &bytes,
+            "save.eeprom",
+            &context,
+            0,
+            &invalid_bcd,
+            swankit::SaveEditOptions {
+                skip_validation: true,
+                ..Default::default()
+            }
+        )
+        .is_ok());
+
+    let mut group_def = save_definition();
+    group_def["schema"] = json!("swankit-save-def/2");
+    for (name, offset) in [("setting.copy_b", 10), ("setting.copy_c", 40)] {
+        group_def["fields"].as_array_mut().unwrap().push(
+            json!({"name":name,"medium":"cart EEPROM","offset":offset,"size":1,"encoding":"u8"}),
+        );
+    }
+    group_def["copy_groups"] =
+        json!([{"name":"setting.copies","fields":["setting","setting.copy_b","setting.copy_c"]}]);
+    let group_format = swankit::saves::Format::from_json(&group_def.to_string()).unwrap();
+    let scalar = toolkit
+        .set_save(&group_format, &bytes, "save.eeprom", &context, 0, &json!(7))
+        .unwrap();
+    assert_eq!(
+        (scalar[1], scalar[10], scalar[40]),
+        (7, bytes[10], bytes[40])
+    );
+    let copied = toolkit
+        .set_save_with_options(
+            &group_format,
+            &bytes,
+            "save.eeprom",
+            &context,
+            0,
+            &json!(7),
+            swankit::SaveEditOptions {
+                all_copies: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    assert_eq!((copied[1], copied[10], copied[40]), (7, 7, 7));
+}
+
 #[cfg(feature = "saves")]
 fn save_definition() -> Value {
     let constant = |value: Value| json!({"t":"Constant","value":value});

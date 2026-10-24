@@ -28,6 +28,9 @@ impl Args {
                     | "--server"
                     | "--allocate"
                     | "--resume"
+                    | "--all-copies"
+                    | "--skip-validation"
+                    | "--no-repair"
             ) {
                 if !out.flags.insert(word.clone()) {
                     return Err(format!("duplicate option: {word}").into());

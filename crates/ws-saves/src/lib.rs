@@ -24,6 +24,23 @@ pub struct Field {
     pub size: usize,
     pub encoding: String,
 }
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(tag = "kind", rename_all = "kebab-case", deny_unknown_fields)]
+pub enum Constraint {
+    UnsignedRange {
+        minimum: u64,
+        maximum: u64,
+    },
+    Enum {
+        values: Vec<u64>,
+    },
+    PackedBcd {
+        digits: u8,
+        byte_order: String,
+        minimum: u64,
+        maximum: u64,
+    },
+}
 impl Field {
     pub fn read(&self, bytes: &[u8]) -> Result<Json> {
         Ok(match (self.size, self.encoding.as_str()) {
@@ -83,9 +100,16 @@ pub struct Format {
     pub id: String,
     pub fields: Vec<Field>,
     pub records: Vec<(String, usize)>,
+    constraints: Vec<Option<Constraint>>,
+    copy_groups: Vec<CopyGroup>,
     entry: Json,
     program: Json,
     definition: Json,
+}
+#[derive(Debug, Clone)]
+pub struct CopyGroup {
+    pub name: String,
+    pub fields: Vec<usize>,
 }
 include!(concat!(env!("OUT_DIR"), "/definitions.rs"));
 fn models() -> &'static Result<Vec<Format>> {
@@ -121,8 +145,72 @@ impl Format {
         }
         let definition: Json =
             serde_json::from_str(json).map_err(|e| bad(format!("save definition: {e}")))?;
-        if definition["schema"] != "swankit-save-def/1" {
+        let version = definition["schema"]
+            .as_str()
+            .ok_or_else(|| bad("save definition schema missing"))?;
+        if !matches!(version, "swankit-save-def/1" | "swankit-save-def/2") {
             return Err(bad("unsupported save definition schema"));
+        }
+        if version == "swankit-save-def/2" {
+            const TOP_LEVEL_KEYS: &[&str] = &[
+                "schema",
+                "id",
+                "implementation",
+                "media",
+                "entry",
+                "fields",
+                "records",
+                "blocks",
+                "checksums",
+                "validity",
+                "primitives",
+                "program",
+                "copy_groups",
+            ];
+            let object = definition
+                .as_object()
+                .ok_or_else(|| bad("save definition must be an object"))?;
+            if object
+                .keys()
+                .any(|key| !TOP_LEVEL_KEYS.contains(&key.as_str()))
+            {
+                return Err(bad("unknown save definition property"));
+            }
+            let field_keys = [
+                "name",
+                "medium",
+                "offset",
+                "size",
+                "encoding",
+                "type",
+                "meaning",
+                "confidence",
+                "evidence",
+                "array",
+                "constraint",
+            ];
+            for field in definition["fields"]
+                .as_array()
+                .ok_or_else(|| bad("definition array"))?
+            {
+                let object = field
+                    .as_object()
+                    .ok_or_else(|| bad("field definition must be an object"))?;
+                if object.keys().any(|key| !field_keys.contains(&key.as_str())) {
+                    return Err(bad("unknown field property"));
+                }
+            }
+        }
+        if [
+            "replica_groups",
+            "copy_policy",
+            "read_policy",
+            "write_policy",
+        ]
+        .iter()
+        .any(|key| definition.get(*key).is_some())
+        {
+            return Err(bad("unknown copy policy; use copy_groups"));
         }
         let text = |v: &Json| {
             v.as_str()
@@ -173,7 +261,8 @@ impl Format {
         ) {
             return Err(bad("definition entry mode"));
         }
-        let fields = array(&definition["fields"])?
+        let raw_fields = array(&definition["fields"])?;
+        let fields = raw_fields
             .iter()
             .map(|f| {
                 let offset = extent(&f["offset"])?;
@@ -194,6 +283,164 @@ impl Format {
                 })
             })
             .collect::<Result<Vec<_>>>()?;
+        let constraints = raw_fields
+            .iter()
+            .zip(&fields)
+            .map(|(raw, field)| {
+                let Some(value) = raw.get("constraint") else {
+                    return Ok(None);
+                };
+                if version != "swankit-save-def/2" {
+                    return Err(bad("field constraints require swankit-save-def/2"));
+                }
+                let policy: Constraint = serde_json::from_value(value.clone())
+                    .map_err(|_| bad("malformed field constraint"))?;
+                let field_type = raw["type"].as_str();
+                let numeric_storage = matches!(
+                    (field.size, field.encoding.as_str()),
+                    (1, "u8") | (2, "u16le") | (4, "u32le")
+                );
+                let scalar = numeric_storage && field_type == Some("unsigned");
+                let limit = match field.size {
+                    1 => u8::MAX as u64,
+                    2 => u16::MAX as u64,
+                    4 => u32::MAX as u64,
+                    _ => 0,
+                };
+                match &policy {
+                    Constraint::UnsignedRange { minimum, maximum } => {
+                        if !scalar || minimum > maximum || *maximum > limit {
+                            return Err(bad(
+                                "invalid unsigned-range constraint for field representation",
+                            ));
+                        }
+                    }
+                    Constraint::Enum { values } => {
+                        if !scalar
+                            || values.is_empty()
+                            || values.iter().any(|n| *n > limit)
+                            || values
+                                .iter()
+                                .collect::<std::collections::HashSet<_>>()
+                                .len()
+                                != values.len()
+                        {
+                            return Err(bad("invalid enum constraint for field representation"));
+                        }
+                    }
+                    Constraint::PackedBcd {
+                        digits,
+                        byte_order,
+                        minimum,
+                        maximum,
+                    } => {
+                        if numeric_storage
+                            || field_type != Some("bytes")
+                            || *digits == 0
+                            || *digits > 16
+                            || usize::from(*digits) > field.size.saturating_mul(2)
+                            || !matches!(byte_order.as_str(), "little" | "big")
+                            || minimum > maximum
+                            || *maximum > 99_999_999_999_999_999u64
+                        {
+                            return Err(bad(
+                                "invalid packed-bcd constraint for field representation",
+                            ));
+                        }
+                        let cap = 10u64
+                            .checked_pow(u32::from(*digits))
+                            .and_then(|n| n.checked_sub(1))
+                            .ok_or_else(|| bad("packed-bcd digit limit"))?;
+                        if *maximum > cap {
+                            return Err(bad("packed-bcd range exceeds declared digits"));
+                        }
+                    }
+                }
+                Ok(Some(policy))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let mut copy_groups = Vec::new();
+        if version == "swankit-save-def/2" {
+            if let Some(raw_groups) = definition.get("copy_groups") {
+                let groups = raw_groups
+                    .as_array()
+                    .ok_or_else(|| bad("copy_groups must be an array"))?;
+                let mut group_names = std::collections::HashSet::new();
+                let mut claimed = std::collections::HashSet::new();
+                for group in groups {
+                    if !group.is_object()
+                        || group
+                            .as_object()
+                            .is_some_and(|m| m.keys().any(|key| key != "name" && key != "fields"))
+                    {
+                        return Err(bad("unknown copy group property"));
+                    }
+                    let name = group["name"]
+                        .as_str()
+                        .filter(|s| !s.is_empty())
+                        .ok_or_else(|| bad("copy group name"))?
+                        .to_owned();
+                    if !group_names.insert(name.clone()) {
+                        return Err(bad("duplicate copy group name"));
+                    }
+                    let members = group["fields"]
+                        .as_array()
+                        .ok_or_else(|| bad("copy group fields must be an array"))?;
+                    if members.len() < 2 {
+                        return Err(bad("copy group requires at least two fields"));
+                    }
+                    let mut indexes = Vec::new();
+                    for member in members {
+                        let member = member
+                            .as_str()
+                            .ok_or_else(|| bad("copy group member must be a field name"))?;
+                        let matches: Vec<_> = fields
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, f)| f.name == member)
+                            .map(|(i, _)| i)
+                            .collect();
+                        if matches.is_empty() {
+                            return Err(bad(format!("dangling copy group member: {member}")));
+                        }
+                        if matches.len() != 1 {
+                            return Err(bad(format!("ambiguous copy group member: {member}")));
+                        }
+                        let i = matches[0];
+                        if !claimed.insert(i) || indexes.contains(&i) {
+                            return Err(bad("duplicate copy group membership"));
+                        }
+                        for previous in &indexes {
+                            let a: &Field = &fields[*previous];
+                            let b: &Field = &fields[i];
+                            if (a.size, a.encoding.as_str(), a.medium.as_str())
+                                != (b.size, b.encoding.as_str(), b.medium.as_str())
+                            {
+                                return Err(bad("incompatible copy group member representation"));
+                            }
+                            let a_end = a
+                                .offset
+                                .checked_add(a.size)
+                                .ok_or_else(|| bad("copy group field extent"))?;
+                            let b_end = b
+                                .offset
+                                .checked_add(b.size)
+                                .ok_or_else(|| bad("copy group field extent"))?;
+                            if a.offset < b_end && b.offset < a_end {
+                                return Err(bad("overlapping copy group member extents"));
+                            }
+                        }
+                        indexes.push(i);
+                    }
+                    copy_groups.push(CopyGroup {
+                        name,
+                        fields: indexes,
+                    });
+                }
+            }
+        } else if definition.get("copy_groups").is_some() {
+            return Err(bad("copy groups require swankit-save-def/2"));
+        }
         for block in array(&definition["blocks"])? {
             if extent(&block["field"])? >= fields.len() {
                 return Err(bad("block field index"));
@@ -213,6 +460,8 @@ impl Format {
             id: text(&definition["id"])?,
             fields,
             records,
+            constraints,
+            copy_groups,
             entry: definition["entry"].clone(),
             program: definition["program"].clone(),
             definition,
@@ -221,6 +470,95 @@ impl Format {
     /// Portable source definition, including symbolic semantics and policy.
     pub fn definition(&self) -> &Json {
         &self.definition
+    }
+    pub fn copy_group_for_field(&self, field: usize) -> Option<&CopyGroup> {
+        self.copy_groups
+            .iter()
+            .find(|group| group.fields.contains(&field))
+    }
+    pub fn copy_groups(&self) -> &[CopyGroup] {
+        &self.copy_groups
+    }
+    pub fn validate_field_value(&self, field: usize, value: &Json) -> Result<()> {
+        let f = self
+            .fields
+            .get(field)
+            .ok_or_else(|| bad("unknown field index"))?;
+        let Some(policy) = self.constraints.get(field).and_then(Option::as_ref) else {
+            return Ok(());
+        };
+        match policy {
+            Constraint::UnsignedRange { minimum, maximum } => {
+                let n = value
+                    .as_u64()
+                    .ok_or_else(|| bad("field constraint requires unsigned integer"))?;
+                if n < *minimum || n > *maximum {
+                    return Err(bad(format!(
+                        "value {n} is outside field constraint {minimum}..={maximum}"
+                    )));
+                }
+            }
+            Constraint::Enum { values } => {
+                let n = value
+                    .as_u64()
+                    .ok_or_else(|| bad("field constraint requires unsigned integer"))?;
+                if !values.contains(&n) {
+                    return Err(bad(format!("value {n} is not an allowed field value")));
+                }
+            }
+            Constraint::PackedBcd {
+                digits,
+                byte_order,
+                minimum,
+                maximum,
+            } => {
+                let input = value
+                    .as_array()
+                    .ok_or_else(|| bad("packed BCD field requires byte array"))?;
+                if input.len() != f.size {
+                    return Err(bad("field edit extent"));
+                }
+                let mut bytes = input
+                    .iter()
+                    .map(|v| {
+                        v.as_u64()
+                            .and_then(|n| u8::try_from(n).ok())
+                            .ok_or_else(|| bad("byte edit range"))
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                if byte_order == "little" {
+                    bytes.reverse();
+                }
+                let padding = bytes
+                    .len()
+                    .checked_mul(2)
+                    .and_then(|n| n.checked_sub(usize::from(*digits)))
+                    .ok_or_else(|| bad("packed BCD digit extent"))?;
+                let mut numeric = 0u64;
+                for (index, byte) in bytes.into_iter().enumerate() {
+                    for (within_byte, digit) in [byte >> 4, byte & 0x0f].into_iter().enumerate() {
+                        let nibble = index * 2 + within_byte;
+                        if nibble < padding {
+                            if digit != 0 {
+                                return Err(bad("nonzero packed BCD padding digit"));
+                            }
+                        } else {
+                            if digit > 9 {
+                                return Err(bad("invalid packed BCD digit"));
+                            }
+                            numeric = numeric
+                                .checked_mul(10)
+                                .and_then(|v| v.checked_add(u64::from(digit)))
+                                .ok_or_else(|| bad("packed BCD value overflow"))?;
+                        }
+                    }
+                }
+                if numeric < *minimum || numeric > *maximum {
+                    return Err(bad(format!("packed BCD value {numeric} is outside field constraint {minimum}..={maximum}")));
+                }
+            }
+        }
+        Ok(())
     }
     fn engine(&self, bytes: &[u8], name: &str, context: &DecodeContext) -> Result<engine::Engine> {
         let mut engine = engine::Engine::new(bytes, name)?;
@@ -239,6 +577,20 @@ impl Format {
     }
     /// Edit an explicitly selected stored field. Field names need not be unique.
     pub fn set_field(&self, bytes: &mut [u8], field: usize, value: &Json) -> Result<()> {
+        self.set_field_with_options(bytes, field, value, false)
+    }
+    /// Edit a stored field, optionally bypassing only its semantic value policy.
+    /// Storage bounds and representation checks always apply.
+    pub fn set_field_with_options(
+        &self,
+        bytes: &mut [u8],
+        field: usize,
+        value: &Json,
+        skip_validation: bool,
+    ) -> Result<()> {
+        if !skip_validation {
+            self.validate_field_value(field, value)?;
+        }
         self.fields
             .get(field)
             .ok_or_else(|| bad("unknown field index"))?

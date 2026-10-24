@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:swankit:save-def:1",
-  "title": "swankit-save-def/1",
+  "$id": "urn:swankit:save-def:2",
+  "title": "swankit-save-def/1 and /2",
   "description": "Portable save layout and bounded semantic program. See save-definitions.md for execution and write policy.",
   "type": "object",
   "additionalProperties": false,
@@ -21,7 +21,10 @@
   ],
   "properties": {
     "schema": {
-      "const": "swankit-save-def/1"
+      "enum": [
+        "swankit-save-def/1",
+        "swankit-save-def/2"
+      ]
     },
     "id": {
       "type": "string",
@@ -79,6 +82,13 @@
     },
     "program": {
       "$ref": "#/$defs/Module"
+    },
+    "copy_groups": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/copy-group"
+      },
+      "maxItems": 1048576
     }
   },
   "$defs": {
@@ -161,6 +171,19 @@
         },
         "array": {
           "$ref": "#/$defs/array-layout"
+        },
+        "constraint": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/unsigned-range"
+            },
+            {
+              "$ref": "#/$defs/enum-constraint"
+            },
+            {
+              "$ref": "#/$defs/packed-bcd"
+            }
+          ]
         }
       }
     },
@@ -2333,6 +2356,140 @@
           "$ref": "#/$defs/withitem"
         }
       ]
+    },
+    "copy-group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "fields"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 2,
+          "uniqueItems": true
+        }
+      }
+    },
+    "unsigned-range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "minimum",
+        "maximum"
+      ],
+      "properties": {
+        "kind": {
+          "const": "unsigned-range"
+        },
+        "minimum": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maximum": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "enum-constraint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "values"
+      ],
+      "properties": {
+        "kind": {
+          "const": "enum"
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      }
+    },
+    "packed-bcd": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "digits",
+        "byte_order",
+        "minimum",
+        "maximum"
+      ],
+      "properties": {
+        "kind": {
+          "const": "packed-bcd"
+        },
+        "digits": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "byte_order": {
+          "enum": [
+            "little",
+            "big"
+          ]
+        },
+        "minimum": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maximum": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "schema": {
+            "const": "swankit-save-def/1"
+          }
+        },
+        "required": [
+          "schema"
+        ]
+      },
+      "then": {
+        "not": {
+          "required": [
+            "copy_groups"
+          ]
+        },
+        "properties": {
+          "fields": {
+            "items": {
+              "not": {
+                "required": [
+                  "constraint"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

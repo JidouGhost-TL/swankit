@@ -53,3 +53,39 @@ pub fn write(path: &str, bytes: &[u8], force: bool) -> Result<()> {
     file.flush()?;
     Ok(())
 }
+
+/// Refuse a save output that resolves to an input, including filesystem aliases.
+#[cfg(feature = "saves")]
+pub fn ensure_distinct_path(output: &str, input: &str) -> Result<()> {
+    let input_path = Path::new(input);
+    let output_path = Path::new(output);
+    let input_canonical = input_path.canonicalize()?;
+    let output_canonical = if output_path.exists() {
+        output_path.canonicalize()?
+    } else {
+        let parent = output_path
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or(Path::new("."));
+        parent.canonicalize()?.join(
+            output_path
+                .file_name()
+                .ok_or("output path has no filename")?,
+        )
+    };
+    if input_canonical == output_canonical {
+        return Err("save output aliases its input".into());
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        if output_path.exists() {
+            let a = std::fs::metadata(input_path)?;
+            let b = std::fs::metadata(output_path)?;
+            if a.dev() == b.dev() && a.ino() == b.ino() {
+                return Err("save output aliases its input".into());
+            }
+        }
+    }
+    Ok(())
+}

@@ -27,13 +27,16 @@ const HELP: &str = "swankit: WonderSwan format tools
   extract sound FILE --def JSON [--output JSON] [--json]
   extract codec FILE --def JSON --output FILE [--json]
   save decode DEF_OR_AUTO SAVE [--context JSON] [--json]
-  save set DEF_OR_AUTO SAVE --field INDEX --value JSON --output SAVE [--context JSON]
+  save set DEF_OR_AUTO SAVE --field INDEX --value JSON --output SAVE [--all-copies] [--skip-validation] [--no-repair] [--context JSON]
   save fix DEF_OR_AUTO SAVE --output SAVE [--context JSON]
   patch apply PATCH BASE --output FILE [--overlap reject|last-write-wins] [--growth reject|zero-fill]
   patch create BASE TARGET --output IPS
   assets search|search-corpus|discover|extract|replace|verify ... (see swankit assets --help)
 Options: --json where listed; output-writing commands accept --force to replace files.
 Integers accept decimal or 0x hexadecimal.
+For save set, --no-repair disables repair while keeping validation enabled.
+--skip-validation bypasses field constraints and post-edit usability only;
+storage bounds and byte representation checks remain active.
 Experimental: interop --json [--server] (versioned JSON-lines requests on stdin).
   wg-server --data DIR --wire DIR [--bind IP] [--http-port N] [--bpl-port N]
             [--clock system|fixed:YYYYMMDDhhmmss] [--seed N]
@@ -71,6 +74,8 @@ fn artifact(path: &str, bytes: &[u8], force: bool, json_mode: bool, extra: Value
             "{}",
             json!({"output":path,"bytes":bytes.len(),"details":extra})
         );
+    } else if extra.get("validation").and_then(Value::as_str) == Some("skipped") {
+        println!("Wrote {} bytes to {path} (validation skipped)", bytes.len());
     } else {
         println!("Wrote {} bytes to {path}", bytes.len());
     }
