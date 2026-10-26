@@ -22,6 +22,8 @@ pub enum Family {
     LzWordCounted,
     Rgb444,
     ScreenMap,
+    #[serde(rename = "sgd1-tile-grid")]
+    Sgd1TileGrid,
     #[serde(rename = "tile-map-record16")]
     TileMapRecord16,
     ReaderSignature,
@@ -467,6 +469,92 @@ fn budget_used(report: &SearchReport) -> usize {
             .counts
             .get(&Family::TileMapRecord16)
             .map_or(0, |counts| counts.probes)
+        + report
+            .counts
+            .get(&Family::Sgd1TileGrid)
+            .map_or(0, |counts| counts.probes)
+}
+
+/// Return the accepted full record size when an SGD1 header satisfies the
+/// measured tile-area relation. Bytes 6..14 remain unknown and unconstrained.
+fn sgd1_tile_grid_length(src: &[u8]) -> Option<usize> {
+    if src.get(..4)? != b"SGD1" || src.len() < 16 {
+        return None;
+    }
+    let mut reader = Reader::new(src);
+    reader.skip(4).ok()?;
+    let width = usize::from(reader.u8().ok()?);
+    let height = usize::from(reader.u8().ok()?);
+    reader.skip(8).ok()?;
+    let declared = usize::from(reader.u16_le().ok()?);
+    if width == 0 || height == 0 {
+        return None;
+    }
+    let payload = width.checked_mul(height)?.checked_mul(16)?;
+    let expected = 16usize.checked_add(payload)?;
+    if declared != expected || src.get(..declared).is_none() {
+        return None;
+    }
+    Some(declared)
+}
+
+fn sgd1_tile_grid_leads(
+    rom: &[u8],
+    options: &Options,
+    report: &mut SearchReport,
+    kept: &mut BTreeMap<Family, Vec<Lead>>,
+) {
+    let finder = memchr::memmem::Finder::new(b"SGD1");
+    let mut start = 0;
+    while rom.len().saturating_sub(start) >= 4 {
+        let Some(found) = finder.find(&rom[start..]) else {
+            break;
+        };
+        let offset = start + found;
+        start = offset + 1;
+        if offset % options.stride != 0 {
+            continue;
+        }
+        if budget_used(report) >= options.max_probes {
+            report.complete_for_configured_scan = false;
+            report
+                .counts
+                .entry(Family::Sgd1TileGrid)
+                .or_default()
+                .probes_skipped_by_budget += 1;
+            break;
+        }
+        report
+            .counts
+            .entry(Family::Sgd1TileGrid)
+            .or_default()
+            .probes += 1;
+        let src = &rom[offset..];
+        let Some(record_length) = sgd1_tile_grid_length(src) else {
+            report
+                .counts
+                .entry(Family::Sgd1TileGrid)
+                .or_default()
+                .rejected_probes += 1;
+            continue;
+        };
+        if promising(report, kept, Family::Sgd1TileGrid, offset, 100) {
+            retain(report, kept, Lead {
+                family: Family::Sgd1TileGrid,
+                offset,
+                stored_length: record_length,
+                decoded_length: None,
+                stored_sha256: ws_assets::sha256_hex(&src[..record_length]),
+                decoded_sha256: None,
+                signature_id: None,
+                rank: 100,
+                evidence: "The SGD1 tag, positive byte grid, declared full record size and 16-byte-per-cell area agree; this structural match does not establish field meanings, a reader, runtime use or asset identity.".into(),
+                requires: vec!["Establish the resource reader, field semantics, palette and runtime context before assigning meaning to this bounded record.".into()],
+                reference_matches: Vec::new(),
+                reference_matches_truncated: false,
+            });
+        }
+    }
 }
 
 /// Check the measured 16-byte descriptor relations using the shared checked reader.
@@ -681,6 +769,9 @@ pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
         .collect();
     let mut kept = BTreeMap::new();
     exact_patterns(rom, &patterns, &mut report, &mut kept);
+    if enabled.contains(&Family::Sgd1TileGrid) {
+        sgd1_tile_grid_leads(rom, options, &mut report, &mut kept);
+    }
     for offset in (0..rom.len()).step_by(options.stride) {
         report.positions_scanned += 1;
         let src = &rom[offset..];

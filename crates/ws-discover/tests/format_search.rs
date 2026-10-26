@@ -28,6 +28,109 @@ fn tile_map_options() -> Options {
     }
 }
 
+fn sgd1_tile_grid(width: u8, height: u8, declared: u16, payload_byte: u8) -> Vec<u8> {
+    let mut bytes = b"SGD1".to_vec();
+    bytes.extend_from_slice(&[width, height]);
+    bytes.extend_from_slice(&[0x31, 0x52, 0x73, 0x94, 0xb5, 0xd6, 0xf7, 0x18]);
+    bytes.extend_from_slice(&declared.to_le_bytes());
+    bytes.extend(std::iter::repeat_n(
+        payload_byte,
+        usize::from(declared).saturating_sub(16),
+    ));
+    bytes
+}
+
+fn sgd1_options() -> Options {
+    serde_json::from_value(serde_json::json!({"families":["sgd1-tile-grid"]})).unwrap()
+}
+
+#[test]
+fn sgd1_tagged_grid_is_an_opt_in_full_span_lead_without_link_requirement() {
+    let record = sgd1_tile_grid(3, 2, 112, 0xa7);
+    assert_eq!(record.len(), 112);
+    let mut rom = vec![0x55; 5];
+    rom.extend_from_slice(&record); // Ends exactly at ROM EOF; no following tag.
+    let report = search(&rom, &sgd1_options()).unwrap();
+    let report = serde_json::to_value(report).unwrap();
+    let lead = report["leads"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|lead| lead["family"] == "sgd1-tile-grid")
+        .unwrap();
+    assert_eq!(lead["offset"], 5);
+    assert_eq!(lead["stored_length"], record.len());
+    assert_eq!(lead["decoded_length"], serde_json::Value::Null);
+    assert_eq!(report["counts"]["sgd1-tile-grid"]["probes"], 1);
+    assert_eq!(report["counts"]["sgd1-tile-grid"]["candidates"], 1);
+    assert_eq!(report["complete_for_configured_scan"], true);
+}
+
+#[test]
+fn sgd1_tagged_grid_rejects_malformed_sizes_truncation_and_zero_dimensions() {
+    let valid = sgd1_tile_grid(3, 2, 112, 0x6b);
+    for cut in [0, 3, 4, 15, 16, 111] {
+        assert!(
+            search(&valid[..cut], &sgd1_options())
+                .unwrap()
+                .leads
+                .is_empty(),
+            "cut={cut}"
+        );
+    }
+    let mut wrong_tag = valid.clone();
+    wrong_tag[0] = b'X';
+    assert!(search(&wrong_tag, &sgd1_options())
+        .unwrap()
+        .leads
+        .is_empty());
+
+    for (at, value) in [(4, 0u8), (5, 0u8)] {
+        let mut malformed = valid.clone();
+        malformed[at] = value;
+        assert!(search(&malformed, &sgd1_options())
+            .unwrap()
+            .leads
+            .is_empty());
+    }
+    for size in [0u16, 111, 113] {
+        let mut malformed = valid.clone();
+        malformed[14..16].copy_from_slice(&size.to_le_bytes());
+        assert!(search(&malformed, &sgd1_options())
+            .unwrap()
+            .leads
+            .is_empty());
+    }
+
+    let huge = sgd1_tile_grid(255, 255, u16::MAX, 0);
+    assert_eq!(huge.len(), usize::from(u16::MAX));
+    assert!(search(&huge, &sgd1_options()).unwrap().leads.is_empty());
+}
+
+#[test]
+fn sgd1_tagged_grid_budget_and_family_list_validation_are_reported() {
+    let mut two_records = sgd1_tile_grid(1, 1, 32, 0x33);
+    two_records.extend_from_slice(&sgd1_tile_grid(1, 1, 32, 0x44));
+    let limited = search(
+        &two_records,
+        &Options {
+            max_probes: 1,
+            ..sgd1_options()
+        },
+    )
+    .unwrap();
+    assert!(!limited.complete_for_configured_scan);
+    let limited = serde_json::to_value(limited).unwrap();
+    assert_eq!(limited["complete_for_configured_scan"], false);
+    assert_eq!(limited["counts"]["sgd1-tile-grid"]["probes"], 1);
+    assert!(
+        limited["counts"]["sgd1-tile-grid"]["probes_skipped_by_budget"]
+            .as_u64()
+            .unwrap()
+            > 0
+    );
+}
+
 #[test]
 fn all_supported_families_are_selectable_with_empty_and_duplicate_lists_rejected() {
     let options = Options {
@@ -39,6 +142,7 @@ fn all_supported_families_are_selectable_with_empty_and_duplicate_lists_rejected
             Family::LzWordCounted,
             Family::Rgb444,
             Family::ScreenMap,
+            Family::Sgd1TileGrid,
             Family::TileMapRecord16,
             Family::ReaderSignature,
             Family::ReferenceBytes,
@@ -46,7 +150,7 @@ fn all_supported_families_are_selectable_with_empty_and_duplicate_lists_rejected
         ..Options::default()
     };
     let report = search(&[], &options).unwrap();
-    assert_eq!(report.options.families.len(), 10);
+    assert_eq!(report.options.families.len(), 11);
     assert!(search(
         &[],
         &Options {

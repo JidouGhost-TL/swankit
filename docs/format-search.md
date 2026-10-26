@@ -34,6 +34,7 @@ contain reference bytes and should be treated according to their provenance.
 | `lz-word-counted` | A small nonzero command count and valid first literal command | Bounded parse of a word table and separate literal pool |
 | `rgb444` | Sixteen aligned little-endian words, upper nibbles zero, at least four different colours | A plausible 32-byte palette window |
 | `screen-map` | Thirty-two aligned hardware screen words; at least eight distinct tile indices, at most three palettes, and at least 24 neighbouring index differences at most 32 | A plausible 64-byte map window |
+| `sgd1-tile-grid` | Exact `SGD1` tag; positive byte dimensions; little-endian total-size word at +14 equals 16-byte header plus 16 bytes per grid cell; full span fits input | A bounded record matching the tag, declared-size and byte-grid relation; field meanings remain unknown |
 | `tile-map-record16` | A 16-byte descriptor with positive 8-pixel dimensions, a bounded tile count, related tile/map offsets and counts, and valid bounded map words | A complete raw record span satisfying those relations; reader context and meaning remain unknown |
 | `reader-signature` | An external exact or per-bit-masked pattern | A byte-pattern match, possibly related reader code |
 | `reference-bytes` | An external exact, nonuniform block of at least 16 bytes | A matching reference chunk in ROM; matching decoded chunks are also recorded on codec leads |
@@ -53,6 +54,14 @@ probe per inspected descriptor and one per inspected map word against
 `max_probes`. Unknown header words are unconstrained, flip bits are allowed, and
 bank or reader context is not inferred. This structural match is not a verified
 format or asset.
+
+`sgd1-tile-grid` checks the exact four-byte `SGD1` tag, positive unsigned-byte
+dimensions at +4/+5, and the little-endian total-size field at +14 against
+`16 + width * height * 16`. Bytes +6 through +13 are unconstrained. The full
+declared span must fit in the ROM input; there is no codec `max_stored` or
+64 KiB bank-window cap. A following tag is not required. The rule establishes
+only the bounded byte relation, not dimension semantics, palette, reader,
+runtime use or asset identity.
 
 There is no universal raw-tile, text, font, sample or music signature. Use captured
 reference blocks, reader signatures or the existing source/capture discovery
@@ -77,7 +86,8 @@ Options are optional, strict JSON: unknown keys are errors. The defaults are:
 ```
 
 The nine original families are enabled by default. `families` can select a subset
-from the table above, including `tile-map-record16`. External patterns use
+from the table above, including the opt-in `sgd1-tile-grid` and
+`tile-map-record16`. External patterns use
 `signatures`:
 
 ```json
@@ -113,7 +123,8 @@ miss real resources. A configured complete scan is not exhaustive format coverag
 
 `max_probes` bounds decoder attempts, direct signature checks,
 decoded-reference pattern-search operations, and `tile-map-record16` descriptor
-and map-word checks together. Exact patterns use the existing optimized
+and map-word checks, plus each `sgd1-tile-grid` tagged-header attempt, together.
+Exact patterns use the existing optimized
 byte-search mechanism rather than comparing every pattern at every byte. The
 report exposes those counters and skipped work.
 If the budget prevents a configured check, `complete_for_configured_scan` is false.
