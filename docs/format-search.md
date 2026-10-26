@@ -34,6 +34,7 @@ contain reference bytes and should be treated according to their provenance.
 | `lz-word-counted` | A small nonzero command count and valid first literal command | Bounded parse of a word table and separate literal pool |
 | `rgb444` | Sixteen aligned little-endian words, upper nibbles zero, at least four different colours | A plausible 32-byte palette window |
 | `screen-map` | Thirty-two aligned hardware screen words; at least eight distinct tile indices, at most three palettes, and at least 24 neighbouring index differences at most 32 | A plausible 64-byte map window |
+| `tile-map-record16` | A 16-byte descriptor with positive 8-pixel dimensions, a bounded tile count, related tile/map offsets and counts, and valid bounded map words | A complete raw record span satisfying those relations; reader context and meaning remain unknown |
 | `reader-signature` | An external exact or per-bit-masked pattern | A byte-pattern match, possibly related reader code |
 | `reference-bytes` | An external exact, nonuniform block of at least 16 bytes | A matching reference chunk in ROM; matching decoded chunks are also recorded on codec leads |
 
@@ -44,6 +45,14 @@ signature does not establish a common engine or resource-directory grammar.
 Reference chunks can have duplicate sources and can match only part of an output.
 **No hit establishes a verified asset, whole-output equivalence, resource
 ownership, reachable selector domain or safe replacement.**
+
+`tile-map-record16` checks the descriptor and the full tile/map span in the input;
+it is not limited by the codec-only `max_stored` or 64 KiB bank window. Its
+candidate span is `16 + tile_count * 16 + map_entries * 2` bytes. It charges one
+probe per inspected descriptor and one per inspected map word against
+`max_probes`. Unknown header words are unconstrained, flip bits are allowed, and
+bank or reader context is not inferred. This structural match is not a verified
+format or asset.
 
 There is no universal raw-tile, text, font, sample or music signature. Use captured
 reference blocks, reader signatures or the existing source/capture discovery
@@ -67,8 +76,9 @@ Options are optional, strict JSON: unknown keys are errors. The defaults are:
 }
 ```
 
-All nine families are enabled by default. `families` can select a subset using
-the names above. External patterns use `signatures`:
+The nine original families are enabled by default. `families` can select a subset
+from the table above, including `tile-map-record16`. External patterns use
+`signatures`:
 
 ```json
 {
@@ -101,9 +111,11 @@ literal parses but can miss genuine uncompressed/literal resources. Successful
 parses rejected by these filters are counted separately. These filters can
 miss real resources. A configured complete scan is not exhaustive format coverage.
 
-`max_probes` bounds decoder attempts, direct signature checks and decoded-reference
-pattern-search operations together. Exact patterns use the existing optimized
-byte-search mechanism rather than comparing every pattern at every byte. The report exposes those counters and skipped work.
+`max_probes` bounds decoder attempts, direct signature checks,
+decoded-reference pattern-search operations, and `tile-map-record16` descriptor
+and map-word checks together. Exact patterns use the existing optimized
+byte-search mechanism rather than comparing every pattern at every byte. The
+report exposes those counters and skipped work.
 If the budget prevents a configured check, `complete_for_configured_scan` is false.
 Increasing limits or changing stride changes the search; record that configuration.
 

@@ -6,6 +6,162 @@ fn counted() -> Vec<u8> {
     bytes
 }
 
+fn tile_map_record16(map_words: &[u16]) -> Vec<u8> {
+    assert_eq!(map_words.len(), 4);
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(&0x5a3cu16.to_le_bytes()); // Unknown header word.
+    bytes.extend_from_slice(&0xc7e1u16.to_le_bytes()); // Unknown header word.
+    for word in [16u16, 16, 2, 4, 16, 48] {
+        bytes.extend_from_slice(&word.to_le_bytes());
+    }
+    bytes.extend_from_slice(&[0x44; 32]);
+    for &word in map_words {
+        bytes.extend_from_slice(&word.to_le_bytes());
+    }
+    bytes
+}
+
+fn tile_map_options() -> Options {
+    Options {
+        families: vec![Family::TileMapRecord16],
+        ..Options::default()
+    }
+}
+
+#[test]
+fn all_supported_families_are_selectable_with_empty_and_duplicate_lists_rejected() {
+    let options = Options {
+        families: vec![
+            Family::LzU8Zero,
+            Family::LzRle7f,
+            Family::LzBits16,
+            Family::LzWord16Msb,
+            Family::LzWordCounted,
+            Family::Rgb444,
+            Family::ScreenMap,
+            Family::TileMapRecord16,
+            Family::ReaderSignature,
+            Family::ReferenceBytes,
+        ],
+        ..Options::default()
+    };
+    let report = search(&[], &options).unwrap();
+    assert_eq!(report.options.families.len(), 10);
+    assert!(search(
+        &[],
+        &Options {
+            families: Vec::new(),
+            ..options.clone()
+        }
+    )
+    .is_err());
+    assert!(search(
+        &[],
+        &Options {
+            families: vec![Family::TileMapRecord16, Family::TileMapRecord16],
+            ..options
+        }
+    )
+    .is_err());
+}
+
+#[test]
+fn tile_map_record16_accepts_odd_start_unknown_words_flips_and_exact_end() {
+    let record = tile_map_record16(&[0x0000, 0x4001, 0x8000, 0xc001]);
+    let mut rom = vec![0xa5; 7];
+    rom.extend_from_slice(&record);
+    let report = search(&rom, &tile_map_options()).unwrap();
+    let lead = report
+        .leads
+        .iter()
+        .find(|lead| lead.family == Family::TileMapRecord16)
+        .unwrap();
+    assert_eq!(lead.offset, 7);
+    assert_eq!(lead.stored_length, record.len());
+    assert_eq!(record.len(), 56);
+    assert!(lead.decoded_length.is_none());
+    assert!(lead.evidence.contains("descriptor relations"));
+    assert!(report.complete_for_configured_scan);
+    assert_eq!(report.counts[&Family::TileMapRecord16].candidates, 1);
+    assert_eq!(report.counts[&Family::TileMapRecord16].probes, 52);
+}
+
+#[test]
+fn tile_map_record16_rejects_truncation_relations_indices_and_attributes() {
+    let valid = tile_map_record16(&[0, 1, 0, 1]);
+    for cut in [0, 15, 16, 47, 48, 54, 55] {
+        let report = search(&valid[..cut], &tile_map_options()).unwrap();
+        assert!(report.leads.is_empty(), "cut={cut}");
+    }
+
+    let malformed_words: [(usize, u16); 7] = [
+        (4, 15),  // Width is not a multiple of eight.
+        (6, 24),  // Height changes the required map-entry count.
+        (8, 0),   // Empty tile table.
+        (8, 513), // Tile table exceeds the family bound.
+        (10, 3),  // Wrong map entry count.
+        (12, 15), // Wrong tile offset.
+        (14, 47), // Wrong map offset.
+    ];
+    for (byte, value) in malformed_words {
+        let mut malformed = valid.clone();
+        malformed[byte..byte + 2].copy_from_slice(&value.to_le_bytes());
+        assert!(search(&malformed, &tile_map_options())
+            .unwrap()
+            .leads
+            .is_empty());
+    }
+    let mut out_of_range = valid.clone();
+    out_of_range[48..50].copy_from_slice(&2u16.to_le_bytes());
+    assert!(search(&out_of_range, &tile_map_options())
+        .unwrap()
+        .leads
+        .is_empty());
+    let mut unsupported = valid;
+    unsupported[48..50].copy_from_slice(&0x0200u16.to_le_bytes());
+    assert!(search(&unsupported, &tile_map_options())
+        .unwrap()
+        .leads
+        .is_empty());
+}
+
+#[test]
+fn tile_map_record16_bounds_work_and_retention() {
+    let mut rom = tile_map_record16(&[0, 1, 0, 1]);
+    rom.extend_from_slice(&[0xee; 8]);
+    rom.extend_from_slice(&tile_map_record16(&[1, 0, 1, 0]));
+    let report = search(
+        &rom,
+        &Options {
+            leads_per_family: 1,
+            ..tile_map_options()
+        },
+    )
+    .unwrap();
+    assert_eq!(report.counts[&Family::TileMapRecord16].candidates, 2);
+    assert_eq!(report.counts[&Family::TileMapRecord16].retained, 1);
+    assert_eq!(report.leads.len(), 1);
+
+    let limited = search(
+        &tile_map_record16(&[0, 1, 0, 1]),
+        &Options {
+            max_probes: 2,
+            ..tile_map_options()
+        },
+    )
+    .unwrap();
+    assert!(!limited.complete_for_configured_scan);
+    assert!(limited.leads.is_empty());
+    assert_eq!(limited.counts[&Family::TileMapRecord16].probes, 2);
+    assert!(limited.counts[&Family::TileMapRecord16].probes_skipped_by_budget > 0);
+
+    let mut huge = tile_map_record16(&[0, 1, 0, 1]);
+    huge[4..6].copy_from_slice(&65528u16.to_le_bytes());
+    huge[6..8].copy_from_slice(&65528u16.to_le_bytes());
+    huge[10..12].copy_from_slice(&u16::MAX.to_le_bytes());
+    assert!(search(&huge, &tile_map_options()).unwrap().leads.is_empty());
+}
+
 #[test]
 fn exact_odd_start_complete_extent_and_no_payload_export() {
     let mut rom = vec![255; 17];

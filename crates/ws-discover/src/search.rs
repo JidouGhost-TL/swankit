@@ -22,6 +22,8 @@ pub enum Family {
     LzWordCounted,
     Rgb444,
     ScreenMap,
+    #[serde(rename = "tile-map-record16")]
+    TileMapRecord16,
     ReaderSignature,
     ReferenceBytes,
 }
@@ -89,7 +91,6 @@ impl Options {
     pub fn validate(&self) -> Result<()> {
         let invalid = |s: &str| Error::Malformed(format!("format search: {s}"));
         if self.families.is_empty()
-            || self.families.len() > 9
             || self.families.iter().collect::<BTreeSet<_>>().len() != self.families.len()
         {
             return Err(invalid("families must be nonempty and unique"));
@@ -459,7 +460,89 @@ struct PreparedPattern<'a> {
     sha256: String,
 }
 fn budget_used(report: &SearchReport) -> usize {
-    report.decoder_probes + report.signature_probes + report.decoded_reference_probes
+    report.decoder_probes
+        + report.signature_probes
+        + report.decoded_reference_probes
+        + report
+            .counts
+            .get(&Family::TileMapRecord16)
+            .map_or(0, |counts| counts.probes)
+}
+
+/// Check the measured 16-byte descriptor relations using the shared checked reader.
+/// Returns the complete raw record span and map entry count when the descriptor is
+/// structurally compatible. The unknown first two words are deliberately ignored.
+fn tile_map_record16_layout(src: &[u8]) -> Option<(usize, usize, usize)> {
+    if src.len() < 16 {
+        return None;
+    }
+    let mut reader = Reader::new(src);
+    reader.skip(4).ok()?;
+    let width = usize::from(reader.u16_le().ok()?);
+    let height = usize::from(reader.u16_le().ok()?);
+    let tile_count = usize::from(reader.u16_le().ok()?);
+    let map_entries = usize::from(reader.u16_le().ok()?);
+    let tile_offset = usize::from(reader.u16_le().ok()?);
+    let map_offset = usize::from(reader.u16_le().ok()?);
+    if width == 0
+        || height == 0
+        || width % 8 != 0
+        || height % 8 != 0
+        || !(1..=512).contains(&tile_count)
+        || tile_offset != 16
+    {
+        return None;
+    }
+    let expected_entries = (width / 8).checked_mul(height / 8)?;
+    let expected_map_offset = tile_count.checked_mul(16)?.checked_add(16)?;
+    if map_entries != expected_entries || map_offset != expected_map_offset {
+        return None;
+    }
+    let map_bytes = map_entries.checked_mul(2)?;
+    let record_end = map_offset.checked_add(map_bytes)?;
+    if record_end > src.len() {
+        return None;
+    }
+    Some((record_end, map_entries, tile_count))
+}
+
+/// Verify map indices and the unsupported attribute bits. Flip bits 14 and 15
+/// are retained as permitted attributes. Returns false as soon as a word fails.
+fn tile_map_record16_entries(
+    src: &[u8],
+    entries: usize,
+    tile_count: usize,
+    available_probes: usize,
+) -> (bool, usize, usize) {
+    let map_offset = match tile_count.checked_mul(16).and_then(|n| n.checked_add(16)) {
+        Some(offset) => offset,
+        None => return (false, 0, 0),
+    };
+    let map_bytes = match entries.checked_mul(2) {
+        Some(bytes) => bytes,
+        None => return (false, 0, 0),
+    };
+    let Some(map) = src
+        .get(map_offset..)
+        .and_then(|bytes| bytes.get(..map_bytes))
+    else {
+        return (false, 0, 0);
+    };
+    let mut reader = Reader::new(map);
+    let to_check = entries.min(available_probes);
+    for _ in 0..to_check {
+        let Ok(word) = reader.u16_le() else {
+            return (false, 0, 0);
+        };
+        if usize::from(word & 0x01ff) >= tile_count || word & 0x3e00 != 0 {
+            return (false, reader.pos() / 2, 0);
+        }
+    }
+    if to_check < entries {
+        (false, to_check, entries - to_check)
+    } else {
+        (true, to_check, 0)
+    }
 }
 fn reference_matches(
     bytes: &[u8],
@@ -574,7 +657,7 @@ pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
         leads: Vec::new(), overlapping_codec_leads:Vec::new(),
         limitations: vec![
             "Leads only: no reader, source ownership, runtime use, media meaning or editing compatibility is established.".into(),
-            "Byte stride, bank boundary, command count, input/output limits, prefilters and per-family retention bound this search. Completion is only for that configuration.".into(),
+            "Byte stride, codec bank windows, codec command count, checked raw-layout spans, input/output limits, prefilters and per-family retention bound this search. Completion is only for that configuration.".into(),
             "Raw tiles, unframed fonts/text/PCM and externally sized or history-dependent codecs have no reliable context-free identification here.".into(),
             "Palette and screen-map leads are fixed inspection windows, not proven resource extents. Uniform output and short streams are suppressed.".into(),
             "Headerless parses can be false positives or starts inside another stream; overlapping leads are retained, not asserted to be independent resources.".into(),
@@ -679,6 +762,52 @@ pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
                         requires: vec!["Find the consumer, boundaries and display context; distinguish numeric tables from graphics data.".into()],
                         reference_matches: Vec::new(), reference_matches_truncated: false,
                     });
+                }
+            }
+        }
+        if enabled.contains(&Family::TileMapRecord16) && src.len() >= 16 {
+            if budget_used(&report) >= options.max_probes {
+                report.complete_for_configured_scan = false;
+                report
+                    .counts
+                    .get_mut(&Family::TileMapRecord16)
+                    .unwrap()
+                    .probes_skipped_by_budget += 1;
+            } else {
+                report
+                    .counts
+                    .get_mut(&Family::TileMapRecord16)
+                    .unwrap()
+                    .probes += 1;
+                if let Some((record_length, map_entries, tile_count)) =
+                    tile_map_record16_layout(src)
+                {
+                    let available = options.max_probes.saturating_sub(budget_used(&report));
+                    let (valid_map, used, skipped) =
+                        tile_map_record16_entries(src, map_entries, tile_count, available);
+                    let counts = report.counts.get_mut(&Family::TileMapRecord16).unwrap();
+                    counts.probes += used;
+                    counts.probes_skipped_by_budget += skipped;
+                    if skipped != 0 {
+                        report.complete_for_configured_scan = false;
+                    } else if !valid_map {
+                        counts.rejected_probes += 1;
+                    } else if promising(&mut report, &kept, Family::TileMapRecord16, offset, 100) {
+                        retain(&mut report, &mut kept, Lead {
+                            family: Family::TileMapRecord16,
+                            offset,
+                            stored_length: record_length,
+                            decoded_length: None,
+                            stored_sha256: ws_assets::sha256_hex(&src[..record_length]),
+                            decoded_sha256: None,
+                            signature_id: None,
+                            rank: 100,
+                            evidence: "Bounded 16-byte descriptor relations and map-word constraints matched; this does not establish a format, reader context, runtime use or asset identity.".into(),
+                            requires: vec!["Establish the actual reader, header ownership, bank context and complete resource boundaries before treating this as a resource.".into()],
+                            reference_matches: Vec::new(),
+                            reference_matches_truncated: false,
+                        });
+                    }
                 }
             }
         }
