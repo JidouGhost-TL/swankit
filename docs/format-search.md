@@ -36,6 +36,7 @@ contain reference bytes and should be treated according to their provenance.
 | `screen-map` | Thirty-two aligned hardware screen words; at least eight distinct tile indices, at most three palettes, and at least 24 neighbouring index differences at most 32 | A plausible 64-byte map window |
 | `sgd1-tile-grid` | Exact `SGD1` tag; positive byte dimensions; little-endian total-size word at +14 equals 16-byte header plus 16 bytes per grid cell; full span fits input | A bounded record matching the tag, declared-size and byte-grid relation; field meanings remain unknown |
 | `tile-map-record16` | A 16-byte descriptor with positive 8-pixel dimensions, a bounded tile count, related tile/map offsets and counts, and valid bounded map words | A complete raw record span satisfying those relations; reader context and meaning remain unknown |
+| `counted-relative-directory16` | A little-endian relative-u16 directory whose entry count is inferred from its minimum offset, followed by positive 16-byte-unit counted records that form a contiguous span | Individual bounded raw records from a directory-shaped group; payload meanings and table use remain unknown |
 | `reader-signature` | An external exact or per-bit-masked pattern | A byte-pattern match, possibly related reader code |
 | `reference-bytes` | An external exact, nonuniform block of at least 16 bytes | A matching reference chunk in ROM; matching decoded chunks are also recorded on codec leads |
 
@@ -63,6 +64,22 @@ declared span must fit in the ROM input; there is no codec `max_stored` or
 only the bounded byte relation, not dimension semantics, palette, reader,
 runtime use or asset identity.
 
+`counted-relative-directory16` infers the number of u16 relative offsets from
+the minimum value among the first N entries: that minimum must equal `2 * N`,
+the directory byte length. The first entry may point anywhere in the record
+run. Each distinct target must begin with a positive little-endian u16 unit
+count and contain exactly `2 + 16 * count` bytes. Sorted distinct records must
+start immediately after the directory and continue without gaps or overlap;
+repeated directory targets remain repeated leads. Only the directory words
+are interpreted as offsets, never record payload words. Group validation checks
+each referenced span against the ROM input bounds regardless of `max_stored`;
+only records whose individual spans fit `max_stored` are emitted, so one larger
+record does not suppress smaller members of a valid group. Every directory word
+and distinct record header inspected consumes the shared `max_probes` budget. If that budget stops
+the scan, `complete_for_configured_scan` is false. This is a structural
+candidate rule, not evidence of payload encoding, resource meaning, a reader,
+runtime use, palette or asset identity.
+
 There is no universal raw-tile, text, font, sample or music signature. Use captured
 reference blocks, reader signatures or the existing source/capture discovery
 adapter for these. Externally sized and unknown-history codecs are omitted rather
@@ -87,7 +104,7 @@ Options are optional, strict JSON: unknown keys are errors. The defaults are:
 
 The nine original families are enabled by default. `families` can select a subset
 from the table above, including the opt-in `sgd1-tile-grid` and
-`tile-map-record16`. External patterns use
+`tile-map-record16` and `counted-relative-directory16`. External patterns use
 `signatures`:
 
 ```json
@@ -123,7 +140,8 @@ miss real resources. A configured complete scan is not exhaustive format coverag
 
 `max_probes` bounds decoder attempts, direct signature checks,
 decoded-reference pattern-search operations, and `tile-map-record16` descriptor
-and map-word checks, plus each `sgd1-tile-grid` tagged-header attempt, together.
+and map-word checks, plus each `sgd1-tile-grid` tagged-header attempt and each
+`counted-relative-directory16` directory-word/record-header check, together.
 Exact patterns use the existing optimized
 byte-search mechanism rather than comparing every pattern at every byte. The
 report exposes those counters and skipped work.

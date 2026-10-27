@@ -26,6 +26,8 @@ pub enum Family {
     Sgd1TileGrid,
     #[serde(rename = "tile-map-record16")]
     TileMapRecord16,
+    #[serde(rename = "counted-relative-directory16")]
+    CountedRelativeDirectory16,
     ReaderSignature,
     ReferenceBytes,
 }
@@ -473,6 +475,10 @@ fn budget_used(report: &SearchReport) -> usize {
             .counts
             .get(&Family::Sgd1TileGrid)
             .map_or(0, |counts| counts.probes)
+        + report
+            .counts
+            .get(&Family::CountedRelativeDirectory16)
+            .map_or(0, |counts| counts.probes)
 }
 
 /// Return the accepted full record size when an SGD1 header satisfies the
@@ -553,6 +559,236 @@ fn sgd1_tile_grid_leads(
                 reference_matches: Vec::new(),
                 reference_matches_truncated: false,
             });
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct CountedRecord16 {
+    relative_offset: usize,
+    byte_length: usize,
+}
+
+#[derive(Debug)]
+enum CountedDirectory16Parse {
+    Rejected {
+        probes: usize,
+    },
+    Budget {
+        probes: usize,
+    },
+    Match {
+        probes: usize,
+        entries: Vec<CountedRecord16>,
+    },
+}
+
+fn counted_record16_length(units: usize) -> Option<usize> {
+    2usize.checked_add(units.checked_mul(16)?)
+}
+
+fn counted_record16_length_at(src: &[u8], offset: usize, header: &[u8]) -> Option<usize> {
+    let units = usize::from(Reader::new(header).u16_le().ok()?);
+    if units == 0 {
+        return None;
+    }
+    let byte_length = counted_record16_length(units)?;
+    src.get(offset..offset.checked_add(byte_length)?)?;
+    Some(byte_length)
+}
+
+/// Parse one candidate directory. The entry count is the minimum-relative
+/// offset divided by two; the first directory word is only an upper bound.
+/// Duplicate entries stay in `entries`, while each distinct target is checked
+/// once for the contiguous record run.
+fn counted_relative_directory16_parse(
+    src: &[u8],
+    available_probes: usize,
+) -> CountedDirectory16Parse {
+    if src.len() < 2 {
+        return CountedDirectory16Parse::Rejected { probes: 0 };
+    }
+    if available_probes == 0 {
+        return CountedDirectory16Parse::Budget { probes: 0 };
+    }
+
+    let mut reader = Reader::new(src);
+    let first = match reader.u16_le() {
+        Ok(value) => usize::from(value),
+        Err(_) => return CountedDirectory16Parse::Rejected { probes: 0 },
+    };
+    let mut probes = 1;
+    if first < 2 {
+        return CountedDirectory16Parse::Rejected { probes };
+    }
+    if probes >= available_probes {
+        return CountedDirectory16Parse::Budget { probes };
+    }
+    probes += 1;
+    let Some(first_header) = src.get(first..first.saturating_add(2)) else {
+        return CountedDirectory16Parse::Rejected { probes };
+    };
+    let Some(first_record_length) = counted_record16_length_at(src, first, first_header) else {
+        return CountedDirectory16Parse::Rejected { probes };
+    };
+    let max_entries = (first / 2).min(usize::from(u16::MAX) / 2);
+    if max_entries == 0 {
+        return CountedDirectory16Parse::Rejected { probes };
+    }
+
+    let mut minimum = first;
+    let mut offsets = vec![first];
+    let mut entry_count = (minimum == 2).then_some(1usize);
+    for index in 1..max_entries {
+        if entry_count.is_some() {
+            break;
+        }
+        if probes >= available_probes {
+            return CountedDirectory16Parse::Budget { probes };
+        }
+        probes += 1;
+        let value = match reader.u16_le() {
+            Ok(value) => usize::from(value),
+            Err(_) => return CountedDirectory16Parse::Rejected { probes },
+        };
+        minimum = minimum.min(value);
+        offsets.push(value);
+        let count = index + 1;
+        let table_bytes = count * 2;
+        if minimum < table_bytes {
+            return CountedDirectory16Parse::Rejected { probes };
+        }
+        if minimum == table_bytes {
+            entry_count = Some(count);
+            break;
+        }
+    }
+    let Some(entry_count) = entry_count else {
+        return CountedDirectory16Parse::Rejected { probes };
+    };
+    let directory_bytes = entry_count * 2;
+    let Some(_directory) = src.get(..directory_bytes) else {
+        return CountedDirectory16Parse::Rejected { probes };
+    };
+    offsets.truncate(entry_count);
+    if offsets.iter().copied().min() != Some(directory_bytes) {
+        return CountedDirectory16Parse::Rejected { probes };
+    }
+
+    let mut unique = BTreeMap::from([(first, first_record_length)]);
+    for &offset in &offsets {
+        if unique.contains_key(&offset) {
+            continue;
+        }
+        if probes >= available_probes {
+            return CountedDirectory16Parse::Budget { probes };
+        }
+        probes += 1;
+        let Some(header) = src.get(offset..offset.saturating_add(2)) else {
+            return CountedDirectory16Parse::Rejected { probes };
+        };
+        let Some(byte_length) = counted_record16_length_at(src, offset, header) else {
+            return CountedDirectory16Parse::Rejected { probes };
+        };
+        unique.insert(offset, byte_length);
+    }
+
+    let mut boundary = directory_bytes;
+    for (&offset, &byte_length) in &unique {
+        if offset != boundary {
+            return CountedDirectory16Parse::Rejected { probes };
+        }
+        let Some(end) = boundary.checked_add(byte_length) else {
+            return CountedDirectory16Parse::Rejected { probes };
+        };
+        boundary = end;
+    }
+    let entries = offsets
+        .into_iter()
+        .map(|relative_offset| CountedRecord16 {
+            relative_offset,
+            byte_length: unique[&relative_offset],
+        })
+        .collect();
+    CountedDirectory16Parse::Match { probes, entries }
+}
+
+fn counted_relative_directory16_leads(
+    rom: &[u8],
+    options: &Options,
+    report: &mut SearchReport,
+    kept: &mut BTreeMap<Family, Vec<Lead>>,
+) {
+    for base in (0..rom.len()).step_by(options.stride) {
+        if rom.len().saturating_sub(base) < 2 {
+            break;
+        }
+        let available = options.max_probes.saturating_sub(budget_used(report));
+        if available == 0 {
+            report.complete_for_configured_scan = false;
+            report
+                .counts
+                .entry(Family::CountedRelativeDirectory16)
+                .or_default()
+                .probes_skipped_by_budget += 1;
+            break;
+        }
+        match counted_relative_directory16_parse(&rom[base..], available) {
+            CountedDirectory16Parse::Rejected { probes } => {
+                let counts = report
+                    .counts
+                    .entry(Family::CountedRelativeDirectory16)
+                    .or_default();
+                counts.probes += probes;
+                counts.rejected_probes += 1;
+            }
+            CountedDirectory16Parse::Budget { probes } => {
+                let counts = report
+                    .counts
+                    .entry(Family::CountedRelativeDirectory16)
+                    .or_default();
+                counts.probes += probes;
+                counts.probes_skipped_by_budget += 1;
+                report.complete_for_configured_scan = false;
+                break;
+            }
+            CountedDirectory16Parse::Match { probes, entries } => {
+                report
+                    .counts
+                    .entry(Family::CountedRelativeDirectory16)
+                    .or_default()
+                    .probes += probes;
+                for entry in entries {
+                    if entry.byte_length > options.max_stored {
+                        continue;
+                    }
+                    let offset = base + entry.relative_offset;
+                    if promising(
+                        report,
+                        kept,
+                        Family::CountedRelativeDirectory16,
+                        offset,
+                        100,
+                    ) {
+                        retain(report, kept, Lead {
+                            family: Family::CountedRelativeDirectory16,
+                            offset,
+                            stored_length: entry.byte_length,
+                            decoded_length: None,
+                            stored_sha256: ws_assets::sha256_hex(
+                                &rom[offset..offset + entry.byte_length],
+                            ),
+                            decoded_sha256: None,
+                            signature_id: None,
+                            rank: 100,
+                            evidence: "A relative-u16 directory, positive 16-byte-unit record headers and a contiguous raw record run matched; directory aliases are retained. This structural match does not establish payload meaning, a reader, runtime use or asset identity.".into(),
+                            requires: vec!["Establish the table base, reader and record meanings before assigning a format or using the record as an asset.".into()],
+                            reference_matches: Vec::new(),
+                            reference_matches_truncated: false,
+                        });
+                    }
+                }
+            }
         }
     }
 }
@@ -772,6 +1008,9 @@ pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
     if enabled.contains(&Family::Sgd1TileGrid) {
         sgd1_tile_grid_leads(rom, options, &mut report, &mut kept);
     }
+    if enabled.contains(&Family::CountedRelativeDirectory16) {
+        counted_relative_directory16_leads(rom, options, &mut report, &mut kept);
+    }
     for offset in (0..rom.len()).step_by(options.stride) {
         report.positions_scanned += 1;
         let src = &rom[offset..];
@@ -958,4 +1197,35 @@ pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
     }
     report.overlapping_codec_leads = overlapping(&report.leads);
     Ok(report)
+}
+
+#[cfg(test)]
+mod counted_directory16_tests {
+    use super::{
+        counted_record16_length, counted_relative_directory16_parse, CountedDirectory16Parse,
+    };
+
+    #[test]
+    fn counted_record_length_checks_arithmetic_overflow() {
+        assert_eq!(counted_record16_length(0), Some(2));
+        assert_eq!(counted_record16_length(1), Some(18));
+        assert_eq!(counted_record16_length(usize::MAX), None);
+    }
+
+    #[test]
+    fn directory_parser_stops_before_payload_words() {
+        let mut bytes = vec![0u8; 60];
+        for (index, offset) in [42u16, 6, 24].into_iter().enumerate() {
+            bytes[index * 2..index * 2 + 2].copy_from_slice(&offset.to_le_bytes());
+        }
+        for offset in [6usize, 24, 42] {
+            bytes[offset..offset + 2].copy_from_slice(&1u16.to_le_bytes());
+        }
+        // These look like additional relative offsets but are part of payload.
+        bytes[8..14].copy_from_slice(&[8, 0, 10, 0, 12, 0]);
+        match counted_relative_directory16_parse(&bytes, 100) {
+            CountedDirectory16Parse::Match { entries, .. } => assert_eq!(entries.len(), 3),
+            other => panic!("expected three directory entries, got {other:?}"),
+        }
+    }
 }

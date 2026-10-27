@@ -44,6 +44,207 @@ fn sgd1_options() -> Options {
     serde_json::from_value(serde_json::json!({"families":["sgd1-tile-grid"]})).unwrap()
 }
 
+fn counted_relative_directory16_fixture(
+    counts: &[u16],
+    entries: &[usize],
+) -> (Vec<u8>, Vec<(usize, usize)>) {
+    assert!(entries.iter().all(|&index| index < counts.len()));
+    let directory_bytes = (entries.len() * 2) as u16;
+    let mut offsets = Vec::with_capacity(counts.len());
+    let mut end = usize::from(directory_bytes);
+    for &count in counts {
+        offsets.push(end);
+        end += 2 + usize::from(count) * 16;
+    }
+
+    let mut bytes = vec![0u8; end];
+    let mut expected = Vec::with_capacity(entries.len());
+    for (index, &record_index) in entries.iter().enumerate() {
+        let offset = offsets[record_index];
+        bytes[index * 2..index * 2 + 2].copy_from_slice(&(offset as u16).to_le_bytes());
+        expected.push((offset, 2 + usize::from(counts[record_index]) * 16));
+    }
+    for (index, (&offset, &count)) in offsets.iter().zip(counts).enumerate() {
+        bytes[offset..offset + 2].copy_from_slice(&count.to_le_bytes());
+        bytes[offset + 2..offset + 2 + usize::from(count) * 16]
+            .fill(0xa5u8.wrapping_add(index as u8));
+    }
+    (bytes, expected)
+}
+
+fn counted_relative_directory16_options() -> Options {
+    Options {
+        families: vec![Family::CountedRelativeDirectory16],
+        ..Options::default()
+    }
+}
+
+#[test]
+fn counted_relative_directory16_finds_seven_records_from_unsorted_minimum_offset() {
+    let counts = [1, 2, 1, 3, 2, 1, 4];
+    let entries = [4, 0, 6, 2, 1, 5, 3];
+    let (directory, expected) = counted_relative_directory16_fixture(&counts, &entries);
+    assert_eq!(u16::from_le_bytes([directory[0], directory[1]]), 134);
+    assert_eq!(directory.len(), 252);
+    let mut rom = vec![0x71; 5];
+    rom.extend_from_slice(&directory);
+    let report = search(&rom, &counted_relative_directory16_options()).unwrap();
+    let mut actual = report
+        .leads
+        .iter()
+        .filter(|lead| lead.family == Family::CountedRelativeDirectory16)
+        .map(|lead| (lead.offset - 5, lead.stored_length))
+        .collect::<Vec<_>>();
+    let mut expected = expected;
+    actual.sort_unstable();
+    expected.sort_unstable();
+    assert_eq!(actual, expected);
+    assert_eq!(
+        report.counts[&Family::CountedRelativeDirectory16].candidates,
+        7
+    );
+    assert_eq!(
+        report
+            .leads
+            .iter()
+            .filter(|lead| lead.family == Family::CountedRelativeDirectory16)
+            .count(),
+        7
+    );
+}
+
+#[test]
+fn counted_relative_directory16_preserves_duplicate_alias_entries() {
+    let counts = [1, 1, 2, 1, 2, 1];
+    let entries = [4, 0, 5, 2, 1, 3, 0];
+    let (directory, _) = counted_relative_directory16_fixture(&counts, &entries);
+    let report = search(&directory, &counted_relative_directory16_options()).unwrap();
+    let leads = report
+        .leads
+        .iter()
+        .filter(|lead| lead.family == Family::CountedRelativeDirectory16)
+        .collect::<Vec<_>>();
+    assert_eq!(leads.len(), 7);
+    assert_eq!(
+        report.counts[&Family::CountedRelativeDirectory16].candidates,
+        7
+    );
+    assert_eq!(leads.iter().filter(|lead| lead.offset == 14).count(), 2);
+}
+
+#[test]
+fn counted_relative_directory16_rejects_malformed_and_bounded_records() {
+    let counts = [1, 2, 1, 3, 2, 1, 4];
+    let entries = [4, 0, 6, 2, 1, 5, 3];
+    let (valid, _) = counted_relative_directory16_fixture(&counts, &entries);
+    let options = counted_relative_directory16_options();
+
+    let mut zero = valid.clone();
+    zero[14..16].copy_from_slice(&0u16.to_le_bytes());
+    assert!(search(&zero, &options).unwrap().leads.is_empty());
+
+    let truncated = &valid[..valid.len() - 1];
+    assert!(search(truncated, &options).unwrap().leads.is_empty());
+
+    let mut oversized_count = valid.clone();
+    oversized_count[14..16].copy_from_slice(&u16::MAX.to_le_bytes());
+    assert!(search(&oversized_count, &options).unwrap().leads.is_empty());
+
+    let mut noncontiguous = valid.clone();
+    noncontiguous[0..2].copy_from_slice(&168u16.to_le_bytes());
+    assert!(search(&noncontiguous, &options).unwrap().leads.is_empty());
+
+    let mut small_limit = options.clone();
+    small_limit.max_stored = 17;
+    assert!(search(&valid, &small_limit).unwrap().leads.is_empty());
+}
+
+#[test]
+fn counted_relative_directory16_budget_and_stride_are_explicit() {
+    let counts = [1, 2, 1, 3, 2, 1, 4];
+    let entries = [4, 0, 6, 2, 1, 5, 3];
+    let (directory, _) = counted_relative_directory16_fixture(&counts, &entries);
+    let limited = search(
+        &directory,
+        &Options {
+            max_probes: 1,
+            ..counted_relative_directory16_options()
+        },
+    )
+    .unwrap();
+    assert!(!limited.complete_for_configured_scan);
+    assert_eq!(
+        limited.counts[&Family::CountedRelativeDirectory16].probes,
+        1
+    );
+    assert_eq!(
+        limited.counts[&Family::CountedRelativeDirectory16].probes_skipped_by_budget,
+        1
+    );
+
+    let mut odd_base = vec![0x71; 5];
+    odd_base.extend_from_slice(&directory);
+    let odd_stride = search(
+        &odd_base,
+        &Options {
+            stride: 2,
+            ..counted_relative_directory16_options()
+        },
+    )
+    .unwrap();
+    assert!(odd_stride.leads.is_empty());
+}
+
+#[test]
+fn counted_relative_directory16_applies_max_stored_to_each_record() {
+    let counts = [1; 10];
+    let entries = [9, 0, 8, 1, 7, 2, 6, 3, 5, 4];
+    let (directory, _) = counted_relative_directory16_fixture(&counts, &entries);
+    assert_eq!(directory.len(), 200);
+    let report = search(
+        &directory,
+        &Options {
+            max_stored: 18,
+            ..counted_relative_directory16_options()
+        },
+    )
+    .unwrap();
+    let leads = report
+        .leads
+        .iter()
+        .filter(|lead| lead.family == Family::CountedRelativeDirectory16)
+        .collect::<Vec<_>>();
+    assert_eq!(leads.len(), 10);
+    assert!(leads.iter().all(|lead| lead.stored_length == 18));
+}
+
+#[test]
+fn counted_relative_directory16_keeps_small_records_when_another_exceeds_max_stored() {
+    let counts = [1, 2, 1, 400];
+    let entries = [3, 0, 2, 1];
+    let (directory, _) = counted_relative_directory16_fixture(&counts, &entries);
+    assert_eq!(directory.len(), 6480);
+    let report = search(
+        &directory,
+        &Options {
+            max_stored: 64,
+            ..counted_relative_directory16_options()
+        },
+    )
+    .unwrap();
+    let leads = report
+        .leads
+        .iter()
+        .filter(|lead| lead.family == Family::CountedRelativeDirectory16)
+        .collect::<Vec<_>>();
+    assert_eq!(leads.len(), 3);
+    assert!(leads.iter().all(|lead| lead.stored_length <= 64));
+    assert_eq!(
+        report.counts[&Family::CountedRelativeDirectory16].candidates,
+        3
+    );
+}
+
 #[test]
 fn sgd1_tagged_grid_is_an_opt_in_full_span_lead_without_link_requirement() {
     let record = sgd1_tile_grid(3, 2, 112, 0xa7);
@@ -144,13 +345,17 @@ fn all_supported_families_are_selectable_with_empty_and_duplicate_lists_rejected
             Family::ScreenMap,
             Family::Sgd1TileGrid,
             Family::TileMapRecord16,
+            Family::CountedRelativeDirectory16,
             Family::ReaderSignature,
             Family::ReferenceBytes,
         ],
         ..Options::default()
     };
     let report = search(&[], &options).unwrap();
-    assert_eq!(report.options.families.len(), 11);
+    assert_eq!(report.options.families.len(), 12);
+    assert!(!Options::default()
+        .families
+        .contains(&Family::CountedRelativeDirectory16));
     assert!(search(
         &[],
         &Options {
