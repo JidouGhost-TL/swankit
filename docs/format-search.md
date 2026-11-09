@@ -339,7 +339,7 @@ not automatically values at the matched core. The constructor's
 `entry_to_core_hold` is null only when the retained entry reaches that core
 through exact, contiguous, mapped one-byte PUSH/NOP instructions or two-byte
 immediate-port input to AL, with no
-recorded alternate entry into the prefix or core. Other prefixes remain held;
+recorded alternate entry into the prefix or core start. Other prefixes remain held;
 the checker does not simulate register rewrites or assume callee preservation.
 A held prefix preserves the original code lead, listing compatibility and
 caller-entry argument facts, while blocking downstream pointer resolution
