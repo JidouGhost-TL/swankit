@@ -9,14 +9,15 @@ use std::{
         Mutex,
     },
 };
+use ws_discover::retained::{self, Attachment, ProvenanceReference};
 use ws_discover::search::{self, Options, SearchReport};
 
-const HELP: &str = "swankit assets search ROM [--config JSON] [--output JSON] [--json]
+const HELP: &str = "swankit assets search ROM [--config JSON] [--retained-source JSON] [--provenance-output JSON] [--output JSON] [--json]
 swankit assets search-corpus MANIFEST --output DIR [--config JSON] [--jobs N] [--resume] [--json]
 Search results are leads, never verified asset maps. Configurations select bounded
 decoder probes, layout heuristics and external reader/reference patterns.
 Batch manifest schema: swankit-format-search-inputs/1; inputs contain id, path,
-optional sha256 and optional per-input config path (relative to the manifest).
+optional sha256, config and retained_source paths (relative to the manifest).
 Each successful input is checkpointed independently; --resume verifies identities,
 configuration, executable hash and report digest. Changed inputs/configurations
 need a new output directory. Failures are reported and make the command fail.
@@ -37,8 +38,10 @@ struct Input {
     sha256: Option<String>,
     #[serde(default)]
     config: Option<String>,
+    #[serde(default)]
+    retained_source: Option<String>,
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 struct FileReport {
     schema: String,
     executable_sha256: String,
@@ -48,6 +51,8 @@ struct FileReport {
     batch_manifest_sha256: Option<String>,
     batch_index: Option<usize>,
     batch_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    retained_source: Option<SourceBinding>,
 }
 #[derive(Debug, Serialize)]
 struct BatchEntry {
@@ -105,6 +110,7 @@ fn envelope(rom: &[u8], options: &Options, executable: &str) -> Result<FileRepor
         batch_manifest_sha256: None,
         batch_index: None,
         batch_id: None,
+        retained_source: None,
     })
 }
 fn resolve(base: &Path, value: &str) -> PathBuf {
@@ -118,6 +124,82 @@ fn resolve(base: &Path, value: &str) -> PathBuf {
 fn string(path: &Path) -> Result<&str> {
     path.to_str()
         .ok_or_else(|| "non-UTF8 input/output path".into())
+}
+
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+struct SourceBinding {
+    attachment_sha256: String,
+    listing_sha256: String,
+    sidecar: String,
+    sidecar_sha256: String,
+}
+struct LoadedSource {
+    attachment: Attachment,
+    attachment_sha256: String,
+    listing: Vec<u8>,
+    protected: Vec<PathBuf>,
+}
+fn source_attachment(path: &Path) -> Result<LoadedSource> {
+    let bytes = io::read(string(path)?, 1024 * 1024)?;
+    let attachment: Attachment = serde_json::from_slice(&bytes)?;
+    let listing_path = resolve(
+        path.parent().unwrap_or(Path::new(".")),
+        &attachment.listing.path,
+    );
+    let listing = io::read(string(&listing_path)?, retained::MAX_LISTING_BYTES)?;
+    Ok(LoadedSource {
+        attachment,
+        attachment_sha256: ws_assets::sha256_hex(&bytes),
+        listing,
+        protected: vec![path.to_path_buf(), listing_path],
+    })
+}
+fn attach_source(
+    found: &mut FileReport,
+    rom: &[u8],
+    input: &LoadedSource,
+    sidecar: &str,
+) -> Result<Vec<u8>> {
+    let provenance = retained::analyze(
+        rom,
+        &found.report,
+        &input.attachment,
+        &input.attachment_sha256,
+        &input.listing,
+    )?;
+    let bytes = serde_json::to_vec_pretty(&provenance)?;
+    if bytes.len() > 64 * 1024 * 1024 {
+        return Err("caller provenance exceeds 64 MiB checkpoint bound".into());
+    }
+    let hash = ws_assets::sha256_hex(&bytes);
+    for lead in &mut found.report.leads {
+        if lead.family != search::Family::BankedQueueConstructor {
+            continue;
+        }
+        let indices = provenance
+            .constructors
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| c.lead_offset == lead.offset && c.lead_sha256 == lead.stored_sha256)
+            .map(|(n, _)| n)
+            .collect::<Vec<_>>();
+        if !indices.is_empty() {
+            lead.source_provenance = Some(ProvenanceReference {
+                sidecar: sidecar.into(),
+                sha256: hash.clone(),
+                constructor_indices: indices,
+            });
+        }
+    }
+    found.retained_source = Some(SourceBinding {
+        attachment_sha256: input.attachment_sha256.clone(),
+        listing_sha256: input.attachment.listing.sha256.to_ascii_lowercase(),
+        sidecar: sidecar.into(),
+        sidecar_sha256: hash,
+    });
+    found.report_sha256 = digest(&found.report)?;
+    Ok(bytes)
 }
 
 struct BatchContext<'a> {
@@ -162,6 +244,16 @@ fn one(index: usize, input: &Input, ctx: &BatchContext<'_>) -> Result<BatchEntry
     if let Some(path) = per_input {
         protected.push(path);
     }
+    let attached = input
+        .retained_source
+        .as_ref()
+        .map(|p| source_attachment(&resolve(ctx.base, p)))
+        .transpose()?;
+    if let Some(source) = &attached {
+        protected.extend(source.protected.iter().cloned());
+    }
+    let side_relative = format!("provenance/{index:05}-{hash}.json");
+    let side_output = ctx.output.join(&side_relative);
     let mut resumed = false;
     let found = if output.try_exists()? {
         if !ctx.resume {
@@ -189,6 +281,31 @@ fn one(index: usize, input: &Input, ctx: &BatchContext<'_>) -> Result<BatchEntry
                     .into(),
             );
         }
+        if let Some(attached) = &attached {
+            if !side_output.is_file()
+                || std::fs::symlink_metadata(&side_output)?
+                    .file_type()
+                    .is_symlink()
+            {
+                return Err("missing or symlinked caller provenance checkpoint".into());
+            }
+            let mut expected = found.clone();
+            let side_bytes = attach_source(&mut expected, &rom, attached, &side_relative)?;
+            if expected.retained_source != found.retained_source
+                || expected.report_sha256 != found.report_sha256
+                || io::read(string(&side_output)?, 64 * 1024 * 1024)? != side_bytes
+            {
+                return Err("retained source/provenance identity or recomputed facts differ; use a new directory".into());
+            }
+        } else if found.retained_source.is_some()
+            || found
+                .report
+                .leads
+                .iter()
+                .any(|l| l.source_provenance.is_some())
+        {
+            return Err("unexpected retained provenance at unconfigured checkpoint".into());
+        }
         resumed = true;
         found
     } else {
@@ -196,11 +313,15 @@ fn one(index: usize, input: &Input, ctx: &BatchContext<'_>) -> Result<BatchEntry
         found.batch_manifest_sha256 = Some(ctx.manifest_sha256.into());
         found.batch_index = Some(index);
         found.batch_id = Some(input.id.clone());
-        super::output::write(
-            vec![(output, serde_json::to_vec_pretty(&found)?)],
-            &protected,
-            false,
-        )?;
+        let mut files = Vec::new();
+        if let Some(attached) = &attached {
+            files.push((
+                side_output,
+                attach_source(&mut found, &rom, attached, &side_relative)?,
+            ));
+        }
+        files.push((output, serde_json::to_vec_pretty(&found)?));
+        super::output::write(files, &protected, false)?;
         found
     };
     Ok(BatchEntry {
@@ -273,6 +394,18 @@ fn batch(mut args: Args) -> Result<()> {
         }
     }
     std::fs::create_dir_all(output.join("leads"))?;
+    if manifest.inputs.iter().any(|i| i.retained_source.is_some()) {
+        let provenance = output.join("provenance");
+        if provenance.try_exists()?
+            && (std::fs::symlink_metadata(&provenance)?
+                .file_type()
+                .is_symlink()
+                || !provenance.is_dir())
+        {
+            return Err("provenance directory must be a regular directory".into());
+        }
+        std::fs::create_dir_all(provenance)?;
+    }
     let mut previous_hashes = BTreeMap::new();
     for entry in std::fs::read_dir(output.join("leads"))? {
         let entry = entry?;
@@ -389,6 +522,23 @@ fn batch(mut args: Args) -> Result<()> {
                 protected.push(path);
             }
         }
+        if let Some(source) = &input.retained_source {
+            let path = resolve(ctx.base, source);
+            if path.try_exists()? {
+                protected.push(path.clone());
+                // Protect referenced files without rereading a failed listing; the
+                // per-input error remains explicit in the batch summary.
+                let attachment: Attachment =
+                    serde_json::from_slice(&io::read(string(&path)?, 1024 * 1024)?)?;
+                let listing = resolve(
+                    path.parent().unwrap_or(Path::new(".")),
+                    &attachment.listing.path,
+                );
+                if listing.try_exists()? {
+                    protected.push(listing);
+                }
+            }
+        }
     }
     super::output::write(
         vec![(summary, serde_json::to_vec_pretty(&report)?)],
@@ -420,22 +570,52 @@ pub fn run(words: Vec<String>) -> Result<()> {
     }
     let config = args.value("--config");
     let output = args.value("--output");
+    let retained_path = args.value("--retained-source");
+    let provenance_output = args.value("--provenance-output");
     let json = args.flag("--json");
     args.finish(3)?;
     let options = configuration(config.as_deref())?;
     let source = &args.positional[2];
     let bytes = io::read(source, 64 * 1024 * 1024)?;
-    let found = envelope(&bytes, &options, &executable_digest()?)?;
+    let mut found = envelope(&bytes, &options, &executable_digest()?)?;
+    let attached = retained_path
+        .as_ref()
+        .map(|p| source_attachment(Path::new(p)))
+        .transpose()?;
+    if attached.is_none() && provenance_output.is_some() {
+        return Err("--provenance-output requires --retained-source".into());
+    }
+    let mut files = Vec::new();
+    let mut protected = vec![PathBuf::from(source)];
+    if let Some(attached) = &attached {
+        protected.extend(attached.protected.iter().cloned());
+        let side_path = match (&provenance_output, &output) {
+            (Some(path), _) => PathBuf::from(path),
+            (None, Some(path)) => PathBuf::from(path).with_extension("callers.json"),
+            _ => return Err("--retained-source requires --output or --provenance-output".into()),
+        };
+        let locator = if provenance_output.is_some() {
+            string(&side_path)?.to_owned()
+        } else {
+            side_path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .ok_or("invalid sidecar path")?
+                .to_owned()
+        };
+        files.push((
+            side_path,
+            attach_source(&mut found, &bytes, attached, &locator)?,
+        ));
+    }
+    if let Some(path) = &config {
+        protected.push(PathBuf::from(path));
+    }
     if let Some(path) = output {
-        let mut protected = vec![PathBuf::from(source)];
-        if let Some(path) = config {
-            protected.push(PathBuf::from(path));
-        }
-        super::output::write(
-            vec![(PathBuf::from(path), serde_json::to_vec_pretty(&found)?)],
-            &protected,
-            false,
-        )?;
+        files.push((PathBuf::from(path), serde_json::to_vec_pretty(&found)?));
+    }
+    if !files.is_empty() {
+        super::output::write(files, &protected, false)?;
     }
     if json {
         println!("{}", serde_json::to_string_pretty(&found)?);

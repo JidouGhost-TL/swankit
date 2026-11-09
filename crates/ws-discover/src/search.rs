@@ -171,6 +171,8 @@ pub struct Lead {
     pub requires: Vec<String>,
     pub reference_matches: Vec<ReferenceMatch>,
     pub reference_matches_truncated: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_provenance: Option<crate::retained::ProvenanceReference>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -561,7 +563,7 @@ fn sgd1_tile_grid_leads(
                 evidence: "The SGD1 tag, positive byte grid, declared full record size and 16-byte-per-cell area agree; this structural match does not establish field meanings, a reader, runtime use or asset identity.".into(),
                 requires: vec!["Establish the resource reader, field semantics, palette and runtime context before assigning meaning to this bounded record.".into()],
                 reference_matches: Vec::new(),
-                reference_matches_truncated: false,
+                reference_matches_truncated: false, source_provenance: None,
             });
         }
     }
@@ -788,7 +790,7 @@ fn counted_relative_directory16_leads(
                             evidence: "A relative-u16 directory, positive 16-byte-unit record headers and a contiguous raw record run matched; directory aliases are retained. This structural match does not establish payload meaning, a reader, runtime use or asset identity.".into(),
                             requires: vec!["Establish the table base, reader and record meanings before assigning a format or using the record as an asset.".into()],
                             reference_matches: Vec::new(),
-                            reference_matches_truncated: false,
+                            reference_matches_truncated: false, source_provenance: None,
                         });
                     }
                 }
@@ -960,7 +962,7 @@ fn exact_patterns(
                 stored_sha256:pattern.sha256.clone(), decoded_sha256:None, signature_id:Some(pattern.signature.id.clone()),rank,
                 evidence:if family==Family::ReferenceBytes { "Exact external reference bytes occur in the ROM; this does not establish a unique origin, loader or whole resource." } else { "Exact external reader pattern matched; resource format and use remain unconfirmed." }.into(),
                 requires:vec!["Establish original reference provenance, reader/caller context and complete resource boundaries; duplicates remain possible.".into()],
-                reference_matches:Vec::new(), reference_matches_truncated:false,
+                reference_matches:Vec::new(), reference_matches_truncated:false, source_provenance:None,
             });
         }
     }
@@ -1079,7 +1081,7 @@ pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
                 decoded_sha256: Some(ws_assets::sha256_hex(&decoded.bytes)), signature_id: None, rank,
                 evidence: "Complete bounded parse using the existing decoder with empty initial history; no original-output comparison.".into(),
                 requires: vec!["Find the actual reader/caller and establish the stream start, bank context and header ownership.".into(), "Compare the complete output and recover the selector domain before declaring an asset family.".into()],
-                reference_matches: matches, reference_matches_truncated: truncated,
+                reference_matches: matches, reference_matches_truncated: truncated, source_provenance: None,
             });
         }
         if offset % 2 == 0 {
@@ -1094,7 +1096,7 @@ pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
                         signature_id: None, rank: 100,
                         evidence: format!("{explanation} This is a layout heuristic, not a unique signature."),
                         requires: vec!["Find the consumer, boundaries and display context; distinguish numeric tables from graphics data.".into()],
-                        reference_matches: Vec::new(), reference_matches_truncated: false,
+                        reference_matches: Vec::new(), reference_matches_truncated: false, source_provenance: None,
                     });
                 }
             }
@@ -1139,7 +1141,7 @@ pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
                             evidence: "Bounded 16-byte descriptor relations and map-word constraints matched; this does not establish a format, reader context, runtime use or asset identity.".into(),
                             requires: vec!["Establish the actual reader, header ownership, bank context and complete resource boundaries before treating this as a resource.".into()],
                             reference_matches: Vec::new(),
-                            reference_matches_truncated: false,
+                            reference_matches_truncated: false, source_provenance: None,
                         });
                     }
                 }
@@ -1174,7 +1176,7 @@ pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
                                 "Bind retained caller bytes/flow and register-lane clobber facts before resolving any selector: reset on calls, branches, gaps and every recorded incoming target; unknown indirect entries remain HOLD.".into(),
                                 "Establish original bank/table identities, complete resource boundaries, consumer and runtime/output ownership; no SDK, codec, asset or support claim follows.".into(),
                             ],
-                            reference_matches: Vec::new(), reference_matches_truncated: false,
+                            reference_matches: Vec::new(), reference_matches_truncated: false, source_provenance: None,
                         });
                     }
                 } else {
@@ -1220,7 +1222,7 @@ pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
                         signature_id: Some(signature.id.clone()), rank,
                         evidence: if signature.family == Family::ReaderSignature { "External masked reader pattern matched; code use and resource format remain unconfirmed." } else { "Exact external reference bytes occur in the ROM; this does not establish the loader, unique origin or complete asset extent." }.into(),
                         requires: vec![if signature.family == Family::ReaderSignature { "Disassemble the match, compare nonrelocated operands and follow its callers/resource tables in this ROM." } else { "Check reference provenance, all duplicate ROM locations, complete source extent and the actual loader; captures are not assets." }.into()],
-                        reference_matches: Vec::new(), reference_matches_truncated: false,
+                        reference_matches: Vec::new(), reference_matches_truncated: false, source_provenance: None,
                     });
                 } else {
                     report
@@ -1238,6 +1240,10 @@ pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
     }
     report.overlapping_codec_leads = overlapping(&report.leads);
     Ok(report)
+}
+
+pub(crate) fn constructor_pattern_matches(bytes: &[u8]) -> bool {
+    banked_constructor::evidence(bytes).is_some()
 }
 
 #[cfg(test)]

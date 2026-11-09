@@ -243,3 +243,101 @@ The existing stride, shared probe budget and per-family retention limit apply.
 Counts describe configured byte-pattern candidates, not supported games or
 assets; a configured zero is not proof of absence. `max_stored` is a decoder/raw
 resource bound and does not truncate this fixed code-inspection span.
+
+## Optional retained-source caller evidence
+
+An explicitly configured `banked-queue-constructor` search can additionally read
+an external, identity-bound instruction listing:
+
+```sh
+swankit assets search image.bin --config constructors.json \
+  --retained-source source.json --output leads.json --json
+```
+
+This writes `leads.json` and `leads.callers.json`. Alternatively,
+`--provenance-output FILE` chooses the sidecar path; it is required when no
+`--output` is supplied. The automatic sidecar locator is relative to the report's
+directory. An explicitly supplied locator is preserved as supplied, relative to
+the invocation directory unless absolute. Both outputs refuse input overlap or
+existing files. No attachment means no new report fields and no caller analysis;
+defaults, external signatures and ordinary search results remain unchanged.
+
+A batch input can use an optional `retained_source` path alongside `id`, `path`,
+`sha256` and `config`. Its path is relative to the manifest. Sidecars are stored
+under `provenance/` and referenced by the constructor code leads and their file
+envelope. Resume verifies original/configuration/executable/report identities,
+the attachment and listing hashes, and recomputes caller evidence before accepting
+the sidecar. Changing caller values and updating stored hashes is insufficient.
+Missing, partial, changed or symlinked sidecars are refused; no fallback is used.
+A missing listing is an explicit failed batch input, with its failure in the
+summary. A malformed attachment is a configuration error.
+
+The strict attachment format is `swankit-retained-source/1`. For example, this
+invented geometry describes a 64-KiB file with equal logical and file offsets:
+
+```json
+{
+  "schema": "swankit-retained-source/1",
+  "rom_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "rom_bytes": 65536,
+  "listing": {
+    "path": "listing.tsv",
+    "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+    "bytes": 1234
+  },
+  "mapping": [{"logical_start": 0, "physical_start": 0, "length": 65536}]
+}
+```
+
+Replace the invented identities and byte count with independently reviewed
+originals. A mapping binds linear listing addresses to file bytes; it does not
+infer bank residency. Logical ranges must be disjoint and all mapped bytes must
+match the original. Instructions outside the reviewed mapping remain unverified
+and cannot supply caller arguments. Unknown fields are errors. An optional
+`bank_policy: "rom1-low-byte-power-of-two"` enables pointer leads only for an
+explicitly reviewed low-byte ROM1 policy and a power-of-two, 64-KiB-aligned file
+of at most 16 MiB. The full bank word and its output low byte remain distinct.
+No policy is selected automatically, and no runtime bank state is established.
+
+The listing is the existing tab-separated function/instruction export, without
+paths or resource payloads added to it:
+
+- `F`: entry in hexadecimal, segmented label, name, decimal instruction count,
+  call-reference count, hexadecimal body minimum and maximum.
+- `I`: hexadecimal address, containing function entry or `-`, flow name, complete
+  instruction hex, same-length mask hex, registers read, registers written,
+  assembly text and comma-separated hexadecimal direct targets or `-`.
+
+Include the complete retained export, including unowned instructions and other
+functions, rather than only the chosen caller. All recorded direct targets can
+invalidate a reaching definition. Counts/membership, byte boundaries, mapped
+original bytes and global targets are checked; masks never replace literal
+operand identity. The exporter gives parent-register effects, so byte registers
+are conservatively normalized to their 16-bit parents. The supported transfer
+rules recognize immediate word/byte lanes and XOR-self. Calls, branches, returns,
+gaps and recorded incoming entries reset state. Memory/computed writes and
+implicit multiply/divide clobbers kill values; unsupported effects kill all
+tracked values. Supported instruction effects require an exact original opcode
+extent; a longer row cannot hide a second write behind harmless effect metadata.
+There is no arithmetic folding, default-zero high lane, branch
+join or assumed callee preservation. A recorded entry inside an instruction
+prevents source qualification of that function. A function with multiple matching
+constructor cores remains ambiguous.
+
+The separately hash-bound `swankit-retained-callers/1` sidecar records constructor
+core versus function entry, complete retained function byte identity, direct
+calls, original blocks, producer locations for both register lanes, explicit
+unknown reasons and optional source-pointer leads. It retains the global recorded
+direct-entry edges, unresolved flow sites, original segmented function identities
+and, when available, the original instruction that caused a value to be held.
+Only constructor-family leads
+receive references; external reader signatures retain their previous meaning.
+Code spans stay code spans, and no decoded output length is invented.
+
+Assurance is explicitly **retained-direct-flow candidate; incomplete-listing**.
+Hash binding is not authentication or proof that the listing is globally correct.
+Unknown indirect/unexported entries remain possible. Function envelopes are not
+complete program boundaries; matching the retained listing does not adopt a
+project or prove execution. No code is discarded. Pointer leads prove neither
+object start/extent, a reader's length/bias contract, a codec, assets nor runtime
+output. These require separate original-source and complete-output evidence.

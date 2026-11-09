@@ -1,5 +1,6 @@
 //! Evidence-driven draft maps. Runtime associations are candidates, never proof.
 #![forbid(unsafe_code)]
+pub mod retained;
 pub mod search;
 use formatkit_core::{bytes_at, Error, Result};
 use serde::{Deserialize, Serialize};
