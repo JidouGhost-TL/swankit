@@ -1,5 +1,7 @@
 //! ROM-only leads, not asset maps or evidence of runtime use.
 //! Hardware layouts: docs/hardware.md and WSdev Display/Screen, Display/Palette.
+mod banked_constructor;
+
 use formatkit_core::{Error, Reader, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -29,6 +31,8 @@ pub enum Family {
     #[serde(rename = "counted-relative-directory16")]
     CountedRelativeDirectory16,
     ReaderSignature,
+    /// Explicit opt-in fixed-role code pattern; no flow or asset inference.
+    BankedQueueConstructor,
     ReferenceBytes,
 }
 
@@ -1138,6 +1142,43 @@ pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
                             reference_matches_truncated: false,
                         });
                     }
+                }
+            }
+        }
+        if enabled.contains(&Family::BankedQueueConstructor)
+            && src.len() >= banked_constructor::LENGTH
+        {
+            let family = Family::BankedQueueConstructor;
+            if budget_used(&report) >= options.max_probes {
+                report.complete_for_configured_scan = false;
+                report
+                    .counts
+                    .entry(family)
+                    .or_default()
+                    .probes_skipped_by_budget += 1;
+            } else {
+                report.signature_probes += 1;
+                report.counts.entry(family).or_default().probes += 1;
+                if let Some(evidence) = banked_constructor::evidence(src) {
+                    let rank = 200;
+                    if promising(&mut report, &kept, family, offset, rank) {
+                        retain(&mut report, &mut kept, Lead {
+                            family, offset, stored_length: banked_constructor::LENGTH,
+                            decoded_length: None,
+                            stored_sha256: ws_assets::sha256_hex(&src[..banked_constructor::LENGTH]),
+                            decoded_sha256: None,
+                            signature_id: Some("fixed-register-banked-queue-v1".into()), rank,
+                            evidence,
+                            requires: vec![
+                                "Independently establish original instruction boundaries, containing function and incoming branch targets; a match inside data or another instruction is not code proof.".into(),
+                                "Bind retained caller bytes/flow and register-lane clobber facts before resolving any selector: reset on calls, branches, gaps and every recorded incoming target; unknown indirect entries remain HOLD.".into(),
+                                "Establish original bank/table identities, complete resource boundaries, consumer and runtime/output ownership; no SDK, codec, asset or support claim follows.".into(),
+                            ],
+                            reference_matches: Vec::new(), reference_matches_truncated: false,
+                        });
+                    }
+                } else {
+                    report.counts.entry(family).or_default().rejected_probes += 1;
                 }
             }
         }

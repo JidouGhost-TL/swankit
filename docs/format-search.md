@@ -38,6 +38,7 @@ contain reference bytes and should be treated according to their provenance.
 | `tile-map-record16` | A 16-byte descriptor with positive 8-pixel dimensions, a bounded tile count, related tile/map offsets and counts, and valid bounded map words | A complete raw record span satisfying those relations; reader context and meaning remain unknown |
 | `counted-relative-directory16` | A little-endian relative-u16 directory whose entry count is inferred from its minimum offset, followed by positive 16-byte-unit counted records that form a contiguous span | Individual bounded raw records from a directory-shaped group; payload meanings and table use remain unknown |
 | `reader-signature` | An external exact or per-bit-masked pattern | A byte-pattern match, possibly related reader code |
+| `banked-queue-constructor` | Explicit opt-in fixed-register instruction core with equal queue-pointer literals | A code-pattern lead retaining literal operands; instruction boundaries, callers and data remain unproven |
 | `reference-bytes` | An external exact, nonuniform block of at least 16 bytes | A matching reference chunk in ROM; matching decoded chunks are also recorded on codec leads |
 
 Hardware layouts follow [the cited display rules](hardware.md#display-snapshot-rules).
@@ -208,3 +209,37 @@ as new research. The summary is the latest attempt's status, not an immutable lo
 Search reports deliberately contain file offsets, evidence and follow-up needs,
 so they can be used alongside Ghidra without making Ghidra a prerequisite for
 the bulk scan. No new Ghidra analyzer or automatic code classification is added.
+
+## Opt-in constructor code pattern
+
+The `banked-queue-constructor` family is explicitly selected with
+`{"families":["banked-queue-constructor"]}`. It is absent from the default family
+list and does not change empty `reader-signature` configurations. It uses the
+existing lead/report fields and remains independent of caller-flow
+analysis.
+
+The rule checks one 73-byte, fixed-register instruction-encoding core. It permits
+only literal table, initial ES segment and repeated queue-pointer operands to
+vary; the two queue-pointer literals must agree. Leads retain the literal operand
+values, actual full-span hash, bank-word/AL distinction, OUT port, pointer-window
+segment and fixed register roles. Changing an ES override, output port, index
+operation or queue-store role refuses the pattern. Instruction encodings are
+based on the Intel 8086 instruction reference; hardware bank context is described
+in [hardware.md](hardware.md).
+
+These are **code-pattern leads**, including when the bytes have no proven
+instruction boundary. A hit does not identify a containing function, caller,
+selector, mapped bank value, table extent, decoder, SDK, asset or runtime use.
+Literal ES values are recorded rather than replaced with an assumed segment;
+no table bytes are dereferenced and no file-bank normalization is performed.
+The retained source analysis has richer flow facts that this ROM-only search
+cannot ingest: register-lane writes, original instruction/function identity,
+direct targets and every recorded incoming branch target. No caller constants
+are propagated by this rule. Unknown incoming entries/clobbers remain unresolved;
+unvisited code is preserved. Full flow-aware integration needs a separately
+reviewed source-facts input contract.
+
+The existing stride, shared probe budget and per-family retention limit apply.
+Counts describe configured byte-pattern candidates, not supported games or
+assets; a configured zero is not proof of absence. `max_stored` is a decoder/raw
+resource bound and does not truncate this fixed code-inspection span.
