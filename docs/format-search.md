@@ -334,6 +334,23 @@ Only constructor-family leads
 receive references; external reader signatures retain their previous meaning.
 Code spans stay code spans, and no decoded output length is invented.
 
+Caller arguments describe values at the constructor's function entry. They are
+not automatically values at the matched core. The constructor's
+`entry_to_core_hold` is null only when the retained entry reaches that core
+through exact, contiguous, mapped one-byte PUSH/NOP instructions or two-byte
+immediate-port input to AL, with no
+recorded alternate entry into the prefix or core. Other prefixes remain held;
+the checker does not simulate register rewrites or assume callee preservation.
+A held prefix preserves the original code lead, listing compatibility and
+caller-entry argument facts, while blocking downstream pointer resolution
+before directory bytes are read. An unmapped or otherwise incompatible function
+still cannot bind a caller. Even a transparent prefix proves only the retained
+direct entry-to-core path, with the incomplete-listing limits below.
+The input-to-AL rule proves only that DX/BX/CX are preserved and that the matched
+core overwrites AX before use; it makes no port-behavior or bank-state claim.
+This interpretation is identified by sidecar policy
+`immediate-lanes-neutral-constructor-prefix-v2`.
+
 Assurance is explicitly **retained-direct-flow candidate; incomplete-listing**.
 Hash binding is not authentication or proof that the listing is globally correct.
 Unknown indirect/unexported entries remain possible. Function envelopes are not

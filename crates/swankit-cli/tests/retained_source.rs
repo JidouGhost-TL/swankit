@@ -30,6 +30,9 @@ fn core() -> Vec<Vec<u8>> {
 }
 impl Fixture {
     fn new(ops: Vec<(Vec<u8>, &str, &str)>) -> Self {
+        Self::with_prefix(ops, vec![(vec![0x50], "SP", "FALL_THROUGH")])
+    }
+    fn with_prefix(ops: Vec<(Vec<u8>, &str, &str)>, prefix: Vec<(Vec<u8>, &str, &str)>) -> Self {
         let dir = std::env::temp_dir().join(format!(
             "retained-source-{}-{}",
             std::process::id(),
@@ -42,7 +45,7 @@ impl Fixture {
             lines: Vec::new(),
             functions: Vec::new(),
         };
-        let mut helper = vec![(vec![0x50], "SP", "FALL_THROUGH")];
+        let mut helper = prefix;
         helper.extend(
             core()
                 .into_iter()
@@ -119,7 +122,7 @@ impl Fixture {
             .join("\n")
             + "\n";
         self.put("listing.tsv", text.as_bytes());
-        let source=self.data("source.json",json!({"schema":"swankit-retained-source/1","rom_sha256":ws_assets::sha256_hex(&self.rom),"rom_bytes":self.rom.len(),"listing":{"path":"listing.tsv","sha256":ws_assets::sha256_hex(text.as_bytes()),"bytes":text.len()},"mapping":[{"logical_start":0,"physical_start":0,"length":65536}]}));
+        let source=self.data("source.json",json!({"schema":"swankit-retained-source/1","rom_sha256":ws_assets::sha256_hex(&self.rom),"rom_bytes":self.rom.len(),"listing":{"path":"listing.tsv","sha256":ws_assets::sha256_hex(text.as_bytes()),"bytes":text.len()},"mapping":[{"logical_start":0,"physical_start":0,"length":self.rom.len()}]}));
         let config = self.data(
             "config.json",
             json!({"families":["banked-queue-constructor"]}),
@@ -146,6 +149,36 @@ impl Fixture {
         assert!(r.status.success(), "{}", String::from_utf8_lossy(&r.stderr));
         serde_json::from_slice(&fs::read(self.path("report.callers.json")).unwrap()).unwrap()
     }
+    fn banked_sidecar(&self) -> Value {
+        self.banked_sidecar_mapping(None)
+    }
+    fn banked_sidecar_mapping(&self, mapping: Option<Value>) -> Value {
+        let (r, s, c) = self.inputs();
+        let mut a: Value = serde_json::from_slice(&fs::read(&s).unwrap()).unwrap();
+        a["bank_policy"] = json!("rom1-low-byte-power-of-two");
+        if let Some(mapping) = mapping {
+            a["mapping"] = mapping;
+        }
+        fs::write(&s, serde_json::to_vec(&a).unwrap()).unwrap();
+        let out = command(&[
+            "assets",
+            "search",
+            &r,
+            "--config",
+            &c,
+            "--retained-source",
+            &s,
+            "--output",
+            &self.path("report.json"),
+            "--json",
+        ]);
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        serde_json::from_slice(&fs::read(self.path("report.callers.json")).unwrap()).unwrap()
+    }
 }
 impl Drop for Fixture {
     fn drop(&mut self) {
@@ -167,6 +200,178 @@ fn fixed() -> Vec<(Vec<u8>, &'static str, &'static str)> {
 }
 fn args(s: &Value) -> &Value {
     &s["callers"][0]["arguments"]
+}
+#[test]
+fn constructor_selector_write_preserves_entry_fact_but_holds_core_pointer() {
+    let mut f = Fixture::with_prefix(fixed(), vec![(vec![0xba, 0, 0], "DX", "FALL_THROUGH")]);
+    f.rom.resize(1048576, 0xcc);
+    f.rom[0x14567..0x1456b].copy_from_slice(&[0x20, 0, 1, 0]);
+    f.rom[0x10020..0x10024].copy_from_slice(&[0, 0x30, 0, 0x20]);
+    let s = f.banked_sidecar();
+    assert_eq!(args(&s)["DX"]["value"], 1);
+    assert_eq!(
+        s["constructors"][0]["status"],
+        "RETAINED_LISTING_COMPATIBLE"
+    );
+    assert_eq!(s["callers"][0]["pointer"]["status"], "HOLD");
+    assert!(s["callers"][0]["pointer"]["source_physical"].is_null());
+    assert!(s["callers"][0]["pointer"]["hold"]
+        .as_str()
+        .unwrap()
+        .contains("entry-to-core"));
+}
+fn original_banked_prefix(prefix: Vec<(Vec<u8>, &str, &str)>) -> Fixture {
+    let mut f = Fixture::with_prefix(fixed(), prefix);
+    f.rom.resize(1048576, 0xcc);
+    f.rom[0x14567..0x1456b].copy_from_slice(&[0x20, 0, 1, 0]);
+    f.rom[0x10020..0x10024].copy_from_slice(&[0, 0x30, 0, 0x20]);
+    f
+}
+#[test]
+fn nontransparent_constructor_prefixes_hold_downstream_without_losing_entry_arguments() {
+    for (bytes, writes, flow) in [
+        (vec![0xba, 0, 0], "DX", "FALL_THROUGH"),
+        (vec![0xbb, 0, 0], "BX", "FALL_THROUGH"),
+        (vec![0xb9, 0, 0], "CX", "FALL_THROUGH"),
+        (vec![0xeb, 0], ".", "UNCONDITIONAL_JUMP"),
+        (vec![0xc7, 0x06, 0, 0x10, 1, 0], ".", "FALL_THROUGH"),
+        (vec![0xf8], ".", "FALL_THROUGH"),
+        (vec![0x50, 0xba, 0, 0], "SP", "FALL_THROUGH"),
+        (vec![0x9a, 0, 0, 0x30, 0], "CS,SP", "UNCONDITIONAL_CALL"),
+        (vec![0x5a], "DX,SP", "FALL_THROUGH"),
+    ] {
+        let f = original_banked_prefix(vec![(bytes.clone(), writes, flow)]);
+        let s = f.banked_sidecar();
+        assert_eq!(args(&s)["DX"]["value"], 1, "{bytes:?}");
+        assert_eq!(args(&s)["BX"]["value"], 0x3456, "{bytes:?}");
+        assert_eq!(args(&s)["CX"]["value"], 0, "{bytes:?}");
+        assert!(
+            s["constructors"][0]["entry_to_core_hold"].is_string(),
+            "{bytes:?}"
+        );
+        assert_eq!(s["callers"][0]["pointer"]["status"], "HOLD", "{bytes:?}");
+        assert!(s["callers"][0]["pointer"]["group_physical"].is_null());
+    }
+}
+#[test]
+fn exact_neutral_prefix_and_core_at_entry_preserve_pointer_qualification() {
+    for prefix in [
+        Vec::new(),
+        vec![(vec![0x90], ".", "FALL_THROUGH")],
+        vec![
+            (vec![0x53], "SP", "FALL_THROUGH"),
+            (vec![0x51], "SP", "FALL_THROUGH"),
+            (vec![0x52], "SP", "FALL_THROUGH"),
+            (vec![0x06], "SP", "FALL_THROUGH"),
+            (vec![0x1e], "SP", "FALL_THROUGH"),
+        ],
+    ] {
+        let f = original_banked_prefix(prefix);
+        let s = f.banked_sidecar();
+        assert!(s["constructors"][0]["entry_to_core_hold"].is_null());
+        assert_eq!(
+            s["callers"][0]["pointer"]["status"],
+            "SOURCE_POINTER_LEAD_ONLY"
+        );
+        assert_eq!(s["callers"][0]["pointer"]["source_physical"], 0x12000);
+    }
+}
+#[test]
+fn constructor_prefix_gap_and_global_alternate_entries_hold_pointer() {
+    for alternate in [false, true] {
+        let mut f = original_banked_prefix(vec![
+            (vec![0x50], "SP", "FALL_THROUGH"),
+            (vec![0x90], ".", "FALL_THROUGH"),
+        ]);
+        if alternate {
+            f.row(
+                0x500,
+                None,
+                &[0xe9, 0xfe, 0xfc],
+                ".",
+                "UNCONDITIONAL_JUMP",
+                "201",
+            );
+        } else {
+            f.lines.retain(|r| !r.starts_with("I\t201\t"));
+            let header = f
+                .functions
+                .iter_mut()
+                .find(|r| r.starts_with("F\t200\t"))
+                .unwrap();
+            let mut columns = header.split('\t').map(str::to_owned).collect::<Vec<_>>();
+            columns[4] = (columns[4].parse::<usize>().unwrap() - 1).to_string();
+            *header = columns.join("\t");
+        }
+        let s = f.banked_sidecar();
+        assert_eq!(args(&s)["DX"]["value"], 1);
+        assert_eq!(s["callers"][0]["pointer"]["status"], "HOLD");
+        assert!(s["constructors"][0]["entry_to_core_hold"].is_string());
+    }
+}
+#[test]
+fn recorded_core_entries_from_unowned_and_other_functions_hold_pointer() {
+    for owned in [false, true] {
+        let mut f = original_banked_prefix(vec![(vec![0x50], "SP", "FALL_THROUGH")]);
+        f.row(
+            0x500,
+            owned.then_some(0x500),
+            &[0xe9, 0xfe, 0xfc],
+            ".",
+            "UNCONDITIONAL_JUMP",
+            "201",
+        );
+        if owned {
+            f.functions
+                .push("F\t500\t0050:0000\thelper\t1\t0\t500\t502".into());
+        }
+        let s = f.banked_sidecar();
+        assert_eq!(args(&s)["DX"]["value"], 1);
+        assert_eq!(s["callers"][0]["pointer"]["status"], "HOLD");
+        assert!(s["constructors"][0]["entry_to_core_hold"]
+            .as_str()
+            .unwrap()
+            .contains("alternate entry"));
+    }
+}
+#[test]
+fn unmapped_constructor_prefix_keeps_raw_lead_without_pointer_qualification() {
+    let f = original_banked_prefix(vec![(vec![0x50], "SP", "FALL_THROUGH")]);
+    let s = f.banked_sidecar_mapping(Some(json!([
+        {"logical_start":0,"physical_start":0,"length":0x200},
+        {"logical_start":0x201,"physical_start":0x201,"length":1048576-0x201}
+    ])));
+    assert_eq!(s["constructors"][0]["status"], "HOLD");
+    assert!(s["callers"].as_array().unwrap().is_empty());
+    let report: Value = serde_json::from_slice(&fs::read(f.path("report.json")).unwrap()).unwrap();
+    assert_eq!(report["report"]["leads"].as_array().unwrap().len(), 1);
+}
+#[test]
+fn input_to_al_prefix_requires_its_exact_two_byte_extent() {
+    for (bytes, neutral) in [
+        (vec![0xe4, 0xc3], true),
+        (vec![0xe4, 0x55], true),
+        (vec![0xe4], false),
+        (vec![0xe4, 0xc3, 0xba, 0, 0], false),
+    ] {
+        let f = original_banked_prefix(vec![(bytes.clone(), "AX", "FALL_THROUGH")]);
+        let s = f.banked_sidecar();
+        assert_eq!(args(&s)["DX"]["value"], 1);
+        assert_eq!(
+            s["constructors"][0]["entry_to_core_hold"].is_null(),
+            neutral,
+            "{bytes:?}"
+        );
+        assert_eq!(
+            s["callers"][0]["pointer"]["status"],
+            if neutral {
+                "SOURCE_POINTER_LEAD_ONLY"
+            } else {
+                "HOLD"
+            },
+            "{bytes:?}"
+        );
+    }
 }
 #[test]
 fn original_bound_word_and_byte_definitions_create_linked_provenance() {

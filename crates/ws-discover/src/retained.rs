@@ -89,6 +89,7 @@ pub struct Constructor {
     pub function_instruction_sha256: Option<String>,
     pub status: String,
     pub hold: Option<String>,
+    pub entry_to_core_hold: Option<String>,
     pub table_segment: u16,
     pub table_offset: u16,
     pub queue_pointer: u16,
@@ -538,6 +539,12 @@ fn pointer(rom: &[u8], a: &Attachment, c: &Constructor, dx: u16) -> Pointer {
         pointer_word: None,
         source_physical: None,
     };
+    if let Some(reason) = &c.entry_to_core_hold {
+        p.hold = Some(format!(
+            "constructor entry-to-core transparency unproven: {reason}"
+        ));
+        return p;
+    }
     let off = usize::from(c.table_offset) + usize::from(dx >> 8) * 4;
     if off > 65532 {
         p.hold = Some("group offset wraps".into());
@@ -579,6 +586,44 @@ fn pointer(rom: &[u8], a: &Attachment, c: &Constructor, dx: u16) -> Pointer {
     p.status = "SOURCE_POINTER_LEAD_ONLY".into();
     p.hold = None;
     p
+}
+
+fn entry_to_core_hold(
+    members: &[&Instruction],
+    entry: u32,
+    core: u32,
+    incoming: &BTreeSet<u32>,
+) -> Option<String> {
+    let mut next = entry;
+    for i in members.iter().filter(|i| i.at < core) {
+        if i.at != next || i.physical.is_none() {
+            return Some("prefix has a gap or unmapped original instruction".into());
+        }
+        if i.flow != "FALL_THROUGH" || !i.targets.is_empty() {
+            return Some("prefix contains control flow".into());
+        }
+        // Exact pushes, NOP and immediate-port input to AL preserve DX/BX/CX.
+        // The matched core overwrites AX before using it. No port behavior or
+        // bank state is inferred from this register-effect check.
+        // Exported write metadata alone cannot prove a neutral prefix.
+        let neutral = (i.bytes.len() == 1
+            && matches!(i.bytes[0], 0x06 | 0x0e | 0x16 | 0x1e | 0x50..=0x57 | 0x90))
+            || (i.bytes.len() == 2 && i.bytes[0] == 0xe4);
+        if !neutral {
+            return Some("prefix is outside the exact neutral opcode set".into());
+        }
+        let Some(end) = i.at.checked_add(i.bytes.len() as u32) else {
+            return Some("prefix instruction address wraps".into());
+        };
+        next = end;
+    }
+    if next != core {
+        return Some("prefix does not reach the matched core contiguously".into());
+    }
+    if entry < core && incoming.range((entry + 1)..=core).next().is_some() {
+        return Some("recorded alternate entry reaches the prefix or core".into());
+    }
+    None
 }
 
 pub fn analyze(
@@ -710,6 +755,7 @@ pub fn analyze(
             function_instruction_sha256: None,
             status: "HOLD".into(),
             hold: Some("unique retained instruction/function boundary absent".into()),
+            entry_to_core_hold: Some("compatible function entry/core binding absent".into()),
             table_segment: u16::from_le_bytes([span[4], span[5]]),
             table_offset: u16::from_le_bytes([span[1], span[2]]),
             queue_pointer: u16::from_le_bytes([span[46], span[47]]),
@@ -762,6 +808,7 @@ pub fn analyze(
                     ));
                     c.status = "RETAINED_LISTING_COMPATIBLE".into();
                     c.hold = None;
+                    c.entry_to_core_hold = entry_to_core_hold(&members, entry, first.at, &incoming);
                 } else {
                     c.hold = Some(
                         "constructor core/function has a gap, interior entry or unmapped original bytes".into(),
@@ -936,7 +983,7 @@ pub fn analyze(
     }
     Ok(Sidecar {
         schema: SIDECAR_SCHEMA.into(),
-        policy: "immediate-lanes-conservative-effects-v1".into(),
+        policy: "immediate-lanes-neutral-constructor-prefix-v2".into(),
         assurance: "retained-direct-flow-candidate; incomplete-listing".into(),
         rom_sha256: report.rom_sha256.clone(),
         rom_bytes: rom.len(),
@@ -953,6 +1000,7 @@ pub fn analyze(
         limitations: vec![
             "Retained direct-flow candidates only; indirect/unexported entries and listing correctness are not proven complete. No project/code adoption or execution claim.".into(),
             "Unknown register values remain HOLD; no arithmetic folding, memory-value propagation, branch joins or callee-preservation inference.".into(),
+            "Caller arguments describe function-entry values. Downstream pointer resolution also requires the retained exact neutral entry-to-core prefix; no register rewrite, callee preservation or alternate entry is assumed.".into(),
             "Pointer leads use only explicitly reviewed original mapping/bank policy. No table extent, complete object, codec, output, media, SDK or runtime ownership follows.".into(),
             "Unmapped/unvisited code is preserved; absence of a retained match is not absence of code or resources.".into(),
             "Only retained constructor code leads are analyzed; stride, budget and retention limits are not whole-listing constructor coverage.".into(),
