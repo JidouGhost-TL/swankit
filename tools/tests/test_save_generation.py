@@ -1,7 +1,11 @@
 """Synthetic operand geometry; generated words must retain values above 255."""
 import ast
+import hashlib
 import importlib.util
+import json
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -88,3 +92,103 @@ class SourceLayoutSizes(unittest.TestCase):
             generator.merge_layout_fields(existing + [existing[0]], source, approved)
         with self.assertRaises(ValueError):
             generator.merge_layout_fields(existing, source, approved + [approved[0]])
+
+
+class ReviewedLayoutCommand(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        tool = self.root / "tools/generate-saves.py"
+        tool.parent.mkdir()
+        tool.write_bytes(path.read_bytes())
+        self.tool = tool
+        self.source = self.root / "source/sample"
+        self.source.mkdir(parents=True)
+        self.table = self.source / "format.tsv"
+        self.table.write_text("medium\toffset\tsize\tfield\tencoding\n"
+                              "cartridge\t10\te1\tnew board\tbytes\n"
+                              "cartridge\t100\t40\told board\tbytes\n"
+                              "cartridge\t200\t80\towner\tbytes\n")
+        self.header = self.source / "save.h"
+        self.header.write_text("typedef struct { uint8_t pad[16]; uint8_t new_board[225]; "
+                               "uint8_t gap[15]; uint8_t old_board[64]; } Stored;\n")
+        (self.source / "parse_save.py").write_text("def main():\n return None\nif __name__ == '__main__':\n main()\n")
+        self.reference = {"id": "sample", "fields": generator.layouts(self.table),
+                          "program": {"preserved": [1, 2]}, "records": [{"kept": True}],
+                          "schema": "swankit-save-def/1"}
+        self.refs = self.root / "references"
+        self.refs.mkdir()
+        (self.refs / "existing.json").write_text(json.dumps(self.reference))
+        self.policy = {"version": 1, "sources": [{"definition_id": "sample",
+                       "table_sha256": [self.sha(self.table)], "header_sha256": self.sha(self.header),
+                       "size_radix": 16, "record_base": 0, "approved_count": 2,
+                       "approved": [{"medium": "cartridge", "offset": 16, "packed_member": "new_board"},
+                                    {"medium": "cartridge", "offset": 256, "packed_member": "old_board"}]}]}
+        self.policy_path = self.root / "crates/ws-saves/source-layout-policies.json"
+        self.policy_path.parent.mkdir(parents=True)
+        self.policy_path.write_text(json.dumps(self.policy))
+
+    @staticmethod
+    def sha(file):
+        return hashlib.sha256(file.read_bytes()).hexdigest()
+
+    def run_repair(self, label="out", refs=None, only="sample"):
+        output = self.root / label
+        command = [sys.executable, str(self.tool), "--layout-only", "--source", str(self.source.parent),
+                   "--output", str(output), "--policy", str(refs or self.refs), "--only", only,
+                   "--layout-audit", str(self.root / (label + "-audit.json"))]
+        result = subprocess.run(command, capture_output=True, text=True)
+        return result, output
+
+    def test_actual_repair_entrypoint_preserves_semantics_and_edit_indices(self):
+        result, output = self.run_repair()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        actual = json.loads((output / "existing.json").read_text())
+        self.assertEqual({k: v for k, v in actual.items() if k != "fields"},
+                         {k: v for k, v in self.reference.items() if k != "fields"})
+        self.assertEqual([(f["name"], f["size"]) for f in actual["fields"]],
+                         [("old board", 64), ("owner", 80), ("new board", 225)])
+        audit = json.loads((self.root / "out-audit.json").read_text())
+        self.assertEqual(audit[0]["source_rows"][-1]["deferred"][0]["size"], 128)
+        repeated, second = self.run_repair("second", output)
+        self.assertEqual(repeated.returncode, 0, repeated.stderr)
+        self.assertEqual((output / "existing.json").read_bytes(), (second / "existing.json").read_bytes())
+
+    def test_actual_command_refuses_table_header_and_binding_drift(self):
+        original_table, original_header = self.table.read_text(), self.header.read_text()
+        for case in ["table", "header", "both", "binding", "missing-binding"]:
+            self.table.write_text(original_table + ("\n" if case in ["table", "both"] else ""))
+            self.header.write_text(original_header + ("// drift\n" if case in ["header", "both"] else ""))
+            policy = json.loads(json.dumps(self.policy))
+            if case == "binding":
+                policy["sources"][0]["approved"][0]["packed_member"] = "missing"
+            if case == "missing-binding":
+                policy["sources"][0]["approved"].pop()
+            self.policy_path.write_text(json.dumps(policy))
+            result, output = self.run_repair(case)
+            self.assertNotEqual(result.returncode, 0, case)
+            self.assertFalse((output / "existing.json").exists(), case)
+
+    def test_bootstrap_cannot_silently_replace_reviewed_definition(self):
+        output = self.root / "bootstrap"
+        media = self.root / "media.json"
+        media.write_text(json.dumps({"sample": []}))
+        result = subprocess.run([sys.executable, str(self.tool), "--source", str(self.source.parent),
+                                 "--output", str(output), "--media", str(media), "--records",
+                                 str(self.root / "records.rs")], capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("bootstrap cannot replace", result.stderr)
+        self.assertFalse((output / "sample.json").exists())
+
+    def test_unreviewed_decimal_source_retains_280(self):
+        control = self.source.parent / "decimal-control"
+        control.mkdir()
+        table = control / "format.tsv"
+        table.write_text("medium\toffset\tsize\tfield\tencoding\ncartridge\t0\t280\tpayload\tbytes\n")
+        (control / "save.h").write_text("typedef struct { uint8_t payload[280]; } Payload;")
+        reference = {"id": "decimal-control", "fields": generator.layouts(table), "program": {"keep": True}}
+        (self.refs / "decimal.json").write_text(json.dumps(reference))
+        result, output = self.run_repair("decimal", only="decimal-control")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads((output / "decimal.json").read_text()), reference)

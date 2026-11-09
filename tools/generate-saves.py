@@ -7,6 +7,7 @@ paths, corpus populations or frozen expectations. Parsing never invokes Python.
 import argparse
 import ast
 import csv
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -134,6 +135,102 @@ def merge_layout_fields(existing, source_fields, approved):
     return fields
 
 
+def reviewed_layouts(table, header, existing, policies, audit, source_id=None):
+    """Bind reviewed source conventions to exact table/header bytes and members."""
+    table_hash = hashlib.sha256(table.read_bytes()).hexdigest()
+    header_hash = hashlib.sha256(header.read_bytes()).hexdigest()
+    identity_policies = [p for p in policies if p["definition_id"] == source_id]
+    if identity_policies and (len(identity_policies) != 1 or table_hash not in identity_policies[0]["table_sha256"]):
+        raise ValueError("table bytes differ from reviewed indexed source identity")
+    matches = [p for p in policies if table_hash in p["table_sha256"]]
+    if len(matches) > 1:
+        raise ValueError("ambiguous reviewed layout source policy")
+    if not matches:
+        if any(header_hash == p["header_sha256"] for p in policies):
+            raise ValueError("unreviewed table bytes for known packed layout header")
+        fields = layouts(table, audit=audit)
+        if existing is not None:
+            keys = lambda rows: {(f["name"], f["medium"], f["offset"]): f for f in rows}
+            if (len(keys(fields)) != len(fields) or len(keys(existing)) != len(existing)
+                    or keys(fields) != keys(existing)):
+                raise ValueError("unreviewed source differs from indexed layout fields")
+            return list(existing)
+        return fields
+    policy = matches[0]
+    if source_id is not None and policy["definition_id"] != source_id:
+        raise ValueError("reviewed source identity does not match indexed definition")
+    if header_hash != policy["header_sha256"]:
+        raise ValueError("packed layout header differs from reviewed source pin")
+    if existing is None or audit is None:
+        raise ValueError("reviewed layout requires indexed field reference and external audit")
+    fields = layouts(table, size_radix=policy["size_radix"], audit=audit)
+    if len(policy["approved"]) != policy["approved_count"]:
+        raise ValueError("reviewed source binding inventory is incomplete")
+    members = [f for record in records(header.read_text()) for f in record["fields"]]
+    approved = []
+    for binding in policy["approved"]:
+        selected = [f for f in fields if f["medium"] == binding["medium"] and f["offset"] == binding["offset"]]
+        member = [f for f in members if f["name"] == binding["packed_member"]]
+        if (len(selected) != 1 or len(member) != 1 or selected[0]["size"] != member[0]["size"]
+                or selected[0]["offset"] != policy["record_base"] + member[0]["offset"]):
+            raise ValueError("reviewed source field does not match packed member binding")
+        approved.append((selected[0]["name"], selected[0]["medium"], selected[0]["offset"]))
+    merged = merge_layout_fields(existing, fields, approved)
+    key = lambda f: (f["name"], f["medium"], f["offset"])
+    previous = {key(f): f for f in existing}
+    audit.append({"status": "reviewed-source-policy", "table_sha256": table_hash,
+                  "header_sha256": header_hash, "approved": approved,
+                  "deferred": [f for f in fields if key(f) not in approved and previous.get(key(f)) != f]})
+    return merged
+
+
+def layout_source_policies():
+    path = Path(__file__).resolve().parents[1] / "crates/ws-saves/source-layout-policies.json"
+    document = json.loads(path.read_text())
+    if document.get("version") != 1 or not isinstance(document.get("sources"), list):
+        raise ValueError("unsupported reviewed source-layout policy version")
+    return document["sources"]
+
+
+def repair_layouts(args):
+    """Repair only reviewed field metadata; canonical semantic data is retained."""
+    if args.policy is None or args.layout_audit is None:
+        raise ValueError("--layout-only requires existing canonical --policy and external --layout-audit")
+    if args.layout_audit.resolve().is_relative_to(args.output.resolve()):
+        raise ValueError("layout audit must be outside generated definition directory")
+    policies = layout_source_policies()
+    references = {}
+    for path in args.policy.glob("*.json"):
+        definition = json.loads(path.read_text())
+        if definition["id"] in references:
+            raise ValueError("duplicate indexed definition identity")
+        references[definition["id"]] = (path.name, definition)
+    repaired = []; audits = []
+    for directory in sorted(args.source.resolve(strict=True).iterdir()):
+        if not directory.is_dir() or (args.only and directory.name not in args.only):
+            continue
+        if directory.name not in references:
+            raise ValueError("layout repair requires an existing indexed definition")
+        table = directory / "format.tsv"
+        header = directory / "publish/save.h"
+        if not header.is_file():
+            header = directory / "save.h"
+        filename, reference = references[directory.name]
+        audit = []
+        fields = reviewed_layouts(table, header, reference["fields"], policies, audit, directory.name)
+        candidate = dict(reference)
+        candidate["fields"] = fields
+        repaired.append((filename, candidate))
+        audits.append({"id": directory.name, "source_rows": audit})
+    if not repaired:
+        raise ValueError("no existing indexed layouts selected")
+    args.output.mkdir(parents=True, exist_ok=True)
+    args.layout_audit.write_text(json.dumps(audits, ensure_ascii=False, indent=2) + "\n")
+    for filename, definition in repaired:
+        (args.output / filename).write_text(json.dumps(definition, ensure_ascii=False, separators=(",", ":")) + "\n")
+    print(f"Repaired {len(repaired)} indexed layouts; semantic definitions unchanged")
+
+
 def records(header):
     """Describe packed C records whose entire width is statically known."""
     text = re.sub(r"/\*.*?\*/|//[^\n]*", "", header, flags=re.S)
@@ -217,11 +314,18 @@ def sum_unit(operand, functions):
     return "byte"
 
 def generate(args):
+    if getattr(args, "layout_only", False):
+        return repair_layouts(args)
     source = args.source.resolve(strict=True)
     output = args.output
     output.mkdir(parents=True, exist_ok=True)
     policies = {}
     checksum_policies = {}
+    layout_policies = layout_source_policies()
+    layout_audits = []
+    audit_path = getattr(args, "layout_audit", None)
+    if audit_path is not None and audit_path.resolve().is_relative_to(output.resolve()):
+        raise ValueError("layout audit must be outside generated definition directory")
     if args.policy:
         for path in sorted(args.policy.glob("*.json")):
             definition = json.loads(path.read_text())
@@ -246,6 +350,11 @@ def generate(args):
             continue
         # Both field tables and packed record declarations are generation inputs.
         h = header.read_text()
+        table_hash = hashlib.sha256(table.read_bytes()).hexdigest()
+        header_hash = hashlib.sha256(header.read_bytes()).hexdigest()
+        if any(directory.name == p["definition_id"] or table_hash in p["table_sha256"]
+               or header_hash == p["header_sha256"] for p in layout_policies):
+            raise ValueError("bootstrap cannot replace a reviewed indexed definition; use --layout-only")
         tree = ast.parse(parser.read_text())
         launch = entry(tree)
         policy = policies.get(directory.name, {})
@@ -297,7 +406,10 @@ def generate(args):
                 function.body = [ast.Return(value=ast.Call(func=ast.Name(id="definition_checksum", ctx=ast.Load()),
                     args=[ast.Constant(value=function.name), operand], keywords=[]))]
                 checksums[function.name] = binding
-        fields = layouts(table)
+        layout_audit = [] if audit_path is not None else None
+        fields = layouts(table, audit=layout_audit)
+        if layout_audit is not None:
+            layout_audits.append({"id": directory.name, "source_rows": layout_audit})
         entries.append({"schema": "swankit-save-def/1", "id": directory.name,
                         "implementation": "generated", "media": media[directory.name],
                         "blocks": [{"field": i, "redundancy": "program"} for i, f in enumerate(fields)
@@ -308,6 +420,13 @@ def generate(args):
                         "program": node(trim(tree))})
     if not entries:
         raise ValueError("no complete save grammars")
+    if audit_path is not None:
+        audit_path.write_text(json.dumps(layout_audits, ensure_ascii=False, indent=2) + "\n")
+    for definition in entries:
+        slug = re.sub(r"[^a-z0-9]+", "-", definition["id"].lower()).strip("-")
+        destination = output / (slug + ".json")
+        if destination.exists() and any(json.loads(destination.read_text()).get("id") == p["definition_id"] for p in layout_policies):
+            raise ValueError("bootstrap cannot overwrite a protected indexed definition")
     for definition in entries:
         slug = re.sub(r"[^a-z0-9]+", "-", definition["id"].lower()).strip("-")
         (output / (slug + ".json")).write_text(json.dumps(definition, ensure_ascii=False, separators=(",", ":")) + "\n")
@@ -332,10 +451,15 @@ def main():
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--only", action="append")
     p.add_argument("--policy", type=Path, help="existing definition directory with primitive bindings")
-    p.add_argument("--media", type=Path, required=True, help="external medium geometry metadata")
-    p.add_argument("--records", type=Path, required=True)
+    p.add_argument("--media", type=Path, help="external medium geometry metadata (bootstrap only)")
+    p.add_argument("--records", type=Path, help="generated record bindings (bootstrap only)")
+    p.add_argument("--layout-only", action="store_true", help="repair reviewed fields against an existing canonical --policy; preserve semantic data")
     p.add_argument("--progress-log", type=Path)
-    generate(p.parse_args())
+    p.add_argument("--layout-audit", type=Path, help="external per-row reviewed source-layout audit")
+    args = p.parse_args()
+    if not args.layout_only and (args.media is None or args.records is None):
+        p.error("bootstrap requires --media and --records; use --layout-only for indexed field repair")
+    generate(args)
 
 
 if __name__ == "__main__":

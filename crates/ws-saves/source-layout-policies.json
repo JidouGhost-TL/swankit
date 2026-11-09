@@ -1,0 +1,19 @@
+{"version": 1, "sources": [
+  {
+    "definition_id": "Gomoku_Narabe_Reversi_-_Touryuumon_Japan",
+    "table_sha256": [
+      "e9ac49d1e8a2a54915f7a838c0e69e160fe41febce6e2eaf9d56089990711571",
+      "4ee5dfe4586c2b36844afed365748a4bf36a58e785a58888375e1ac362bee5af"
+    ],
+    "header_sha256": "424512518fbe8239a8c26e1332ddba4cb9194bc16a4a91b5f70f71902d84ba6c",
+    "size_radix": 16,
+    "record_base": 32000,
+    "approved_count": 4,
+    "approved": [
+      {"medium": "cart SRAM", "offset": 32013, "packed_member": "gf_board"},
+      {"medium": "cart SRAM", "offset": 32242, "packed_member": "rf_board"},
+      {"medium": "cart SRAM", "offset": 32311, "packed_member": "gt_board"},
+      {"medium": "cart SRAM", "offset": 32541, "packed_member": "rt_board"}
+    ]
+  }
+]}
