@@ -59,24 +59,39 @@ def trim(tree):
     return tree
 
 
-def layouts(path):
+def layouts(path, *, size_radix=10, audit=None):
+    """Read a source table using its explicitly established bare-size radix.
+
+    Decimal remains the default; letters never imply hexadecimal provenance.
+    Explicit 0x sizes retain their own radix. Optional audit rows describe
+    omitted symbolic extents as well as accepted fixed fields.
+    """
+    if type(size_radix) is not int or size_radix not in (10, 16):
+        raise ValueError("source size radix must be explicitly decimal or hexadecimal")
     fields = []
     with path.open() as source:
         rows = csv.DictReader(source, delimiter="\t")
-        for row in rows:
+        for line, row in enumerate(rows, 2):
+            decision = {"line": line, "offset": row.get("offset", ""),
+                        "size_literal": row.get("size", ""), "size_radix": size_radix,
+                        "field": row.get("field", ""), "status": "symbolic-or-unsupported"}
+            if audit is not None:
+                audit.append(decision)
             try:
                 label = row.get("offset", "").strip()
                 if not re.fullmatch(r"(?:0[xX])?[0-9a-fA-F]+", label):
                     continue
                 offset = int(label, 16)
                 size_label = row.get("size", "").strip()
-                match = re.fullmatch(r"(0[xX][0-9a-fA-F]+|[0-9]+)(?:\s*\([^)]*\))?", size_label)
+                bare = r"[0-9]+" if size_radix == 10 else r"[0-9a-fA-F]+"
+                match = re.fullmatch(r"(0[xX][0-9a-fA-F]+|" + bare + r")(?:\s*\([^)]*\))?", size_label)
                 if not match:
                     continue
-                size = int(match[1], 16 if match[1].lower().startswith("0x") else 10)
+                size = int(match[1], 16 if match[1].lower().startswith("0x") else size_radix)
             except ValueError:
                 continue  # symbolic/conditional regions remain in the semantic program
             if offset < 0 or size <= 0 or offset + size > 1048576:
+                decision["status"] = "out-of-range"
                 continue
             encoding = row.get("encoding", "")
             scalar = {"u8": 1, "u16le": 2, "u32le": 4}
@@ -88,6 +103,33 @@ def layouts(path):
             count = re.search(r"\[(\d+)\]", encoding)
             if count and int(count[1]) > 0 and size % int(count[1]) == 0:
                 field["array"] = {"count": int(count[1]), "stride": size // int(count[1])}
+            fields.append(field)
+            decision.update(status="fixed-field", parsed_size=size)
+    return fields
+
+
+def merge_layout_fields(existing, source_fields, approved):
+    """Apply explicitly reviewed source rows while preserving edit identifiers.
+
+    Keys are (name, medium, offset). Existing indices never move; newly approved
+    fields append in source order. Unapproved differences stay deferred.
+    """
+    key = lambda field: (field["name"], field["medium"], field["offset"])
+    old_keys = [key(field) for field in existing]
+    source_keys = [key(field) for field in source_fields]
+    selected = list(approved)
+    if len(set(old_keys)) != len(old_keys) or len(set(source_keys)) != len(source_keys):
+        raise ValueError("ambiguous duplicate source or existing field identity")
+    if len(set(selected)) != len(selected) or any(k not in source_keys for k in selected):
+        raise ValueError("approved fields must uniquely identify fixed source rows")
+    fields = list(existing)
+    for field in source_fields:
+        identity = key(field)
+        if identity not in selected:
+            continue
+        if identity in old_keys:
+            fields[old_keys.index(identity)] = field
+        else:
             fields.append(field)
     return fields
 
