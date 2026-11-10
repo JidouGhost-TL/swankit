@@ -633,3 +633,50 @@ fn snapshot_scanline_ports_change_only_the_selected_rows() {
     .status
     .success());
 }
+
+#[test]
+fn extended_lzss_standalone_extraction_and_refusals() {
+    let fixture = Fixture::new();
+    let src = fixture.put("source.bin", &[0xff, 2, b'A', 0, 0x10, 0xee]);
+    let base = json!({"schema":"swankit-codec-def/1","codec":"lzss-12-ext",
+        "offset":1,"length":4,"decoded_size":4,"max_output":4});
+    let def = fixture.json("codec.json", base.clone());
+    let out = fixture.path("decoded.bin");
+    let meta = value(&[
+        "extract", "codec", &src, "--def", &def, "--output", &out, "--json",
+    ]);
+    assert_eq!(fs::read(&out).unwrap(), b"AAAA");
+    assert_eq!(meta["details"]["consumed"], 4);
+    for (n, mut bad) in [base.clone(), base.clone(), base.clone(), base.clone()]
+        .into_iter()
+        .enumerate()
+    {
+        match n {
+            0 => {
+                bad.as_object_mut().unwrap().remove("decoded_size");
+            }
+            1 => bad["length"] = json!(3),
+            2 => bad["max_output"] = json!(3),
+            _ => {
+                bad["offset"] = json!(3);
+                bad["length"] = json!(3);
+            }
+        }
+        let d = fixture.json(&format!("bad{n}.json"), bad);
+        let output = fixture.path(&format!("bad{n}.bin"));
+        assert!(
+            !command(&["extract", "codec", &src, "--def", &d, "--output", &output])
+                .status
+                .success()
+        );
+        assert!(!std::path::Path::new(&output).exists());
+    }
+    let src = fixture.put("legacy.bin", &[1, b'A', 0, 0]);
+    let mut legacy = base;
+    legacy["codec"] = json!("lzss-12");
+    legacy["offset"] = json!(0);
+    let d = fixture.json("legacy.json", legacy);
+    let out = fixture.path("legacy-out.bin");
+    ok(&["extract", "codec", &src, "--def", &d, "--output", &out]);
+    assert_eq!(fs::read(out).unwrap(), b"AAAA");
+}

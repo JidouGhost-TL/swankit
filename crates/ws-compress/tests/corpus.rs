@@ -261,3 +261,48 @@ fn corpus_counted_word_streams() {
     let n = run_dir("ws-compress-word-counted", &TerminatedLiteralDigest);
     eprintln!("ws-compress-word-counted: {n} logical software streams equal complete original output and extent");
 }
+
+struct ExtendedLengthDecodeDigest;
+impl Digest for ExtendedLengthDecodeDigest {
+    fn digest(&self, bytes: &[u8], args: &Args) -> Result<Value> {
+        let pair =
+            Pair::from_bytes(bytes).ok_or_else(|| Error::Malformed("invalid codec pair".into()))?;
+        if pair.codec != "lzss-12-ext"
+            || args.get("codec").and_then(Value::as_str) != Some(&pair.codec)
+        {
+            return Err(Error::Malformed("unexpected extended-length codec".into()));
+        }
+        let size = args
+            .get("decoded_size")
+            .and_then(Value::as_u64)
+            .and_then(|n| usize::try_from(n).ok())
+            .ok_or_else(|| Error::Malformed("decoded_size required".into()))?;
+        let limit = args
+            .get("max_output")
+            .and_then(Value::as_u64)
+            .and_then(|n| usize::try_from(n).ok())
+            .ok_or_else(|| Error::Malformed("max_output required".into()))?;
+        if size != pair.raw.len() {
+            return Err(Error::Malformed("declared size differs from oracle".into()));
+        }
+        let got = ws_compress::lzss_12_ext::decode(&pair.stored, size, limit)?;
+        if got.bytes != pair.raw || got.consumed != pair.stored.len() {
+            return Err(Error::Malformed(
+                "complete decoded bytes/extent mismatch".into(),
+            ));
+        }
+        Ok(
+            json!({"codec":pair.codec,"raw_sha256":hash_bytes(&got.bytes),
+            "stored_sha256":hash_bytes(&pair.stored),"decoded_len":got.bytes.len(),
+            "consumed":got.consumed,"decode_only":true}),
+        )
+    }
+}
+#[test]
+fn corpus_extended_length_decode_only() {
+    assert_ne!(std::env::var("FORMATKIT_CORPUS_WRITE").as_deref(), Ok("1"));
+    let n = run_dir("ws-compress-lzss-12-ext", &ExtendedLengthDecodeDigest);
+    eprintln!(
+        "ws-compress-lzss-12-ext: {n} complete decode-only byte/extent witnesses; no encoder claim"
+    );
+}

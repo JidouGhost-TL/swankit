@@ -173,3 +173,7 @@ explicit `FORMATKIT_CORPUS_DIR` and `FORMATKIT_CORPUS_REQUIRED=1`. Mount the
 shared lock directory at `XDG_RUNTIME_DIR` with the invoking user's UID.
 Exit 75 means the lock is busy: wait and retry. Ordinary CI and pytest runs
 must have all corpus variables unset. Frozen expectations are never rewritten.
+
+`lzss-12-ext` is available through Rust and the standalone CLI codec definition
+contract only. Python has no definition-driven codec extraction entry point,
+and its `decode`/`encode` codec tags are unchanged.

@@ -308,3 +308,10 @@ def test_codec_resource_subclasses(codec):
     encoded = ws.encode(codec, raw)
     kwargs = {"decoded_size": len(raw)} if codec == "okumura-lzss" else {}
     assert ws.decode(codec, encoded, **kwargs).data == raw
+
+
+def test_extended_lzss_remains_standalone_definition_only():
+    with pytest.raises(ws.SwankitError, match="unknown codec"):
+        ws.decode("lzss-12-ext", b"", decoded_size=0)
+    with pytest.raises(ws.SwankitError, match="unknown codec"):
+        ws.encode("lzss-12-ext", b"")

@@ -187,6 +187,12 @@ pub static MODULES: &[FormatModule] = &[
         None,
         Some(&ws_sound::catalog::EMBEDDED[4]),
     ),
+    row(
+        ws_compress::catalog::LZSS_12_EXT_ID,
+        "ws-compress",
+        None,
+        Some(&ws_compress::catalog::LZSS_12_EXT_SUPPORT),
+    ),
 ];
 
 pub fn compose() -> std::result::Result<ModuleCatalog, ModuleCatalogError> {

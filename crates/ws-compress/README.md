@@ -76,3 +76,8 @@ token and any extension. `decode_with_history` accepts only explicitly known
 preceding bytes; no initialized zero prefix is assumed. The existing output
 bound applies before allocation. There is no encoder, catalog probe, asset-map
 codec selection or automatic detection for this module.
+
+Standalone `swankit-codec-def/1` definitions may explicitly select
+`lzss-12-ext` with `decoded_size` and optional known `history`. Its catalog
+identity advertises decoding only; the separate external corpus witness checks
+complete decoded bytes and consumption, without encoding or round-trip claims.

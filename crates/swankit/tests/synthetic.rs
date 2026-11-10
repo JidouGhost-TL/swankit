@@ -424,3 +424,113 @@ fn counted_word_definition_anchors_source_window_and_refuses_history() {
     src[0xfffb..0x10001].copy_from_slice(&[1, 0, 1, 0, 7, 9]);
     assert!(def.decode(&src).is_err());
 }
+
+#[test]
+fn extended_lzss_definition_requires_explicit_length_and_known_history() {
+    let toolkit = Toolkit::new().unwrap();
+    let base = json!({"schema":"swankit-codec-def/1","codec":"lzss-12-ext",
+        "offset":1,"length":4,"decoded_size":4,"max_output":4});
+    let parse = |value: &serde_json::Value| -> extract::CodecDefinition {
+        extract::definition(&serde_json::to_vec(value).unwrap()).unwrap()
+    };
+    let source = [0xff, 2, b'A', 0, 0x10, 0xee];
+    let got = toolkit.extract_codec(&source, &parse(&base)).unwrap();
+    assert_eq!(got.bytes, b"AAAA");
+    assert_eq!(got.consumed, 4);
+    let mut value = base.clone();
+    value.as_object_mut().unwrap().remove("decoded_size");
+    assert!(toolkit.extract_codec(&source, &parse(&value)).is_err());
+    value["decoded_length"] = json!(4);
+    assert!(
+        extract::definition::<extract::CodecDefinition>(&serde_json::to_vec(&value).unwrap())
+            .is_err()
+    );
+    for (field, invalid) in [
+        ("max_output", 3),
+        ("length", 3),
+        ("offset", 6),
+        ("max_output", 65537),
+    ] {
+        let mut value = base.clone();
+        value[field] = json!(invalid);
+        assert!(
+            toolkit.extract_codec(&source, &parse(&value)).is_err(),
+            "{field}={invalid}"
+        );
+    }
+    let mut value = base.clone();
+    value["history"] = json!(vec![0; 65537]);
+    assert!(toolkit.extract_codec(&source, &parse(&value)).is_err());
+    value = base.clone();
+    value["offset"] = json!(0);
+    value["length"] = json!(3);
+    value["decoded_size"] = json!(3);
+    assert!(toolkit
+        .extract_codec(&[1, 0, 0x10], &parse(&value))
+        .is_err());
+    value["history"] = json!([90]);
+    let got = toolkit
+        .extract_codec(&[1, 0, 0x10], &parse(&value))
+        .unwrap();
+    assert_eq!(got.bytes, b"ZZZ");
+    assert_eq!(got.consumed, 3);
+    value["decoded_size"] = json!(0);
+    let got = toolkit
+        .extract_codec(&[], &{
+            let mut d = parse(&value);
+            d.length = 0;
+            d
+        })
+        .unwrap();
+    assert!(got.bytes.is_empty());
+    assert_eq!(got.consumed, 0);
+    value["history"] = json!([]);
+    value["decoded_size"] = json!(2);
+    value["length"] = json!(5);
+    let got = toolkit
+        .extract_codec(&[2, b'A', 0, 0, 0], &parse(&value))
+        .unwrap();
+    assert_eq!(got.bytes, b"AA");
+    assert_eq!(got.consumed, 5);
+    value["length"] = json!(4);
+    assert!(toolkit
+        .extract_codec(&[2, b'A', 0, 0], &parse(&value))
+        .is_err());
+    // Existing explicit tag retains its opposite flag polarity and token grammar.
+    value = base;
+    value["codec"] = json!("lzss-12");
+    value["offset"] = json!(0);
+    let got = toolkit
+        .extract_codec(&[1, b'A', 0, 0], &parse(&value))
+        .unwrap();
+    assert_eq!(got.bytes, b"AAAA");
+    assert_eq!(got.consumed, 4);
+}
+
+#[test]
+fn extended_lzss_catalog_is_explicit_and_decode_only() {
+    let t = Toolkit::new().unwrap();
+    let id = swankit::compress::catalog::LZSS_12_EXT_ID;
+    let module = t.catalog().module(id).unwrap();
+    let support = module.embedded_support.unwrap();
+    assert!(
+        support.capabilities.decode && support.capabilities.parse && support.capabilities.corpus
+    );
+    assert!(
+        !support.capabilities.edit
+            && !support.capabilities.write
+            && !support.capabilities.round_trip
+            && !support.capabilities.bindings
+    );
+    assert_eq!(support.local_discriminator, "lzss-12-ext");
+    assert_eq!(
+        support.corpus_evidence.unwrap().handler,
+        "ws-compress-lzss-12-ext"
+    );
+    assert!(
+        module.operations.is_empty()
+            && module.writer_contract.is_none()
+            && module.descriptor.is_none()
+    );
+    assert!(t.detect(&[2, b'A', 0, 0x10], None).selected.is_none());
+}

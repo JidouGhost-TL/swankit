@@ -159,7 +159,7 @@ A `swankit-codec-def/1` definition selects one headerless stream. For example:
 ```
 
 `codec` is `lz-rle-7f`, `lz-bits-16`, `lz-u8-zero`, `lz-word16-msb`, `lz-word-counted`, `okumura-lzss`, `lzss-u16-zero`
-or `lzss-12`. `lz-u8-zero` uses literal blocks and backward matches terminated
+or `lzss-12`, or `lzss-12-ext`. `lz-u8-zero` uses literal blocks and backward matches terminated
 by a zero command; its consumed length includes that command and excludes any
 following carrier bytes. The length-prefixed grammar accepts `destination` (default 8192)
 and `prehistory` (`low5-prefix`, `low8-prefix`, `zero-until-start`). The
@@ -179,6 +179,17 @@ zero match token; any carrier prefix belongs outside the definition's offset.
 Okumura requires `decoded_size`; optional `bit_order` is `lsb-first` (default)
 or `msb-first`, and `fill` defaults to zero. It uses ring fill and rejects an
 external `history`. All definitions reject unknown fields and schema versions.
+
+`lzss-12-ext` is decode-only. It requires `decoded_size` and accepts `history`
+as explicitly known preceding bytes (empty by default), with no implicit zero
+prehistory. Its least-significant-first flags select literals with zero and
+matches with one; match lengths can include an extension byte. A final match
+clamps to the requested output size after consuming its complete token. A zero
+`decoded_size` returns empty output and consumes zero bytes; it does not infer
+a carrier header convention. `consumed` excludes unused carrier bytes.
+This tag is available only through Rust and standalone CLI definitions; it has
+no encoder, Python codec tag, automatic detection or asset-map codec selection.
+The standalone field is `decoded_size`; `decoded_length` is not an alias.
 
 ## Sound extraction
 

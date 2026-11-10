@@ -32,6 +32,8 @@ pub enum Codec {
     LzssU16Zero,
     #[serde(rename = "lzss-12")]
     Lzss12,
+    #[serde(rename = "lzss-12-ext")]
+    Lzss12Ext,
 }
 #[derive(Debug, Clone, Copy, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -143,6 +145,13 @@ impl CodecDefinition {
                     policy,
                 )
             }
+            Codec::Lzss12Ext => compress::lzss_12_ext::decode_with_history(
+                source,
+                &self.history,
+                self.decoded_size
+                    .ok_or_else(|| bad("extended-length LZSS requires decoded_size"))?,
+                self.max_output,
+            ),
             Codec::Lzss12 => compress::lzss_12::decode_with_history(
                 source,
                 &self.history,
