@@ -680,3 +680,63 @@ fn extended_lzss_standalone_extraction_and_refusals() {
     ok(&["extract", "codec", &src, "--def", &d, "--output", &out]);
     assert_eq!(fs::read(out).unwrap(), b"AAAA");
 }
+
+#[test]
+fn mask16_fill_standalone_extraction_is_decode_only_and_bounded() {
+    let fixture = Fixture::new();
+    let mut stored = vec![1, 0xee, 0x01, 0x80];
+    stored.extend(0..7);
+    stored.extend(7..14);
+    let source = fixture.put("source.bin", &stored);
+    let definition = fixture.json(
+        "codec.json",
+        json!({"schema":"swankit-codec-def/1","codec":"mask16-fill",
+            "length":18,"decoded_size":16,"max_output":16}),
+    );
+    let output = fixture.path("decoded.bin");
+    let result = value(&[
+        "extract",
+        "codec",
+        &source,
+        "--def",
+        &definition,
+        "--output",
+        &output,
+        "--json",
+    ]);
+    let mut expected: Vec<u8> = (0..7).collect();
+    expected.extend_from_slice(&[0xee, 0xee]);
+    expected.extend(7..14);
+    assert_eq!(fs::read(&output).unwrap(), expected);
+    assert_eq!(result["details"]["consumed"], 18);
+
+    for (n, def) in [
+        json!({"schema":"swankit-codec-def/1","codec":"mask16-fill",
+            "length":18,"decoded_size":15,"max_output":16}),
+        json!({"schema":"swankit-codec-def/1","codec":"mask16-fill",
+            "length":18,"max_output":16,"history":[0]}),
+        json!({"schema":"swankit-codec-def/1","codec":"mask16-fill",
+            "length":1,"max_output":15}),
+        json!({"schema":"swankit-codec-def/1","codec":"mask16-fill",
+            "length":1,"max_output":16}),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let d = fixture.json(&format!("invalid{n}.json"), def);
+        let input = if n == 3 {
+            fixture.put(&format!("zero{n}.bin"), &[0])
+        } else if n == 2 {
+            fixture.put(&format!("bounded{n}.bin"), &[1])
+        } else {
+            source.clone()
+        };
+        let output = fixture.path(&format!("invalid{n}.bin"));
+        assert!(
+            !command(&["extract", "codec", &input, "--def", &d, "--output", &output,])
+                .status
+                .success()
+        );
+        assert!(!std::path::Path::new(&output).exists());
+    }
+}

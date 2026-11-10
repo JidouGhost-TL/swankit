@@ -158,8 +158,8 @@ A `swankit-codec-def/1` definition selects one headerless stream. For example:
  "offset":4096,"length":128,"max_output":512}
 ```
 
-`codec` is `lz-rle-7f`, `lz-bits-16`, `lz-u8-zero`, `lz-word16-msb`, `lz-word-counted`, `okumura-lzss`, `lzss-u16-zero`
-or `lzss-12`, or `lzss-12-ext`. `lz-u8-zero` uses literal blocks and backward matches terminated
+`codec` is `lz-rle-7f`, `lz-bits-16`, `lz-u8-zero`, `lz-word16-msb`, `lz-word-counted`, `okumura-lzss`, `lzss-u16-zero`,
+`lzss-12`, `lzss-12-ext`, `flag16-distance11` or `mask16-fill`. `lz-u8-zero` uses literal blocks and backward matches terminated
 by a zero command; its consumed length includes that command and excludes any
 following carrier bytes. The length-prefixed grammar accepts `destination` (default 8192)
 and `prehistory` (`low5-prefix`, `low8-prefix`, `zero-until-start`). The
@@ -190,6 +190,15 @@ a carrier header convention. `consumed` excludes unused carrier bytes.
 This tag is available only through Rust and standalone CLI definitions; it has
 no encoder, Python codec tag, automatic detection or asset-map codec selection.
 The standalone field is `decoded_size`; `decoded_length` is not an alias.
+
+`mask16-fill` is also decode-only. Its nonzero group-count byte specifies
+sixteen outputs per group. Each group carries a fill byte and a little-endian
+16-bit mask; bits run `0x80` through `0x01` in the low byte, then the high byte.
+A set bit emits the group fill byte and a clear bit consumes a literal. Optional
+`decoded_size` must equal sixteen times the group count; `history` is rejected.
+The zero count is refused because the source loop wraps to 65,536 iterations,
+not because it represents empty output. The neutral tag has no encoder, Python
+codec tag, automatic detection or asset-map codec selection.
 
 ## Sound extraction
 

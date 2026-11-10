@@ -36,6 +36,8 @@ pub enum Codec {
     Lzss12Ext,
     #[serde(rename = "flag16-distance11")]
     Flag16Distance11,
+    #[serde(rename = "mask16-fill")]
+    Mask16Fill,
 }
 #[derive(Debug, Clone, Copy, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -168,6 +170,18 @@ impl CodecDefinition {
                     &self.history,
                     self.max_output,
                 )
+            }
+            Codec::Mask16Fill => {
+                if !self.history.is_empty() {
+                    return Err(bad("mask16-fill has no history input"));
+                }
+                let declared = compress::mask16_fill::decoded_size(source)?;
+                if self.decoded_size.is_some_and(|size| size != declared) {
+                    return Err(bad(
+                        "declared output size disagrees with mask16-fill header",
+                    ));
+                }
+                compress::mask16_fill::decode(source, self.max_output)
             }
             Codec::Lzss12 => compress::lzss_12::decode_with_history(
                 source,

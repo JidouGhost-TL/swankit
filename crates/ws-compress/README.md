@@ -15,6 +15,7 @@ bytes through the terminator. Trailing carrier data remains unconsumed.
 | `lzss_12` | External length, LSB byte flags, distance12-minus-one/length4 tokens | Deterministic backward-match encoder |
 | `lzss_12_ext` | External size, LSB byte flags with zero literals, distance12-minus-one, length4 plus two or extension plus eighteen, clamped final match | Decode only |
 | `flag16_distance11` | Mode byte and u16LE output count; nonzero mode uses LSB-first u16 flags, zero literals, distance11-plus-one/length5-plus-three matches | Decode only |
+| `mask16_fill` | Nonzero u8 group count; each group has a fill byte and LE16 mask, low then high byte MSB-first; one emits fill, zero consumes a literal; 16 outputs per group | Decode only |
 | `okumura` | 4 KiB initialized ring, flag bytes, external decoded length | Formatkit's original tree matcher |
 
 ```rust
@@ -95,3 +96,13 @@ preserves that behavior and applies `max_output`; it does not clamp a final
 match. Explicit history is supported up to the grammar's 2048-byte distance
 range, with no implicit fill. The codec is decode-only and has no probe,
 encoder, asset-map selection, or default selection.
+
+The standalone definition also accepts `mask16-fill`. Its nonzero count byte
+specifies groups of sixteen output bytes; each group supplies a fresh fill byte
+and a little-endian 16-bit mask. The low mask byte is tested from `0x80` to
+`0x01`, followed by the high byte in the same order. Set bits emit the fill
+byte and clear bits consume one literal. If `decoded_size` is supplied, it
+must equal sixteen times the count. A zero count is rejected: the source's
+16-bit loop underflows rather than describing an empty stream. The bounded
+decoder refuses it before allocating output or reading group payload. This
+codec has no history, encoder, probe, asset-map selection or default selection.

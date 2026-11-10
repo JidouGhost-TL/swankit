@@ -586,3 +586,51 @@ fn flag16_distance11_definition_is_explicit_decode_only() {
         .selected
         .is_none());
 }
+
+#[test]
+fn mask16_fill_definition_is_explicit_decode_only() {
+    let toolkit = Toolkit::new().unwrap();
+    let mut stored = vec![1, 0xee, 0x01, 0x80];
+    stored.extend(0..7);
+    stored.extend(7..14);
+    let definition: extract::CodecDefinition = extract::definition(
+        br#"{"schema":"swankit-codec-def/1","codec":"mask16-fill","length":18,"max_output":16}"#,
+    )
+    .unwrap();
+    let decoded = toolkit.extract_codec(&stored, &definition).unwrap();
+    let mut expected: Vec<u8> = (0..7).collect();
+    expected.extend_from_slice(&[0xee, 0xee]);
+    expected.extend(7..14);
+    assert_eq!(decoded.bytes, expected);
+    assert_eq!(decoded.consumed, stored.len());
+
+    for def_json in [
+        br#"{"schema":"swankit-codec-def/1","codec":"mask16-fill","length":18,"decoded_size":15,"max_output":16}"#.as_slice(),
+        br#"{"schema":"swankit-codec-def/1","codec":"mask16-fill","length":18,"max_output":16,"history":[0]}"#.as_slice(),
+    ] {
+        let invalid: extract::CodecDefinition = extract::definition(def_json).unwrap();
+        assert!(toolkit.extract_codec(&stored, &invalid).is_err());
+    }
+    let zero: extract::CodecDefinition = extract::definition(
+        br#"{"schema":"swankit-codec-def/1","codec":"mask16-fill","length":1,"max_output":65536}"#,
+    )
+    .unwrap();
+    assert!(toolkit.extract_codec(&[0], &zero).is_err());
+    let bounded: extract::CodecDefinition = extract::definition(
+        br#"{"schema":"swankit-codec-def/1","codec":"mask16-fill","length":1,"max_output":15}"#,
+    )
+    .unwrap();
+    assert!(toolkit.extract_codec(&[1], &bounded).is_err());
+
+    let module = toolkit
+        .catalog()
+        .module(swankit::compress::catalog::MASK16_FILL_ID)
+        .unwrap();
+    let support = module.embedded_support.unwrap();
+    assert_eq!(support.local_discriminator, "mask16-fill");
+    assert!(support.capabilities.parse && support.capabilities.decode);
+    assert!(!support.capabilities.edit && !support.capabilities.write);
+    assert!(!support.capabilities.round_trip && !support.capabilities.bindings);
+    assert!(module.operations.is_empty() && module.writer_contract.is_none());
+    assert!(toolkit.detect(&stored, None).selected.is_none());
+}
