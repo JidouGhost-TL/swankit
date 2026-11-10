@@ -12,6 +12,7 @@ pub mod lz_word16_msb;
 pub mod lz_word_counted;
 pub mod lzss_12;
 pub mod lzss_12_ext;
+pub mod lzss_msb_distance12;
 pub mod lzss_u16_zero;
 pub mod mask16_fill;
 pub mod okumura;

@@ -40,6 +40,8 @@ pub enum Codec {
     Mask16Fill,
     #[serde(rename = "lz-command16-lsb")]
     LzCommand16Lsb,
+    #[serde(rename = "lzss-msb-distance12")]
+    LzssMsbDistance12,
 }
 #[derive(Debug, Clone, Copy, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -201,6 +203,13 @@ impl CodecDefinition {
                 }
                 Ok(decoded)
             }
+            Codec::LzssMsbDistance12 => compress::lzss_msb_distance12::decode_with_history(
+                source,
+                &self.history,
+                self.decoded_size
+                    .ok_or_else(|| bad("MSB distance-12 LZSS requires decoded_size"))?,
+                self.max_output,
+            ),
             Codec::Lzss12 => compress::lzss_12::decode_with_history(
                 source,
                 &self.history,

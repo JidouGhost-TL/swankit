@@ -13,6 +13,7 @@ pub const LZSS_12_EXT_ID: FormatId = FormatId::new("ws-lzss-12-ext");
 pub const FLAG16_DISTANCE11_ID: FormatId = FormatId::new("ws-flag16-distance11");
 pub const MASK16_FILL_ID: FormatId = FormatId::new("ws-mask16-fill");
 pub const LZ_COMMAND16_LSB_ID: FormatId = FormatId::new("ws-lz-command16-lsb");
+pub const LZSS_MSB_DISTANCE12_ID: FormatId = FormatId::new("ws-lzss-msb-distance12");
 
 /// Explicit decode-only grammar; no recognition probe or encoder.
 pub const LZSS_12_EXT_FORMAT: FormatDescriptor = {
@@ -44,6 +45,17 @@ pub const LZ_COMMAND16_LSB_FORMAT: FormatDescriptor = {
     let mut format = descriptor(
         LZ_COMMAND16_LSB_ID,
         "ws-lz-command16-lsb",
+        Confidence::CorpusBacked,
+    );
+    format.capabilities.write = false;
+    format
+};
+
+/// Explicit decode-only grammar selected by an enclosing definition.
+pub const LZSS_MSB_DISTANCE12_FORMAT: FormatDescriptor = {
+    let mut format = descriptor(
+        LZSS_MSB_DISTANCE12_ID,
+        "ws-lzss-msb-distance12",
         Confidence::CorpusBacked,
     );
     format.capabilities.write = false;
@@ -106,6 +118,7 @@ pub const FORMATS: &[FormatDescriptor] = &[
     FLAG16_DISTANCE11_FORMAT,
     MASK16_FILL_FORMAT,
     LZ_COMMAND16_LSB_FORMAT,
+    LZSS_MSB_DISTANCE12_FORMAT,
 ];
 
 /// Decode-only external-length support, with separately scoped corpus evidence.
@@ -362,6 +375,21 @@ pub const EMBEDDED: &[EmbeddedFormatSupport] = &[
         capabilities: LZ_COMMAND16_LSB_FORMAT.capabilities,
         corpus_evidence: Some(CorpusEvidence {
             handler: "ws-compress-lz-command16-lsb",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: LZSS_MSB_DISTANCE12_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "lzss-msb-distance12",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: LZSS_MSB_DISTANCE12_FORMAT.capabilities,
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-lzss-msb-distance12",
             sample_floor: 1,
         }),
     },

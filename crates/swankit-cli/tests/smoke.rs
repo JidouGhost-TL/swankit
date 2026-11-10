@@ -813,3 +813,44 @@ fn lz_command16_lsb_standalone_extraction_is_explicit_and_bounded() {
         assert!(!std::path::Path::new(&output).exists());
     }
 }
+
+#[test]
+fn lzss_msb_distance12_standalone_extraction_requires_explicit_size() {
+    let fixture = Fixture::new();
+    let source = fixture.put("source.bin", &[0xff, 0x40, b'A', 3, 0, 0xde]);
+    let mut definition = json!({
+        "schema": "swankit-codec-def/1",
+        "codec": "lzss-msb-distance12",
+        "offset": 1,
+        "length": 5,
+        "decoded_size": 5,
+        "max_output": 5,
+    });
+    let path = fixture.json("codec.json", definition.clone());
+    let output = fixture.path("decoded.bin");
+    let result = value(&[
+        "extract", "codec", &source, "--def", &path, "--output", &output, "--json",
+    ]);
+    assert_eq!(fs::read(&output).unwrap(), b"AAAAA");
+    assert_eq!(result["details"]["consumed"], 4);
+
+    let mut missing_size = definition.clone();
+    missing_size.as_object_mut().unwrap().remove("decoded_size");
+    let mut short_slice = definition.clone();
+    short_slice["length"] = json!(3);
+    let mut beyond_source = definition.clone();
+    beyond_source["length"] = json!(6);
+    definition["max_output"] = json!(4);
+    for (n, invalid) in [missing_size, short_slice, beyond_source, definition]
+        .into_iter()
+        .enumerate()
+    {
+        let path = fixture.json(&format!("invalid{n}.json"), invalid);
+        let output = fixture.path(&format!("invalid{n}.bin"));
+        let result = command(&[
+            "extract", "codec", &source, "--def", &path, "--output", &output,
+        ]);
+        assert!(!result.status.success());
+        assert!(!std::path::Path::new(&output).exists());
+    }
+}

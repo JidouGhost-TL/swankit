@@ -159,8 +159,8 @@ A `swankit-codec-def/1` definition explicitly selects one codec stream. For exam
 ```
 
 `codec` is `lz-rle-7f`, `lz-bits-16`, `lz-u8-zero`, `lz-word16-msb`, `lz-word-counted`, `okumura-lzss`, `lzss-u16-zero`,
-`lzss-12`, `lzss-12-ext`, `flag16-distance11`, `mask16-fill` or
-`lz-command16-lsb`. `lz-u8-zero` uses literal blocks and backward matches terminated
+`lzss-12`, `lzss-12-ext`, `flag16-distance11`, `mask16-fill`,
+`lz-command16-lsb` or `lzss-msb-distance12`. `lz-u8-zero` uses literal blocks and backward matches terminated
 by a zero command; its consumed length includes that command and excludes any
 following carrier bytes. The length-prefixed grammar accepts `destination` (default 8192)
 and `prehistory` (`low5-prefix`, `low8-prefix`, `zero-until-start`). The
@@ -213,6 +213,15 @@ decoder reports its exact consumed extent and requires known history when a
 backreference reaches before produced output. Optional `decoded_size` checks
 the final result length. The tag has no encoder, Python codec tag, automatic
 detection or asset-map codec selection.
+
+`lzss-msb-distance12` is decode-only and requires `decoded_size`. Set `offset`
+to the first flag byte. Its MSB-first flag bytes select a literal with zero
+and a two-byte little-endian match with one. The upper twelve bits store
+distance minus one and the low four bits store length minus three. A match
+can overlap and the final match is clipped after reading its entire token.
+Explicit `history` supplies known preceding bytes. A zero `decoded_size`
+consumes zero bytes. The tag is available for standalone extraction and has
+no encoder, automatic detection or asset-map selection.
 
 ## Sound extraction
 

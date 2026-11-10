@@ -78,6 +78,7 @@ impl Toolkit {
             extract::Codec::Flag16Distance11 => compress::catalog::FLAG16_DISTANCE11_ID,
             extract::Codec::Mask16Fill => compress::catalog::MASK16_FILL_ID,
             extract::Codec::LzCommand16Lsb => compress::catalog::LZ_COMMAND16_LSB_ID,
+            extract::Codec::LzssMsbDistance12 => compress::catalog::LZSS_MSB_DISTANCE12_ID,
         })?;
         definition.decode(bytes)
     }

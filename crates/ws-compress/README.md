@@ -120,3 +120,12 @@ applies the existing 65,536-byte output limit. Explicit known history can be
 passed through the existing definition field; missing history is an error.
 This codec has no encoder, probe, automatic selection, asset-map selection or
 default selection.
+
+`lzss-msb-distance12` is an explicitly selected standalone decoder. Its
+byte flags are consumed most-significant bit first, with zero for a literal
+and one for a little-endian match. The match stores distance minus one in the
+high twelve bits and length minus three in the low four bits. The enclosing
+definition supplies the output size and may provide known preceding bytes.
+Copies proceed forward with overlap. The final match consumes the complete
+token and clips to the remaining output size. The decoder returns the exact
+consumed extent. This codec has no encoder, probe or asset-map selection.
