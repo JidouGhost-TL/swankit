@@ -12,6 +12,7 @@ pub const LZSS_12_ID: FormatId = FormatId::new("ws-lzss-12");
 pub const LZSS_12_EXT_ID: FormatId = FormatId::new("ws-lzss-12-ext");
 pub const FLAG16_DISTANCE11_ID: FormatId = FormatId::new("ws-flag16-distance11");
 pub const MASK16_FILL_ID: FormatId = FormatId::new("ws-mask16-fill");
+pub const LZ_COMMAND16_LSB_ID: FormatId = FormatId::new("ws-lz-command16-lsb");
 
 /// Explicit decode-only grammar; no recognition probe or encoder.
 pub const LZSS_12_EXT_FORMAT: FormatDescriptor = {
@@ -34,6 +35,17 @@ pub const FLAG16_DISTANCE11_FORMAT: FormatDescriptor = {
 /// Explicit decode-only grammar selected by an enclosing definition.
 pub const MASK16_FILL_FORMAT: FormatDescriptor = {
     let mut format = descriptor(MASK16_FILL_ID, "ws-mask16-fill", Confidence::CorpusBacked);
+    format.capabilities.write = false;
+    format
+};
+
+/// Explicit decode-only grammar selected by an enclosing definition.
+pub const LZ_COMMAND16_LSB_FORMAT: FormatDescriptor = {
+    let mut format = descriptor(
+        LZ_COMMAND16_LSB_ID,
+        "ws-lz-command16-lsb",
+        Confidence::CorpusBacked,
+    );
     format.capabilities.write = false;
     format
 };
@@ -93,6 +105,7 @@ pub const FORMATS: &[FormatDescriptor] = &[
     LZSS_12_EXT_FORMAT,
     FLAG16_DISTANCE11_FORMAT,
     MASK16_FILL_FORMAT,
+    LZ_COMMAND16_LSB_FORMAT,
 ];
 
 /// Decode-only external-length support, with separately scoped corpus evidence.
@@ -334,6 +347,21 @@ pub const EMBEDDED: &[EmbeddedFormatSupport] = &[
         capabilities: MASK16_FILL_FORMAT.capabilities,
         corpus_evidence: Some(CorpusEvidence {
             handler: "ws-compress-mask16-fill",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: LZ_COMMAND16_LSB_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "lz-command16-lsb",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: LZ_COMMAND16_LSB_FORMAT.capabilities,
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-lz-command16-lsb",
             sample_floor: 1,
         }),
     },

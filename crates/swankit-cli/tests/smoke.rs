@@ -740,3 +740,76 @@ fn mask16_fill_standalone_extraction_is_decode_only_and_bounded() {
         assert!(!std::path::Path::new(&output).exists());
     }
 }
+
+#[test]
+fn lz_command16_lsb_standalone_extraction_is_explicit_and_bounded() {
+    let fixture = Fixture::new();
+    let source = fixture.put("source.bin", &[0, 2, 0x06, b'A', 0x00, 0x10]);
+    let definition = fixture.json(
+        "codec.json",
+        json!({"schema":"swankit-codec-def/1","codec":"lz-command16-lsb",
+            "length":6,"decoded_size":4,"max_output":4}),
+    );
+    let output = fixture.path("decoded.bin");
+    let result = value(&[
+        "extract",
+        "codec",
+        &source,
+        "--def",
+        &definition,
+        "--output",
+        &output,
+        "--json",
+    ]);
+    assert_eq!(fs::read(&output).unwrap(), b"AAAA");
+    assert_eq!(result["details"]["consumed"], 6);
+
+    let with_history = fixture.put("history.bin", &[0, 1, 0x03, 0x00, 0x10]);
+    let history_definition = fixture.json(
+        "history.json",
+        json!({"schema":"swankit-codec-def/1","codec":"lz-command16-lsb",
+            "length":5,"max_output":3,"history":[90]}),
+    );
+    let history_output = fixture.path("history-out.bin");
+    ok(&[
+        "extract",
+        "codec",
+        &with_history,
+        "--def",
+        &history_definition,
+        "--output",
+        &history_output,
+    ]);
+    assert_eq!(fs::read(&history_output).unwrap(), b"ZZZ");
+
+    let unknown_history = fixture.put("unknown-history.bin", &[0, 1, 0x03, 0x00, 0x10]);
+    for (n, def) in [
+        json!({"schema":"swankit-codec-def/1","codec":"lz-command16-lsb",
+            "length":6,"max_output":3}),
+        json!({"schema":"swankit-codec-def/1","codec":"lz-command16-lsb",
+            "length":6,"max_output":3}),
+        json!({"schema":"swankit-codec-def/1","codec":"lz-command16-lsb",
+            "length":6,"decoded_size":3,"max_output":4}),
+        json!({"schema":"swankit-codec-def/1","codec":"lz-command16-lsb",
+            "length":5,"max_output":3}),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let d = fixture.json(&format!("invalid{n}.json"), def);
+        let input = if n == 1 {
+            fixture.put("truncated.bin", &[0, 2, 0x06, b'A', 0x00])
+        } else if n == 3 {
+            unknown_history.clone()
+        } else {
+            source.clone()
+        };
+        let output = fixture.path(&format!("invalid{n}.bin"));
+        assert!(
+            !command(&["extract", "codec", &input, "--def", &d, "--output", &output])
+                .status
+                .success()
+        );
+        assert!(!std::path::Path::new(&output).exists());
+    }
+}

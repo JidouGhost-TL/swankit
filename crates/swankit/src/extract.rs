@@ -38,6 +38,8 @@ pub enum Codec {
     Flag16Distance11,
     #[serde(rename = "mask16-fill")]
     Mask16Fill,
+    #[serde(rename = "lz-command16-lsb")]
+    LzCommand16Lsb,
 }
 #[derive(Debug, Clone, Copy, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -182,6 +184,22 @@ impl CodecDefinition {
                     ));
                 }
                 compress::mask16_fill::decode(source, self.max_output)
+            }
+            Codec::LzCommand16Lsb => {
+                let decoded = compress::lz_command16_lsb::decode_with_history(
+                    source,
+                    &self.history,
+                    self.max_output,
+                )?;
+                if self
+                    .decoded_size
+                    .is_some_and(|size| size != decoded.bytes.len())
+                {
+                    return Err(bad(
+                        "declared output size disagrees with decoded command stream",
+                    ));
+                }
+                Ok(decoded)
             }
             Codec::Lzss12 => compress::lzss_12::decode_with_history(
                 source,

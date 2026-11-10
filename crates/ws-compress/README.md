@@ -16,6 +16,7 @@ bytes through the terminator. Trailing carrier data remains unconsumed.
 | `lzss_12_ext` | External size, LSB byte flags with zero literals, distance12-minus-one, length4 plus two or extension plus eighteen, clamped final match | Decode only |
 | `flag16_distance11` | Mode byte and u16LE output count; nonzero mode uses LSB-first u16 flags, zero literals, distance11-plus-one/length5-plus-three matches | Decode only |
 | `mask16_fill` | Nonzero u8 group count; each group has a fill byte and LE16 mask, low then high byte MSB-first; one emits fill, zero consumes a literal; 16 outputs per group | Decode only |
+| `lz_command16_lsb` | BE16 command count; lazy LSB-first flags select a literal, literal run, or distance/length backreference | Decode only |
 | `okumura` | 4 KiB initialized ring, flag bytes, external decoded length | Formatkit's original tree matcher |
 
 ```rust
@@ -106,3 +107,16 @@ must equal sixteen times the count. A zero count is rejected: the source's
 16-bit loop underflows rather than describing an empty stream. The bounded
 decoder refuses it before allocating output or reading group payload. This
 codec has no history, encoder, probe, asset-map selection or default selection.
+
+The standalone definition also accepts `lz-command16-lsb`. Its BE16 header is
+the number of commands, not the decoded byte count. Flags are consumed lazily,
+least-significant bit first: zero copies one literal byte; one followed by zero
+reads a run-length byte and copies that value plus eleven literal bytes; two
+one bits read a little-endian token. The token's low twelve bits encode
+distance minus one and its high four bits encode length. Nonzero length codes
+add two; zero reads an extension byte and adds eighteen. Copies proceed
+forward and may overlap. The decoder reports the exact consumed extent and
+applies the existing 65,536-byte output limit. Explicit known history can be
+passed through the existing definition field; missing history is an error.
+This codec has no encoder, probe, automatic selection, asset-map selection or
+default selection.

@@ -5,6 +5,7 @@
 pub mod catalog;
 pub mod flag16_distance11;
 pub mod lz_bits_16;
+pub mod lz_command16_lsb;
 pub mod lz_rle_7f;
 pub mod lz_u8_zero;
 pub mod lz_word16_msb;

@@ -398,3 +398,49 @@ fn corpus_mask16_fill_decode_only() {
         "ws-compress-mask16-fill: {n} complete decode-only byte/extent witnesses; no encoder claim"
     );
 }
+
+struct LzCommand16LsbDecodeDigest;
+impl Digest for LzCommand16LsbDecodeDigest {
+    fn digest(&self, bytes: &[u8], args: &Args) -> Result<Value> {
+        let pair =
+            Pair::from_bytes(bytes).ok_or_else(|| Error::Malformed("invalid codec pair".into()))?;
+        if pair.codec != "lz-command16-lsb"
+            || args.get("codec").and_then(Value::as_str) != Some("lz-command16-lsb")
+        {
+            return Err(Error::Malformed("unexpected lz-command16-lsb codec".into()));
+        }
+        if args.get("history").is_some() {
+            return Err(Error::Malformed(
+                "this corpus hook checks the empty-history decode path".into(),
+            ));
+        }
+        let limit = args
+            .get("max_output")
+            .and_then(Value::as_u64)
+            .and_then(|n| usize::try_from(n).ok())
+            .ok_or_else(|| Error::Malformed("max_output required".into()))?;
+        let got = ws_compress::lz_command16_lsb::decode(&pair.stored, limit)?;
+        if got.bytes != pair.raw || got.consumed != pair.stored.len() {
+            return Err(Error::Malformed(
+                "complete decoded bytes/extent mismatch".into(),
+            ));
+        }
+        Ok(json!({
+            "codec": pair.codec,
+            "raw_sha256": hash_bytes(&got.bytes),
+            "stored_sha256": hash_bytes(&pair.stored),
+            "decoded_len": got.bytes.len(),
+            "consumed": got.consumed,
+            "decode_only": true,
+        }))
+    }
+}
+
+#[test]
+fn corpus_lz_command16_lsb_decode_only() {
+    assert_ne!(std::env::var("FORMATKIT_CORPUS_WRITE").as_deref(), Ok("1"));
+    let n = run_dir("ws-compress-lz-command16-lsb", &LzCommand16LsbDecodeDigest);
+    eprintln!(
+        "ws-compress-lz-command16-lsb: {n} complete decode-only byte/extent witnesses; no encoder claim"
+    );
+}

@@ -151,7 +151,7 @@ allocation, relocation, layout limits and output safety.
 swankit extract codec cartridge.wsc --def codec.json --output decoded.dat --json
 ```
 
-A `swankit-codec-def/1` definition selects one headerless stream. For example:
+A `swankit-codec-def/1` definition explicitly selects one codec stream. For example:
 
 ```json
 {"schema":"swankit-codec-def/1","codec":"lz-rle-7f",
@@ -159,14 +159,15 @@ A `swankit-codec-def/1` definition selects one headerless stream. For example:
 ```
 
 `codec` is `lz-rle-7f`, `lz-bits-16`, `lz-u8-zero`, `lz-word16-msb`, `lz-word-counted`, `okumura-lzss`, `lzss-u16-zero`,
-`lzss-12`, `lzss-12-ext`, `flag16-distance11` or `mask16-fill`. `lz-u8-zero` uses literal blocks and backward matches terminated
+`lzss-12`, `lzss-12-ext`, `flag16-distance11`, `mask16-fill` or
+`lz-command16-lsb`. `lz-u8-zero` uses literal blocks and backward matches terminated
 by a zero command; its consumed length includes that command and excludes any
 following carrier bytes. The length-prefixed grammar accepts `destination` (default 8192)
 and `prehistory` (`low5-prefix`, `low8-prefix`, `zero-until-start`). The
 external-length grammar requires `decoded_size` and accepts explicit `history`. `offset` defaults to
 zero; `length` and `max_output` are required. The output bound is at most
-65,536 bytes. Optional `history` is an array of known preceding RAM bytes for
-the terminated grammars. The library reports consumed stream bytes through
+65,536 bytes. Optional `history` is an array of known preceding bytes for
+grammars that accept it. The library reports consumed stream bytes through
 the terminator; trailing carrier data remains available. JSON artifact metadata
 includes `consumed`.
 
@@ -199,6 +200,17 @@ A set bit emits the group fill byte and a clear bit consumes a literal. Optional
 The zero count is refused because the source loop wraps to 65,536 iterations,
 not because it represents empty output. The neutral tag has no encoder, Python
 codec tag, automatic detection or asset-map codec selection.
+
+`lz-command16-lsb` is decode-only. Its big-endian 16-bit count is the number of
+commands, not output bytes. Lazy least-significant-first flag bits select one
+literal (`0`), a literal run (`10`, with one length byte plus eleven), or a
+backreference (`11`). The little-endian token stores distance minus one in its
+low twelve bits and a length code in its high four bits: nonzero codes add two;
+zero reads an extension byte and adds eighteen. Copies may overlap. The
+decoder reports its exact consumed extent and requires known history when a
+backreference reaches before produced output. Optional `decoded_size` checks
+the final result length. The tag has no encoder, Python codec tag, automatic
+detection or asset-map codec selection.
 
 ## Sound extraction
 
