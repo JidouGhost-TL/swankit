@@ -13,6 +13,7 @@ bytes through the terminator. Trailing carrier data remains unconsumed.
 | `lz_word16_msb` | Mode0: u16LE count/literals; nonzero: lazy MSB-first u16LE flags, distance12/length4 tokens, optional length extension, zero-word terminator | Counted literals through65535 bytes, literal-only flags for65536 |
 | `lzss_u16_zero` | u16 length, LSB byte flags, length4/distance12 tokens, destination-dependent zero prefix | Minimum-byte parse over literals and backward matches |
 | `lzss_12` | External length, LSB byte flags, distance12-minus-one/length4 tokens | Deterministic backward-match encoder |
+| `lzss_12_ext` | External size, LSB byte flags with zero literals, distance12-minus-one, length4 plus two or extension plus eighteen, clamped final match | Decode only |
 | `okumura` | 4 KiB initialized ring, flag bytes, external decoded length | Formatkit's original tree matcher |
 
 ```rust
@@ -66,3 +67,12 @@ Additional explicit extraction definitions accept `lzss-u16-zero` with optional
 `destination` and `prehistory` (`low5-prefix`, `low8-prefix`, `zero-until-start`),
 or `lzss-12` with `decoded_size` and optional `history`. The encoders avoid
 prehistory dependence. Independent game-output witnesses remain external.
+
+`lzss_12_ext::decode(src, decoded_size, max_output)` takes the size from its
+caller and reads no carrier header. Zero requested bytes return empty output
+without consuming input; this is an API convention, not a carrier zero-count
+rule. Matches clamp to the remaining declared size after consuming their full
+token and any extension. `decode_with_history` accepts only explicitly known
+preceding bytes; no initialized zero prefix is assumed. The existing output
+bound applies before allocation. There is no encoder, catalog probe, asset-map
+codec selection or automatic detection for this module.
