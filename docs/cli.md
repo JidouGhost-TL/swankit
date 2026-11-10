@@ -168,8 +168,9 @@ external-length grammar requires `decoded_size` and accepts explicit `history`. 
 zero; `length` and `max_output` are required. The output bound is at most
 65,536 bytes. Optional `history` is an array of known preceding bytes for
 grammars that accept it. The library reports consumed stream bytes through
-the terminator; trailing carrier data remains available. JSON artifact metadata
-includes `consumed`.
+the grammar’s stopping point; trailing carrier data remains available. A
+counted grammar stops when its declared count is exhausted. JSON artifact
+metadata includes `consumed`.
 
 `lz-word16-msb` starts at its mode byte. Mode zero reads a little-endian u16
 literal count and those bytes. A nonzero mode uses little-endian flag words,
@@ -202,7 +203,8 @@ not because it represents empty output. The neutral tag has no encoder, Python
 codec tag, automatic detection or asset-map codec selection.
 
 `lz-command16-lsb` is decode-only. Its big-endian 16-bit count is the number of
-commands, not output bytes. Lazy least-significant-first flag bits select one
+commands, not output bytes. A zero count consumes only that two-byte count and
+returns empty output. Lazy least-significant-first flag bits select one
 literal (`0`), a literal run (`10`, with one length byte plus eleven), or a
 backreference (`11`). The little-endian token stores distance minus one in its
 low twelve bits and a length code in its high four bits: nonzero codes add two;
