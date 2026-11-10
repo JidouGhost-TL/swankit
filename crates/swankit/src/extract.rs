@@ -34,6 +34,8 @@ pub enum Codec {
     Lzss12,
     #[serde(rename = "lzss-12-ext")]
     Lzss12Ext,
+    #[serde(rename = "flag16-distance11")]
+    Flag16Distance11,
 }
 #[derive(Debug, Clone, Copy, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -152,6 +154,21 @@ impl CodecDefinition {
                     .ok_or_else(|| bad("extended-length LZSS requires decoded_size"))?,
                 self.max_output,
             ),
+            Codec::Flag16Distance11 => {
+                if let Some(size) = self.decoded_size {
+                    let mut header = Reader::new(source);
+                    header.u8()?;
+                    let declared = usize::from(header.u16_le()?);
+                    if size != declared {
+                        return Err(bad("declared output size disagrees with codec header"));
+                    }
+                }
+                compress::flag16_distance11::decode_with_history(
+                    source,
+                    &self.history,
+                    self.max_output,
+                )
+            }
             Codec::Lzss12 => compress::lzss_12::decode_with_history(
                 source,
                 &self.history,

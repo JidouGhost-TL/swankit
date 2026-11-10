@@ -1,7 +1,7 @@
 # ws-compress
 
-Private owner grammars for headerless WonderSwan compression. Select a codec
-from the containing format; the catalog deliberately supplies no byte probes.
+Private owner grammars for WonderSwan compression. Select a codec from the
+containing format; the catalog deliberately supplies no byte probes.
 Terminated decoders return Formatkit's `DecodeOutcome`, reporting only the
 bytes through the terminator. Trailing carrier data remains unconsumed.
 
@@ -14,6 +14,7 @@ bytes through the terminator. Trailing carrier data remains unconsumed.
 | `lzss_u16_zero` | u16 length, LSB byte flags, length4/distance12 tokens, destination-dependent zero prefix | Minimum-byte parse over literals and backward matches |
 | `lzss_12` | External length, LSB byte flags, distance12-minus-one/length4 tokens | Deterministic backward-match encoder |
 | `lzss_12_ext` | External size, LSB byte flags with zero literals, distance12-minus-one, length4 plus two or extension plus eighteen, clamped final match | Decode only |
+| `flag16_distance11` | Mode byte and u16LE output count; nonzero mode uses LSB-first u16 flags, zero literals, distance11-plus-one/length5-plus-three matches | Decode only |
 | `okumura` | 4 KiB initialized ring, flag bytes, external decoded length | Formatkit's original tree matcher |
 
 ```rust
@@ -81,3 +82,16 @@ Standalone `swankit-codec-def/1` definitions may explicitly select
 `lzss-12-ext` with `decoded_size` and optional known `history`. Its catalog
 identity advertises decoding only; the separate external corpus witness checks
 complete decoded bytes and consumption, without encoding or round-trip claims.
+
+The same standalone interface accepts `flag16-distance11`. Its header supplies
+the output count, so `decoded_size` is optional and, when present, must agree
+with that count. Mode zero is a literal copy; nonzero mode selects compressed
+commands. Flag words are little-endian and consumed least-significant bit
+first; clear bits are literals and set bits are matches. A match token stores
+distance minus one in its low eleven bits and length minus three in its high
+five bits. Copies proceed forward and can overlap. The source completes each
+match before checking its 16-bit remaining count again. The bounded decoder
+preserves that behavior and applies `max_output`; it does not clamp a final
+match. Explicit history is supported up to the grammar's 2048-byte distance
+range, with no implicit fill. The codec is decode-only and has no probe,
+encoder, asset-map selection, or default selection.

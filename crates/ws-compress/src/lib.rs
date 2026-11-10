@@ -1,8 +1,9 @@
-//! Bounded, headerless WonderSwan compression streams.
-//! Select the grammar explicitly: these streams have no reliable global magic.
+//! Bounded WonderSwan compression streams.
+//! Select the grammar explicitly: streams have no reliable global magic.
 #![forbid(unsafe_code)]
 
 pub mod catalog;
+pub mod flag16_distance11;
 pub mod lz_bits_16;
 pub mod lz_rle_7f;
 pub mod lz_u8_zero;

@@ -534,3 +534,55 @@ fn extended_lzss_catalog_is_explicit_and_decode_only() {
     );
     assert!(t.detect(&[2, b'A', 0, 0x10], None).selected.is_none());
 }
+
+#[test]
+fn flag16_distance11_definition_is_explicit_decode_only() {
+    let toolkit = Toolkit::new().unwrap();
+    let definition: extract::CodecDefinition = extract::definition(
+        br#"{"schema":"swankit-codec-def/1","codec":"flag16-distance11","length":8,"max_output":5}"#,
+    )
+    .unwrap();
+    let decoded = toolkit
+        .extract_codec(&[1, 5, 0, 2, 0, b'A', 0, 8], &definition)
+        .unwrap();
+    assert_eq!(decoded.bytes, b"AAAAA");
+    assert_eq!(decoded.consumed, 8);
+
+    let mut invalid: serde_json::Value = serde_json::from_slice(
+        br#"{"schema":"swankit-codec-def/1","codec":"flag16-distance11","length":8,"decoded_size":4,"max_output":5}"#,
+    )
+    .unwrap();
+    let def: extract::CodecDefinition =
+        extract::definition(&serde_json::to_vec(&invalid).unwrap()).unwrap();
+    assert!(toolkit
+        .extract_codec(&[1, 5, 0, 2, 0, b'A', 0, 8], &def)
+        .is_err());
+    invalid["decoded_size"] = json!(5);
+    let def: extract::CodecDefinition =
+        extract::definition(&serde_json::to_vec(&invalid).unwrap()).unwrap();
+    assert_eq!(
+        toolkit
+            .extract_codec(&[1, 5, 0, 2, 0, b'A', 0, 8], &def)
+            .unwrap()
+            .bytes,
+        b"AAAAA"
+    );
+
+    let id = swankit::compress::catalog::FLAG16_DISTANCE11_ID;
+    let module = toolkit.catalog().module(id).unwrap();
+    let support = module.embedded_support.unwrap();
+    assert_eq!(support.local_discriminator, "flag16-distance11");
+    assert!(
+        support.capabilities.parse && support.capabilities.decode && support.capabilities.corpus
+    );
+    assert!(
+        !support.capabilities.edit
+            && !support.capabilities.write
+            && !support.capabilities.round_trip
+    );
+    assert!(module.operations.is_empty() && module.writer_contract.is_none());
+    assert!(toolkit
+        .detect(&[1, 5, 0, 2, 0, b'A', 0, 8], None)
+        .selected
+        .is_none());
+}

@@ -10,10 +10,22 @@ pub const LZ_WORD16_MSB_ID: FormatId = FormatId::new("ws-lz-word16-msb");
 pub const LZ_WORD_COUNTED_ID: FormatId = FormatId::new("ws-lz-word-counted");
 pub const LZSS_12_ID: FormatId = FormatId::new("ws-lzss-12");
 pub const LZSS_12_EXT_ID: FormatId = FormatId::new("ws-lzss-12-ext");
+pub const FLAG16_DISTANCE11_ID: FormatId = FormatId::new("ws-flag16-distance11");
 
 /// Explicit decode-only grammar; no recognition probe or encoder.
 pub const LZSS_12_EXT_FORMAT: FormatDescriptor = {
     let mut format = descriptor(LZSS_12_EXT_ID, "ws-lzss-12-ext", Confidence::CorpusBacked);
+    format.capabilities.write = false;
+    format
+};
+
+/// Explicit decode-only grammar, selected by an enclosing definition.
+pub const FLAG16_DISTANCE11_FORMAT: FormatDescriptor = {
+    let mut format = descriptor(
+        FLAG16_DISTANCE11_ID,
+        "ws-flag16-distance11",
+        Confidence::CorpusBacked,
+    );
     format.capabilities.write = false;
     format
 };
@@ -71,6 +83,7 @@ pub const FORMATS: &[FormatDescriptor] = &[
         Confidence::CorpusBacked,
     ),
     LZSS_12_EXT_FORMAT,
+    FLAG16_DISTANCE11_FORMAT,
 ];
 
 /// Decode-only external-length support, with separately scoped corpus evidence.
@@ -285,4 +298,19 @@ pub const EMBEDDED: &[EmbeddedFormatSupport] = &[
         }),
     },
     LZSS_12_EXT_SUPPORT,
+    EmbeddedFormatSupport {
+        id: FLAG16_DISTANCE11_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "flag16-distance11",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FLAG16_DISTANCE11_FORMAT.capabilities,
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-flag16-distance11",
+            sample_floor: 1,
+        }),
+    },
 ];
