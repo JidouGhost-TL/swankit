@@ -39,6 +39,14 @@ asset coverage. `positions_scanned` counts configured ROM offsets, rather than
 the sum of repeated family traversals. A family without an applicable probe
 can complete even when another family exhausts its budget.
 
+An empty `reference_matches` list is not a negative result if reference searches
+were skipped. Check `decoded_reference_searches_skipped`,
+`complete_for_configured_scan` and the codec's `complete_by_family` value before
+interpreting an empty list. Conservatively treat it as unknown when those fields
+show an incomplete search. `reference_matches_truncated` reports occurrence or
+result-count caps; it does not currently report probe-budget exhaustion. A false
+value therefore does not establish that all decoded references were searched.
+
 Counted-directory leads include `directory_provenance`: `base`, `group_length`
 (including the directory), `entry_count`, zero-based `entry_index`,
 `distinct_records`, and `target_entry_index` (the first entry sharing that
@@ -99,7 +107,7 @@ are interpreted as offsets, never record payload words. Group validation checks
 each referenced span against the ROM input bounds regardless of `max_stored`;
 only records whose individual spans fit `max_stored` are emitted, so one larger
 record does not suppress smaller members of a valid group. Every directory word
-and distinct record header inspected consumes the shared `max_probes` budget. If that budget stops
+and distinct record header inspected consumes `max_probes` in the selected budget scope. If that budget stops
 the scan, `complete_for_configured_scan` is false. This is a structural
 candidate rule, not evidence of payload encoding, resource meaning, a reader,
 runtime use, palette or asset identity.
