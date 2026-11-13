@@ -703,6 +703,15 @@ fn decoded_capture_chunk_is_corroboration_not_a_complete_asset_witness() {
     assert_eq!(lead.stored_length, 66);
     assert!(lead.evidence.contains("no original-output comparison"));
     assert!(report.decoded_reference_probes > 0);
+    let mut independent_options = options.clone();
+    independent_options.budget_scope = ws_discover::search::BudgetScope::PerFamily;
+    let independent = search(&stream, &independent_options).unwrap();
+    assert_eq!(independent.leads, report.leads);
+    assert!(independent
+        .complete_by_family
+        .values()
+        .all(|complete| *complete));
+    assert_eq!(independent.counts.len(), 2);
     assert!(search(
         &stream,
         &Options {
@@ -909,4 +918,65 @@ fn exact_end_match_does_not_invent_budget_incompleteness() {
     assert!(got.complete_for_configured_scan);
     assert_eq!(got.signature_probes, 1);
     assert_eq!(got.leads.len(), 1);
+}
+
+#[test]
+fn independent_family_budget_recovers_starved_family_and_reports_completion() {
+    let rom = vec![0xff; 32];
+    let mut config = serde_json::json!({
+        "families": ["counted-relative-directory16", "tile-map-record16"],
+        "stride": 32, "max_probes": 1
+    });
+    let shared = search(&rom, &serde_json::from_value(config.clone()).unwrap()).unwrap();
+    assert_eq!(shared.counts[&Family::TileMapRecord16].probes, 0);
+    assert!(!shared.complete_for_configured_scan);
+    config["budget_scope"] = serde_json::json!("per-family");
+    let separate = search(&rom, &serde_json::from_value(config).unwrap()).unwrap();
+    assert_eq!(separate.counts[&Family::TileMapRecord16].probes, 1);
+    assert!(!separate.complete_for_configured_scan);
+    let value = serde_json::to_value(separate).unwrap();
+    assert_eq!(
+        value["complete_by_family"]["counted-relative-directory16"],
+        false
+    );
+    assert_eq!(value["complete_by_family"]["tile-map-record16"], true);
+}
+
+#[test]
+fn directory_occurrences_have_group_entry_and_alias_witnesses() {
+    let (rom, _) = counted_relative_directory16_fixture(&[1, 2, 3], &[2, 0, 2, 1]);
+    let report = search(&rom, &counted_relative_directory16_options()).unwrap();
+    let leads: Vec<_> = report
+        .leads
+        .iter()
+        .map(|lead| serde_json::to_value(lead).unwrap())
+        .filter(|lead| lead["directory_provenance"]["base"] == 0)
+        .collect();
+    assert_eq!(leads.len(), 4);
+    for lead in &leads {
+        let witness = &lead["directory_provenance"];
+        assert_eq!(witness["entry_count"], 4);
+        assert_eq!(witness["distinct_records"], 3);
+        assert_eq!(witness["group_length"], rom.len());
+    }
+    let alias = leads
+        .iter()
+        .find(|lead| lead["directory_provenance"]["entry_index"] == 2)
+        .unwrap();
+    assert_eq!(alias["directory_provenance"]["target_entry_index"], 0);
+}
+
+#[test]
+fn omitted_budget_scope_preserves_global_configuration_identity() {
+    let options = Options::default();
+    let mut encoded = serde_json::to_value(&options).unwrap();
+    assert!(encoded.get("budget_scope").is_none());
+    let omitted = search(&[], &options).unwrap();
+    encoded["budget_scope"] = serde_json::json!("global");
+    let explicit = search(&[], &serde_json::from_value(encoded).unwrap()).unwrap();
+    assert_eq!(omitted.configuration_sha256, explicit.configuration_sha256);
+    assert_eq!(
+        serde_json::to_value(omitted).unwrap(),
+        serde_json::to_value(explicit).unwrap()
+    );
 }

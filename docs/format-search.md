@@ -23,6 +23,29 @@ source directories when working with read-only collections. No ROM or decoded
 payload bytes are copied into lead reports; external pattern configurations can
 contain reference bytes and should be treated according to their provenance.
 
+The optional configuration field `budget_scope` accepts `"global"` (default)
+or `"per-family"`. Global keeps the established shared `max_probes` ceiling
+and detector order. Per-family repeats the configured scan independently for
+each enabled family, granting each its own `max_probes` ceiling; total work can
+therefore increase with the number of enabled families. Decoded reference
+comparisons charge the codec family's allowance, while ROM reference searches
+charge the reference family's allowance. Retention stays bounded independently
+by `leads_per_family`. No family receives an unbounded scan.
+
+`complete_by_family` explicitly reports completion for every configured family;
+`complete_for_configured_scan` requires all of them to complete. Completion
+covers only the configured stride, predicates and bounds, and does not assert
+asset coverage. `positions_scanned` counts configured ROM offsets, rather than
+the sum of repeated family traversals. A family without an applicable probe
+can complete even when another family exhausts its budget.
+
+Counted-directory leads include `directory_provenance`: `base`, `group_length`
+(including the directory), `entry_count`, zero-based `entry_index`,
+`distinct_records`, and `target_entry_index` (the first entry sharing that
+record target). These witnesses distinguish inferred groups and aliases.
+Equivalent record spans can be grouped by lead offset/length without deleting
+the distinct directory occurrences; occurrence counts remain unchanged.
+
 ## Detectors and their limits
 
 | Family | Search rule | What a hit establishes |

@@ -53,9 +53,27 @@ pub struct Signature {
     pub family: Family,
 }
 
+/// Global preserves the established shared probe ceiling. Per-family repeats
+/// the configured scan independently, with that ceiling for each family.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum BudgetScope {
+    #[default]
+    Global,
+    PerFamily,
+}
+
+impl BudgetScope {
+    fn is_global(&self) -> bool {
+        *self == Self::Global
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Options {
+    #[serde(skip_serializing_if = "BudgetScope::is_global")]
+    pub budget_scope: BudgetScope,
     pub families: Vec<Family>,
     pub stride: usize,
     pub max_probes: usize,
@@ -71,6 +89,7 @@ pub struct Options {
 impl Default for Options {
     fn default() -> Self {
         Self {
+            budget_scope: BudgetScope::Global,
             families: vec![
                 Family::LzU8Zero,
                 Family::LzRle7f,
@@ -158,6 +177,8 @@ impl Options {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Lead {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub directory_provenance: Option<DirectoryProvenance>,
     pub family: Family,
     pub offset: usize,
     pub stored_length: usize,
@@ -173,6 +194,19 @@ pub struct Lead {
     pub reference_matches_truncated: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_provenance: Option<crate::retained::ProvenanceReference>,
+}
+
+/// Structural occurrence identity; aliases and alternative inferred bases remain
+/// separate occurrences. Group span includes the directory and all records.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct DirectoryProvenance {
+    pub base: usize,
+    pub group_length: usize,
+    pub entry_count: usize,
+    pub entry_index: usize,
+    pub distinct_records: usize,
+    /// First directory entry with the same target within this group.
+    pub target_entry_index: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -198,6 +232,8 @@ pub struct SignatureSummary {
 /// Report metadata deliberately omits the external pattern bytes and masks.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReportOptions {
+    #[serde(default)]
+    pub budget_scope: BudgetScope,
     pub families: Vec<Family>,
     pub stride: usize,
     pub max_probes: usize,
@@ -212,6 +248,7 @@ pub struct ReportOptions {
 impl From<&Options> for ReportOptions {
     fn from(options: &Options) -> Self {
         Self {
+            budget_scope: options.budget_scope,
             families: options.families.clone(),
             stride: options.stride,
             max_probes: options.max_probes,
@@ -250,6 +287,8 @@ pub struct Counts {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchReport {
+    #[serde(default)]
+    pub complete_by_family: BTreeMap<Family, bool>,
     pub schema: String,
     pub rom_sha256: String,
     pub rom_bytes: usize,
@@ -551,7 +590,7 @@ fn sgd1_tile_grid_leads(
             continue;
         };
         if promising(report, kept, Family::Sgd1TileGrid, offset, 100) {
-            retain(report, kept, Lead {
+            retain(report, kept, Lead { directory_provenance: None,
                 family: Family::Sgd1TileGrid,
                 offset,
                 stored_length: record_length,
@@ -764,7 +803,18 @@ fn counted_relative_directory16_leads(
                     .entry(Family::CountedRelativeDirectory16)
                     .or_default()
                     .probes += probes;
-                for entry in entries {
+                let entry_count = entries.len();
+                let mut targets = BTreeMap::new();
+                for (index, entry) in entries.iter().enumerate() {
+                    targets.entry(entry.relative_offset).or_insert(index);
+                }
+                let distinct_records = targets.len();
+                let group_length = entries
+                    .iter()
+                    .map(|entry| entry.relative_offset + entry.byte_length)
+                    .max()
+                    .unwrap_or(0);
+                for (entry_index, entry) in entries.into_iter().enumerate() {
                     if entry.byte_length > options.max_stored {
                         continue;
                     }
@@ -776,7 +826,10 @@ fn counted_relative_directory16_leads(
                         offset,
                         100,
                     ) {
-                        retain(report, kept, Lead {
+                        retain(report, kept, Lead { directory_provenance: Some(DirectoryProvenance {
+                            base, group_length, entry_count, entry_index, distinct_records,
+                            target_entry_index: targets[&entry.relative_offset],
+                        }),
                             family: Family::CountedRelativeDirectory16,
                             offset,
                             stored_length: entry.byte_length,
@@ -879,6 +932,7 @@ fn reference_matches(
     stored: &[u8],
     patterns: &[PreparedPattern<'_>],
     report: &mut SearchReport,
+    family: Family,
 ) -> (Vec<ReferenceMatch>, bool) {
     let mut matches = Vec::new();
     let mut truncated = false;
@@ -893,6 +947,7 @@ fn reference_matches(
             if budget_used(report) >= report.options.max_probes {
                 report.complete_for_configured_scan = false;
                 report.decoded_reference_searches_skipped += 1;
+                report.complete_by_family.insert(family, false);
                 break;
             }
             report.decoded_reference_probes += 1;
@@ -926,6 +981,9 @@ fn exact_patterns(
     kept: &mut BTreeMap<Family, Vec<Lead>>,
 ) {
     for pattern in patterns {
+        if !report.options.families.contains(&pattern.signature.family) {
+            continue;
+        }
         let mut start = 0;
         while rom.len().saturating_sub(start) >= pattern.signature.bytes.len() {
             if budget_used(report) >= report.options.max_probes {
@@ -957,7 +1015,7 @@ fn exact_patterns(
             if !promising(report, kept, family, offset, rank) {
                 continue;
             }
-            retain(report,kept,Lead {
+            retain(report,kept,Lead { directory_provenance: None,
                 family, offset, stored_length:length, decoded_length:None,
                 stored_sha256:pattern.sha256.clone(), decoded_sha256:None, signature_id:Some(pattern.signature.id.clone()),rank,
                 evidence:if family==Family::ReferenceBytes { "Exact external reference bytes occur in the ROM; this does not establish a unique origin, loader or whole resource." } else { "Exact external reader pattern matched; resource format and use remain unconfirmed." }.into(),
@@ -973,6 +1031,42 @@ fn exact_patterns(
 /// are included in the report and no candidate is promoted to an asset map.
 pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
     options.validate()?;
+    if options.budget_scope == BudgetScope::PerFamily {
+        let mut combined: Option<SearchReport> = None;
+        for family in &options.families {
+            let mut family_options = options.clone();
+            family_options.families = vec![*family];
+            // Keep all reference patterns for decoded comparisons. Only enabled
+            // families perform ROM pattern searches in the worker.
+            let current = search_shared(rom, &family_options)?;
+            if let Some(report) = &mut combined {
+                report.complete_for_configured_scan &= current.complete_for_configured_scan;
+                report.complete_by_family.extend(current.complete_by_family);
+                report.decoder_probes += current.decoder_probes;
+                report.signature_probes += current.signature_probes;
+                report.decoded_reference_probes += current.decoded_reference_probes;
+                report.decoded_reference_searches_skipped +=
+                    current.decoded_reference_searches_skipped;
+                report.counts.extend(current.counts);
+                report.leads.extend(current.leads);
+            } else {
+                combined = Some(current);
+            }
+        }
+        let mut report = combined.expect("validated nonempty family list");
+        report.options = ReportOptions::from(options);
+        report.configuration_sha256 = ws_assets::sha256_hex(
+            &serde_json::to_vec(options).map_err(|e| Error::Malformed(e.to_string()))?,
+        );
+        report.leads.sort_by_key(|lead| lead.family);
+        report.overlapping_codec_leads = overlapping(&report.leads);
+        report.limitations.push("Per-family probe ceilings apply independently; positions_scanned counts configured offsets, not the sum of repeated family traversals. Completion remains bounded by all configured limits.".into());
+        return Ok(report);
+    }
+    search_shared(rom, options)
+}
+
+fn search_shared(rom: &[u8], options: &Options) -> Result<SearchReport> {
     if rom.len() > MAX_ROM {
         return Err(Error::ResourceLimit {
             resource: "format search input bytes",
@@ -981,6 +1075,7 @@ pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
         });
     }
     let mut report = SearchReport {
+        complete_by_family: options.families.iter().map(|family| (*family, true)).collect(),
         schema: SCHEMA.into(), rom_sha256: ws_assets::sha256_hex(rom), rom_bytes: rom.len(),
         options: ReportOptions::from(options), configuration_sha256: ws_assets::sha256_hex(&serde_json::to_vec(options).map_err(|e| Error::Malformed(e.to_string()))?), positions_scanned: 0, complete_for_configured_scan: true,
         decoder_probes: 0, signature_probes: 0, decoded_reference_probes: 0, decoded_reference_searches_skipped: 0, counts: options.families.iter().map(|f| (*f, Counts::default())).collect(),
@@ -1007,7 +1102,7 @@ pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
     let masked: Vec<_> = options
         .signatures
         .iter()
-        .filter(|s| s.mask.is_some())
+        .filter(|s| s.mask.is_some() && enabled.contains(&s.family))
         .collect();
     let mut kept = BTreeMap::new();
     exact_patterns(rom, &patterns, &mut report, &mut kept);
@@ -1061,7 +1156,7 @@ pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
             let stored = &window[..decoded.consumed];
             let ratio = (decoded.bytes.len() * 100 / decoded.consumed).min(1000) as u32;
             let (matches, truncated) =
-                reference_matches(&decoded.bytes, stored, &patterns, &mut report);
+                reference_matches(&decoded.bytes, stored, &patterns, &mut report, family);
             let distinct: BTreeSet<_> = matches.iter().map(|m| &m.reference_sha256).collect();
             let decoded_only: BTreeSet<_> = matches
                 .iter()
@@ -1075,7 +1170,7 @@ pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
             if !promising(&mut report, &kept, family, offset, rank) {
                 continue;
             }
-            retain(&mut report, &mut kept, Lead {
+            retain(&mut report, &mut kept, Lead { directory_provenance: None,
                 family, offset, stored_length: decoded.consumed,
                 decoded_length: Some(decoded.bytes.len()), stored_sha256: ws_assets::sha256_hex(stored),
                 decoded_sha256: Some(ws_assets::sha256_hex(&decoded.bytes)), signature_id: None, rank,
@@ -1090,7 +1185,7 @@ pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
                 (Family::ScreenMap, 64, enabled.contains(&Family::ScreenMap) && screen_map(src), "Thirty-two screen-compatible words with varied, mostly nearby tile indices and at most three palette indices."),
             ] {
                 if matched && promising(&mut report, &kept, family, offset, 100) {
-                    retain(&mut report, &mut kept, Lead {
+                    retain(&mut report, &mut kept, Lead { directory_provenance: None,
                         family, offset, stored_length: length, decoded_length: None,
                         stored_sha256: ws_assets::sha256_hex(&src[..length]), decoded_sha256: None,
                         signature_id: None, rank: 100,
@@ -1129,7 +1224,7 @@ pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
                     } else if !valid_map {
                         counts.rejected_probes += 1;
                     } else if promising(&mut report, &kept, Family::TileMapRecord16, offset, 100) {
-                        retain(&mut report, &mut kept, Lead {
+                        retain(&mut report, &mut kept, Lead { directory_provenance: None,
                             family: Family::TileMapRecord16,
                             offset,
                             stored_length: record_length,
@@ -1164,7 +1259,7 @@ pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
                 if let Some(evidence) = banked_constructor::evidence(src) {
                     let rank = 200;
                     if promising(&mut report, &kept, family, offset, rank) {
-                        retain(&mut report, &mut kept, Lead {
+                        retain(&mut report, &mut kept, Lead { directory_provenance: None,
                             family, offset, stored_length: banked_constructor::LENGTH,
                             decoded_length: None,
                             stored_sha256: ws_assets::sha256_hex(&src[..banked_constructor::LENGTH]),
@@ -1216,7 +1311,7 @@ pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
                     if !promising(&mut report, &kept, signature.family, offset, rank) {
                         continue;
                     }
-                    retain(&mut report, &mut kept, Lead {
+                    retain(&mut report, &mut kept, Lead { directory_provenance: None,
                         family: signature.family, offset, stored_length: bytes.len(), decoded_length: None,
                         stored_sha256: ws_assets::sha256_hex(bytes), decoded_sha256: None,
                         signature_id: Some(signature.id.clone()), rank,
@@ -1237,6 +1332,9 @@ pub fn search(rom: &[u8], options: &Options) -> Result<SearchReport> {
     for (family, entries) in kept {
         report.counts.entry(family).or_default().retained = entries.len();
         report.leads.extend(entries);
+    }
+    for (family, complete) in &mut report.complete_by_family {
+        *complete &= report.counts[family].probes_skipped_by_budget == 0;
     }
     report.overlapping_codec_leads = overlapping(&report.leads);
     Ok(report)
