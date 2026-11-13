@@ -31,7 +31,7 @@ const HELP: &str = "swankit: WonderSwan format tools
   save fix DEF_OR_AUTO SAVE --output SAVE [--context JSON]
   patch apply PATCH BASE --output FILE [--overlap reject|last-write-wins] [--growth reject|zero-fill]
   patch create BASE TARGET --output IPS
-  assets search|search-corpus|discover|extract|replace|verify ... (see swankit assets --help)
+  assets search|search-corpus|discover|resolve-table|extract|replace|verify ... (see swankit assets --help)
 Options: --json where listed; output-writing commands accept --force to replace files.
 Integers accept decimal or 0x hexadecimal.
 For save set, --no-repair disables repair while keeping validation enabled.
@@ -117,7 +117,9 @@ fn command_help(words: &[String]) -> Result<bool> {
         ["assets", "search" | "search-corpus"] => {
             return assets::search_command(words.to_vec()).map(|()| true)
         }
-        ["assets"] | ["assets", "extract" | "replace" | "verify"] => assets::HELP.to_owned(),
+        ["assets"] | ["assets", "extract" | "replace" | "verify" | "resolve-table"] => {
+            assets::HELP.to_owned()
+        }
         ["link"] => link::HELP.to_owned(),
         ["wg-adapter"] => wg::ADAPTER_HELP.to_owned(),
         ["wg-decode"] => wg::DECODE_HELP.to_owned(),

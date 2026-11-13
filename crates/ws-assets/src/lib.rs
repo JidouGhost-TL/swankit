@@ -15,6 +15,7 @@ mod extract;
 mod font;
 mod gfx;
 pub mod map;
+pub mod parameters;
 mod refs;
 mod replace;
 mod text;

@@ -14,6 +14,7 @@ use ws_assets::{
 pub const HELP: &str = "swankit assets: per-ROM asset maps (swankit-asset-map/1)
   assets search ROM [--config JSON] [--output JSON] [--json]
   assets search-corpus MANIFEST --output DIR [--config JSON] [--jobs N] [--resume] [--json]
+  assets resolve-table ROM DEFINITION --output RECEIPT [--map-out MAP] [--force] [--json]
   assets extract ROM MAP OUTDIR [--force] [--json]
   assets replace ROM MAP --id ID --from FILE -o PATCHED [--text-framing lf] [--ips PATCH] [--map-out MAP] [--allocate] [--force] [--json]
   assets verify ROM MAP [--json]
@@ -78,6 +79,42 @@ pub fn run(words: Vec<String>) -> Result<()> {
     let json_mode = a.flag("--json");
     let force = a.flag("--force");
     match a.positional[1].as_str() {
+        "resolve-table" => {
+            let receipt_path = a.require("--output")?;
+            let map_path = a.value("--map-out");
+            a.finish(4)?;
+            let rom = io::read(&a.positional[2], MAX_ROM)?;
+            let definition = ws_assets::parameters::TableDefinition::from_json(&io::read(
+                &a.positional[3],
+                1024 * 1024,
+            )?)?;
+            let result = ws_assets::parameters::resolve(&rom, &definition)?;
+            let mut files = vec![(
+                PathBuf::from(receipt_path),
+                serde_json::to_vec_pretty(&result)?,
+            )];
+            if let Some(path) = map_path {
+                files.push((PathBuf::from(path), result.asset_map()?.to_json()?));
+            }
+            output::write(
+                files,
+                &[
+                    PathBuf::from(&a.positional[2]),
+                    PathBuf::from(&a.positional[3]),
+                ],
+                force,
+            )?;
+            if json_mode {
+                println!("{}", serde_json::to_string(&result)?);
+            } else {
+                println!(
+                    "{} source mapping: {} distinct slice(s)",
+                    result.decision,
+                    result.slices.len()
+                );
+            }
+            Ok(())
+        }
         "extract" => {
             a.finish(5)?;
             let (rom, map, charmaps) = load(&a.positional[2], &a.positional[3])?;

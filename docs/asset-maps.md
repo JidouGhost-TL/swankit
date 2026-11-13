@@ -302,3 +302,8 @@ nearest-palette policy as tile sheets; contradictory edits to aliased source
 bytes are rejected. Partially used sheet cells remain outside the font count.
 
 `ws-lz-word-counted` expands counted little-endian word commands with a separate literal pool. Commands select literal words, literals followed by a match, or a match in produced word history. Zero command counts and missing initial history are refused. Consumption includes the header, command table and used pool bytes; maps require the exact declared extent. Decoding and literal-only encoding must fit the current 64 KiB source window and the output is bounded to 64 KiB. The encoder may grow beyond the original allocation. This is logical software expansion; hardware transfers, runtime branch selection and game-compatible replacement are not established.
+
+For supplied segment/base and bank parameters, [conditional table source
+resolution](table-parameters.md) can produce an exact Raw candidate map before
+using the existing extraction command. Its route/union and mapping conditions
+remain explicit; it does not identify a named resource or change edit policy.
