@@ -13,6 +13,7 @@ pub const LZSS_12_EXT_ID: FormatId = FormatId::new("ws-lzss-12-ext");
 pub const FLAG16_DISTANCE11_ID: FormatId = FormatId::new("ws-flag16-distance11");
 pub const MASK16_FILL_ID: FormatId = FormatId::new("ws-mask16-fill");
 pub const LZ_COMMAND16_LSB_ID: FormatId = FormatId::new("ws-lz-command16-lsb");
+pub const LZSS_BE_UNITS_ID: FormatId = FormatId::new("ws-lzss-be-units");
 pub const LZSS_MSB_DISTANCE12_ID: FormatId = FormatId::new("ws-lzss-msb-distance12");
 
 /// Explicit decode-only grammar; no recognition probe or encoder.
@@ -56,6 +57,17 @@ pub const LZSS_MSB_DISTANCE12_FORMAT: FormatDescriptor = {
     let mut format = descriptor(
         LZSS_MSB_DISTANCE12_ID,
         "ws-lzss-msb-distance12",
+        Confidence::CorpusBacked,
+    );
+    format.capabilities.write = false;
+    format
+};
+
+/// Explicit decode-only unit carrier; no automatic probe or encoder.
+pub const LZSS_BE_UNITS_FORMAT: FormatDescriptor = {
+    let mut format = descriptor(
+        LZSS_BE_UNITS_ID,
+        "ws-lzss-be-units",
         Confidence::CorpusBacked,
     );
     format.capabilities.write = false;
@@ -119,6 +131,7 @@ pub const FORMATS: &[FormatDescriptor] = &[
     MASK16_FILL_FORMAT,
     LZ_COMMAND16_LSB_FORMAT,
     LZSS_MSB_DISTANCE12_FORMAT,
+    LZSS_BE_UNITS_FORMAT,
 ];
 
 /// Decode-only external-length support, with separately scoped corpus evidence.
@@ -390,6 +403,21 @@ pub const EMBEDDED: &[EmbeddedFormatSupport] = &[
         capabilities: LZSS_MSB_DISTANCE12_FORMAT.capabilities,
         corpus_evidence: Some(CorpusEvidence {
             handler: "ws-compress-lzss-msb-distance12",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: LZSS_BE_UNITS_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "lzss-be-units",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: LZSS_BE_UNITS_FORMAT.capabilities,
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-lzss-be-units",
             sample_floor: 1,
         }),
     },

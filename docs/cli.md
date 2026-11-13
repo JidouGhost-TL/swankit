@@ -419,3 +419,45 @@ Use `swankit assets search ROM --output leads.json` for one input, or
 checkpointed batch. These produce leads, not verified asset maps. See the
 [format-search guide](format-search.md) for strict options, capture/reader
 patterns, resource budgets and resume identity checks.
+
+### Explicit unit-count token extraction
+
+`lzss-be-units` uses a positive big-endian unit count and low-bit-first flags
+with set bits selecting literals. Its direct packed distance/length fields are
+converted into the existing `lzss-12` representation before decoding. It is a
+different stored grammar from `lzss-msb-distance12`.
+
+```json
+{"schema":"swankit-codec-def/1","codec":"lzss-be-units",
+ "offset":0,"length":4096,"max_output":65536,
+ "unit_size":16,"source_width":16,
+ "original_sha256":"REPLACE_WITH_64_HEXADECIMAL_DIGITS"}
+```
+
+```sh
+swankit extract codec input.bin --def unit-codec.json --output decoded.bin --json
+```
+
+`length` is the bounded input cap, rather than a claim about consumed length.
+The required `unit_size` and `source_width` accept only 16 or 32.
+The required SHA-256 identifies the complete original input and is checked before
+output creation. Optional `decoded_size` must agree with the header. History is
+empty; the other codec's history, flag, fill and addressing settings must retain
+their defaults. Unit/width/identity fields are refused on other codec selectors.
+
+The positive header-derived length must fit `max_output` and 65,536 bytes;
+source width 16 additionally refuses lengths above 65,535. The decoder refuses
+zero distance, references before produced output, truncated input and matches
+crossing the declared output. It does not emulate source wrapping or clipping.
+A zero header is an error. A successful static decode does not establish a
+resource identity, runtime call path or editing permission.
+
+Existing output/overwrite behavior is retained. JSON success keeps
+`details.consumed` and adds `details.provenance` with schema
+`swankit-codec-extraction/1`: original size/hash, selected parameters, original
+stored consumption/hash, normalized consumption/hash and decoded size/hash.
+Original consumption includes the two-byte header and excludes unused suffix
+bytes; normalized consumption is a separate measure. JSON refusals for this
+selector use the same schema, `status: "refused"`, a stable `reason`, and an
+explanatory `error`. Earlier selectors retain their previous output envelopes.
+This operation adds no encoder, asset-map codec/editing policy or Python tag.

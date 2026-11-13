@@ -500,3 +500,38 @@ fn corpus_lzss_msb_distance12_decode_only() {
     );
     eprintln!("ws-compress-lzss-msb-distance12: {n} complete decode-only byte/extent witnesses");
 }
+
+struct BeUnitsDigest;
+impl Digest for BeUnitsDigest {
+    fn digest(&self, bytes: &[u8], args: &Args) -> Result<Value> {
+        let pair =
+            Pair::from_bytes(bytes).ok_or_else(|| Error::Malformed("invalid codec pair".into()))?;
+        if pair.codec != "lzss-be-units" {
+            return Err(Error::Malformed("unexpected unit carrier".into()));
+        }
+        let parameter = |name| {
+            args.get(name)
+                .and_then(Value::as_u64)
+                .and_then(|v| u8::try_from(v).ok())
+                .ok_or_else(|| Error::Malformed(format!("missing {name}")))
+        };
+        let unit = parameter("unit_size")?;
+        let width = parameter("source_width")?;
+        let n = ws_compress::lzss_be_units::normalize(&pair.stored, unit, width, 65536)?;
+        let got = ws_compress::lzss_be_units::decode(&pair.stored, unit, width, 65536)?;
+        if got.bytes != pair.raw || got.consumed != pair.stored.len() {
+            return Err(Error::Malformed(
+                "whole unit-carrier byte/extent mismatch".into(),
+            ));
+        }
+        Ok(
+            json!({"codec":pair.codec,"raw_sha256":hash_bytes(&got.bytes),"stored_sha256":hash_bytes(&pair.stored),"decoded_len":got.bytes.len(),"consumed":got.consumed,"normalized_consumed":n.bytes.len(),"normalized_sha256":hash_bytes(&n.bytes),"unit_size":unit,"source_width":width}),
+        )
+    }
+}
+#[test]
+fn corpus_lzss_be_units_decode_only() {
+    assert_ne!(std::env::var("FORMATKIT_CORPUS_WRITE").as_deref(), Ok("1"));
+    let n = run_dir("ws-compress-lzss-be-units", &BeUnitsDigest);
+    eprintln!("ws-compress-lzss-be-units: {n} complete original/normalized/output witnesses");
+}

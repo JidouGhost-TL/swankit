@@ -51,6 +51,26 @@ Raw data bytes only; no speed or timing. --baud applies only to devices.
 See swankit link --help and docs/link.md for details.
 See docs/cli.md for definition schemas and bounds.";
 
+#[derive(Debug)]
+struct CodecRefusal {
+    reason: &'static str,
+    message: String,
+}
+impl std::fmt::Display for CodecRefusal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+impl std::error::Error for CodecRefusal {}
+fn codec_refusal(
+    reason: &'static str,
+    error: impl std::fmt::Display,
+) -> Box<dyn std::error::Error> {
+    Box::new(CodecRefusal {
+        reason,
+        message: error.to_string(),
+    })
+}
 fn emit(
     value: &Value,
     plain: &str,
@@ -412,17 +432,48 @@ fn run(words: Vec<String>) -> Result<()> {
                 "codec" => {
                     a.finish(3)?;
                     let output = output.ok_or("codec extraction requires --output")?;
-                    let def: extract::CodecDefinition =
-                        extract::definition(&io::read(&def, extract::MAX_DEFINITION_BYTES)?)?;
-                    let decoded = Toolkit::new()?
-                        .extract_codec(&io::read(&a.positional[2], MAX_FILE)?, &def)?;
-                    artifact(
-                        &output,
-                        &decoded.bytes,
-                        force,
-                        json_mode,
-                        json!({"consumed":decoded.consumed}),
-                    )
+                    let definition_bytes = io::read(&def, extract::MAX_DEFINITION_BYTES)?;
+                    let selected = serde_json::from_slice::<Value>(&definition_bytes)
+                        .ok()
+                        .is_some_and(|v| {
+                            v.get("codec").and_then(Value::as_str) == Some("lzss-be-units")
+                        });
+                    let definition: extract::CodecDefinition =
+                        extract::definition(&definition_bytes).map_err(|e| {
+                            if selected {
+                                codec_refusal("invalid-definition", e)
+                            } else {
+                                Box::new(e)
+                            }
+                        })?;
+                    let input = io::read(&a.positional[2], MAX_FILE).map_err(|e| {
+                        if selected {
+                            codec_refusal("input-io", e)
+                        } else {
+                            e
+                        }
+                    })?;
+                    let (decoded, provenance) = Toolkit::new()?
+                        .extract_codec_with_provenance(&input, &definition)
+                        .map_err(|e| {
+                            if selected {
+                                codec_refusal(extract::token_refusal_reason(&e), e)
+                            } else {
+                                Box::new(e)
+                            }
+                        })?;
+                    let details = if let Some(provenance) = provenance {
+                        json!({"consumed":decoded.consumed,"provenance":provenance})
+                    } else {
+                        json!({"consumed":decoded.consumed})
+                    };
+                    artifact(&output, &decoded.bytes, force, json_mode, details).map_err(|e| {
+                        if selected {
+                            codec_refusal("output-io", e)
+                        } else {
+                            e
+                        }
+                    })
                 }
                 "sound" => {
                     a.finish(3)?;
@@ -505,7 +556,14 @@ fn main() {
         .collect();
     if let Err(e) = parsed.and_then(run) {
         if json_mode {
-            eprintln!("{}", json!({"error":e.to_string()}));
+            if let Some(refusal) = e.downcast_ref::<CodecRefusal>() {
+                eprintln!(
+                    "{}",
+                    json!({"schema":"swankit-codec-extraction/1","status":"refused","reason":refusal.reason,"error":refusal.message})
+                );
+            } else {
+                eprintln!("{}", json!({"error":e.to_string()}));
+            }
         } else {
             eprintln!("error: {e}");
         }

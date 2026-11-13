@@ -66,6 +66,7 @@ impl Toolkit {
         definition: &extract::CodecDefinition,
     ) -> Result<compress::DecodeOutcome> {
         self.available(match definition.codec {
+            extract::Codec::LzssBeUnits(_) => compress::catalog::LZSS_BE_UNITS_ID,
             extract::Codec::LzRle7f => compress::catalog::LZ_RLE_7F_ID,
             extract::Codec::LzBits16 => compress::catalog::LZ_BITS_16_ID,
             extract::Codec::LzU8Zero => compress::catalog::LZ_U8_ZERO_ID,
@@ -81,6 +82,15 @@ impl Toolkit {
             extract::Codec::LzssMsbDistance12 => compress::catalog::LZSS_MSB_DISTANCE12_ID,
         })?;
         definition.decode(bytes)
+    }
+    pub fn extract_codec_with_provenance(
+        &self,
+        bytes: &[u8],
+        definition: &extract::CodecDefinition,
+    ) -> Result<(compress::DecodeOutcome, Option<Value>)> {
+        let decoded = self.extract_codec(bytes, definition)?;
+        let provenance = definition.provenance(bytes, &decoded)?;
+        Ok((decoded, provenance))
     }
     pub fn extract_sound(
         &self,

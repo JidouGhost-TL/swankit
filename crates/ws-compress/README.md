@@ -129,3 +129,14 @@ definition supplies the output size and may provide known preceding bytes.
 Copies proceed forward with overlap. The final match consumes the complete
 token and clips to the remaining output size. The decoder returns the exact
 consumed extent. This codec has no encoder, probe or asset-map selection.
+
+`lzss-be-units` is an explicitly selected decode-only carrier. A positive
+big-endian 16-bit header counts16- or 32-byte output units. Flags are consumed
+low bit first; set bits select literals. A match's two bytes encode direct
+distance `(first<<4)|(second>>4)` and length `(second&15)+3`. The bounded
+adapter reserializes matches for `lzss_12`; it does not reinterpret raw bytes as
+that codec. Initial history is empty. Zero distance, unavailable history and
+final-token overshoot are errors. Exact original consumption includes the
+header; normalized consumption excludes it. Unused suffix bytes are untouched.
+Source width 16 refuses a shifted size above 65,535; source width 32 permits 65,536
+within the shared decoded cap. There is no encoder or automatic probe.

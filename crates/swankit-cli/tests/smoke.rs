@@ -854,3 +854,109 @@ fn lzss_msb_distance12_standalone_extraction_requires_explicit_size() {
         assert!(!std::path::Path::new(&output).exists());
     }
 }
+
+#[test]
+fn unit_carrier_codec_receipts_and_prewrite_refusals() {
+    let f = Fixture::new();
+    let bytes = [9, 0, 1, 1, b'A', 0, 28, 0xde, 0xad];
+    let input = f.put("unit-input.bin", &bytes);
+    let mut def = json!({"schema":"swankit-codec-def/1","codec":"lzss-be-units","offset":1,"length":8,"max_output":16,"unit_size":16,"source_width":16,"original_sha256":ws_assets::sha256_hex(&bytes)});
+    let path = f.json("unit-def.json", def.clone());
+    let output = f.path("unit-output.bin");
+    let v = value(&[
+        "extract", "codec", &input, "--def", &path, "--output", &output, "--json",
+    ]);
+    assert_eq!(fs::read(&output).unwrap(), vec![b'A'; 16]);
+    assert_eq!(v["details"]["consumed"], 6);
+    let p = &v["details"]["provenance"];
+    assert_eq!(p["schema"], "swankit-codec-extraction/1");
+    assert_eq!(p["stored"]["consumed"], 6);
+    assert_eq!(p["normalized"]["consumed"], 4);
+    assert_eq!(p["stored"]["sha256"], ws_assets::sha256_hex(&bytes[1..7]));
+    assert_eq!(p["decoded"]["sha256"], ws_assets::sha256_hex(&[b'A'; 16]));
+    def["original_sha256"] = json!("0".repeat(64));
+    let bad = f.json("unit-bad.json", def.clone());
+    let absent = f.path("unit-absent.bin");
+    let refused = command(&[
+        "extract", "codec", &input, "--def", &bad, "--output", &absent, "--json",
+    ]);
+    assert!(!refused.status.success());
+    assert!(!std::path::Path::new(&absent).exists());
+    let r: Value = serde_json::from_slice(&refused.stderr).unwrap();
+    assert_eq!(r["schema"], "swankit-codec-extraction/1");
+    assert_eq!(r["reason"], "identity-mismatch");
+    def["original_sha256"] = json!(ws_assets::sha256_hex(&bytes));
+    for (field, bad_value) in [
+        ("unit_size", json!(8)),
+        ("source_width", json!(8)),
+        ("history", json!([0])),
+        ("max_output", json!(15)),
+    ] {
+        let mut d = def.clone();
+        d[field] = bad_value;
+        let dp = f.json("unit-refusal.json", d);
+        assert!(!command(&[
+            "extract", "codec", &input, "--def", &dp, "--output", &absent, "--json"
+        ])
+        .status
+        .success());
+        assert!(!std::path::Path::new(&absent).exists());
+    }
+    let legacy=f.json("unit-legacy.json",json!({"schema":"swankit-codec-def/1","codec":"lzss-12","offset":0,"length":2,"max_output":1,"decoded_size":1}));
+    let oldinput = f.put("unit-legacy.bin", &[1, b'Q']);
+    let old = value(&[
+        "extract",
+        "codec",
+        &oldinput,
+        "--def",
+        &legacy,
+        "--output",
+        &f.path("unit-old-output.bin"),
+        "--json",
+    ]);
+    assert_eq!(old["details"], json!({"consumed":2}));
+}
+
+#[test]
+fn unit_carrier_cli_width_boundary() {
+    let f = Fixture::new();
+    for unit in [16usize, 32] {
+        for (width, size, accept) in [
+            (16, 65536, false),
+            (32, 65536, true),
+            (16, 65536 - unit, true),
+            (32, 65536 + unit, false),
+        ] {
+            let mut bytes = ((size / unit) as u16).to_be_bytes().to_vec();
+            for _ in 0..size / 8 {
+                bytes.push(255);
+                bytes.extend_from_slice(b"abcdefgh");
+            }
+            let label = format!("u{unit}-w{width}-n{size}");
+            let input = f.put(&format!("{label}.bin"), &bytes);
+            let definition=f.json(&format!("{label}.json"),json!({"schema":"swankit-codec-def/1","codec":"lzss-be-units","offset":0,"length":bytes.len(),"max_output":65536,"unit_size":unit,"source_width":width,"original_sha256":ws_assets::sha256_hex(&bytes)}));
+            let output = f.path(&format!("{label}.out"));
+            let result = command(&[
+                "extract",
+                "codec",
+                &input,
+                "--def",
+                &definition,
+                "--output",
+                &output,
+                "--json",
+            ]);
+            assert_eq!(
+                result.status.success(),
+                accept,
+                "{}",
+                String::from_utf8_lossy(&result.stderr)
+            );
+            if accept {
+                assert_eq!(fs::read(&output).unwrap().len(), size);
+            } else {
+                assert!(!std::path::Path::new(&output).exists());
+            }
+        }
+    }
+}

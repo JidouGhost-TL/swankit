@@ -42,6 +42,8 @@ pub enum Codec {
     LzCommand16Lsb,
     #[serde(rename = "lzss-msb-distance12")]
     LzssMsbDistance12,
+    #[serde(skip_deserializing)]
+    LzssBeUnits(TokenParameters),
 }
 #[derive(Debug, Clone, Copy, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -69,27 +71,152 @@ impl BitOrder {
         }
     }
 }
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Debug)]
 pub struct CodecDefinition {
     pub schema: String,
     pub codec: Codec,
-    #[serde(default)]
     pub offset: usize,
     pub length: usize,
     pub max_output: usize,
-    #[serde(default)]
     pub decoded_size: Option<usize>,
-    #[serde(default)]
     pub bit_order: BitOrder,
-    #[serde(default)]
     pub fill: u8,
-    #[serde(default)]
     pub history: Vec<u8>,
-    #[serde(default = "default_destination")]
     pub destination: u16,
-    #[serde(default)]
     pub prehistory: Prehistory,
+}
+
+/// Parameters are carried by the new codec variant to preserve legacy Rust literals.
+#[derive(Debug, Clone, Copy)]
+pub struct TokenParameters {
+    pub unit_size: u8,
+    pub source_width: u8,
+    pub original_sha256: [u8; 32],
+}
+#[derive(Default)]
+struct Parameter<T> {
+    present: bool,
+    value: Option<T>,
+}
+impl<'de, T: Deserialize<'de>> Deserialize<'de> for Parameter<T> {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> std::result::Result<Self, D::Error> {
+        Ok(Self {
+            present: true,
+            value: Option::<T>::deserialize(d)?,
+        })
+    }
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CodecWire {
+    schema: String,
+    codec: String,
+    #[serde(default)]
+    offset: usize,
+    length: usize,
+    max_output: usize,
+    #[serde(default)]
+    decoded_size: Option<usize>,
+    #[serde(default)]
+    bit_order: BitOrder,
+    #[serde(default)]
+    fill: u8,
+    #[serde(default)]
+    history: Vec<u8>,
+    #[serde(default = "default_destination")]
+    destination: u16,
+    #[serde(default)]
+    prehistory: Prehistory,
+    #[serde(default)]
+    unit_size: Parameter<u8>,
+    #[serde(default)]
+    source_width: Parameter<u8>,
+    #[serde(default)]
+    original_sha256: Parameter<String>,
+}
+impl<'de> Deserialize<'de> for CodecDefinition {
+    fn deserialize<D: serde::Deserializer<'de>>(
+        deserializer: D,
+    ) -> std::result::Result<Self, D::Error> {
+        use serde::de::Error as _;
+        let w = CodecWire::deserialize(deserializer)?;
+        let has_parameters =
+            w.unit_size.present || w.source_width.present || w.original_sha256.present;
+        let codec = if w.codec == "lzss-be-units" {
+            let unit_size = w
+                .unit_size
+                .value
+                .ok_or_else(|| D::Error::custom("token.missing-unit"))?;
+            let source_width = w
+                .source_width
+                .value
+                .ok_or_else(|| D::Error::custom("token.missing-width"))?;
+            if !matches!(unit_size, 16 | 32) {
+                return Err(D::Error::custom("token.invalid-unit"));
+            }
+            if !matches!(source_width, 16 | 32) {
+                return Err(D::Error::custom("token.invalid-width"));
+            }
+            let sha = w
+                .original_sha256
+                .value
+                .as_deref()
+                .ok_or_else(|| D::Error::custom("token.missing-identity"))?;
+            if sha.len() != 64 || !sha.bytes().all(|b| b.is_ascii_hexdigit()) {
+                return Err(D::Error::custom("token.invalid-identity"));
+            }
+            let mut original_sha256 = [0; 32];
+            for (i, b) in original_sha256.iter_mut().enumerate() {
+                *b = u8::from_str_radix(&sha[2 * i..2 * i + 2], 16).map_err(D::Error::custom)?;
+            }
+            Codec::LzssBeUnits(TokenParameters {
+                unit_size,
+                source_width,
+                original_sha256,
+            })
+        } else {
+            if has_parameters {
+                return Err(D::Error::custom("token.parameters-on-other-codec"));
+            }
+            Codec::deserialize(Value::String(w.codec)).map_err(D::Error::custom)?
+        };
+        Ok(Self {
+            schema: w.schema,
+            codec,
+            offset: w.offset,
+            length: w.length,
+            max_output: w.max_output,
+            decoded_size: w.decoded_size,
+            bit_order: w.bit_order,
+            fill: w.fill,
+            history: w.history,
+            destination: w.destination,
+            prehistory: w.prehistory,
+        })
+    }
+}
+/// Stable refusal codes for the selected unit-carrier operation.
+pub fn token_refusal_reason(error: &Error) -> &'static str {
+    match error {
+        Error::Truncated { .. } => "truncated-input",
+        Error::ResourceLimit { .. } => "output-limit",
+        Error::Malformed(s) => {
+            for (text, code) in [
+                ("identity-mismatch", "identity-mismatch"),
+                ("source-width-overflow", "source-width-overflow"),
+                ("zero-header", "zero-header"),
+                ("zero-distance", "zero-distance"),
+                ("unknown-history", "unknown-history"),
+                ("token-overshoot", "token-overshoot"),
+            ] {
+                if s.contains(text) {
+                    return code;
+                }
+            }
+            "invalid-parameters"
+        }
+        _ => "invalid-input",
+    }
 }
 impl CodecDefinition {
     pub fn decode(&self, bytes: &[u8]) -> Result<compress::DecodeOutcome> {
@@ -101,6 +228,34 @@ impl CodecDefinition {
         }
         let source = bytes_at(bytes, self.offset, self.length)?;
         match self.codec {
+            Codec::LzssBeUnits(p) => {
+                if !self.history.is_empty()
+                    || self.destination != default_destination()
+                    || !matches!(self.prehistory, Prehistory::Low5Prefix)
+                    || self.fill != 0
+                    || !matches!(self.bit_order, BitOrder::LsbFirst)
+                {
+                    return Err(bad("token.unsupported-history-or-flags"));
+                }
+                let expected = p
+                    .original_sha256
+                    .iter()
+                    .map(|b| format!("{b:02x}"))
+                    .collect::<String>();
+                if ws_assets::sha256_hex(bytes) != expected {
+                    return Err(bad("token.identity-mismatch"));
+                }
+                let got = compress::lzss_be_units::decode(
+                    source,
+                    p.unit_size,
+                    p.source_width,
+                    self.max_output,
+                )?;
+                if self.decoded_size.is_some_and(|n| n != got.bytes.len()) {
+                    return Err(bad("token.decoded-size-mismatch"));
+                }
+                Ok(got)
+            }
             Codec::LzWordCounted => {
                 if !self.history.is_empty() {
                     return Err(bad("counted word streams require produced history"));
@@ -218,6 +373,31 @@ impl CodecDefinition {
                 self.max_output,
             ),
         }
+    }
+}
+
+impl CodecDefinition {
+    pub(crate) fn provenance(
+        &self,
+        bytes: &[u8],
+        decoded: &compress::DecodeOutcome,
+    ) -> Result<Option<Value>> {
+        let Codec::LzssBeUnits(p) = self.codec else {
+            return Ok(None);
+        };
+        let source = bytes_at(bytes, self.offset, self.length)?;
+        let n = compress::lzss_be_units::normalize(
+            source,
+            p.unit_size,
+            p.source_width,
+            self.max_output,
+        )?;
+        if decoded.consumed != n.stored_consumed {
+            return Err(bad("token.extent-mismatch"));
+        }
+        Ok(Some(
+            json!({"schema":"swankit-codec-extraction/1","status":"decoded","stored_grammar":"lzss-be-units","adapter":"be-direct-distance-to-lzss12/1","normalized_codec":"lzss-12","original":{"bytes":bytes.len(),"sha256":ws_assets::sha256_hex(bytes)},"parameters":{"offset":self.offset,"input_cap":self.length,"unit_size":p.unit_size,"source_width":p.source_width,"max_output":self.max_output,"history":"empty","final_token":"reject-overshoot"},"header_count":n.header_count,"stored":{"consumed":decoded.consumed,"sha256":ws_assets::sha256_hex(&source[..decoded.consumed])},"normalized":{"consumed":n.bytes.len(),"sha256":ws_assets::sha256_hex(&n.bytes)},"decoded":{"bytes":decoded.bytes.len(),"sha256":ws_assets::sha256_hex(&decoded.bytes)}}),
+        ))
     }
 }
 

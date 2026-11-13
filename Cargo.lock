@@ -457,6 +457,7 @@ dependencies = [
  "formatkit-runtime",
  "serde",
  "serde_json",
+ "ws-assets",
  "ws-compress",
  "ws-discover",
  "ws-gfx",
