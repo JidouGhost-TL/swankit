@@ -28,6 +28,247 @@ fn core() -> Vec<Vec<u8>> {
     })
     .collect()
 }
+
+fn relational_core(table: bool, alternate: bool) -> Vec<Vec<u8>> {
+    let words: Vec<&str> = if table {
+        vec![
+            "bf3412",
+            "8a0e7856",
+            "32ed",
+            "03f9",
+            "8805",
+            "56",
+            "beffff",
+            "32e4",
+            "03f0",
+            "bf0040",
+            "a07856",
+            "c0e004",
+            "03f8",
+            "b82381",
+            "8ec0",
+            "b90800",
+            "268b04",
+            if alternate { "368905" } else { "8905" },
+            "83c602",
+            "83c702",
+            if alternate { "e2f2" } else { "e2f3" },
+            "5e",
+        ]
+    } else {
+        let mut words = vec![
+            "4b",
+            "268a0f",
+            "ff46fc",
+            "c45efc",
+            "4b",
+            if alternate { "268a07" } else { "268a17" },
+            "32ed",
+            "d1e1",
+            "d1e1",
+            "d1e1",
+            "d1e1",
+            if alternate { "8ad8" } else { "8ada" },
+            "32ff",
+            "d1eb",
+            "d1eb",
+            "d1eb",
+            "d1eb",
+            "03cb",
+        ];
+        words.extend(if alternate {
+            vec!["8bf1", "240f", "32e4", "050300"]
+        } else {
+            vec!["80e20f", "32f6", "83c203"]
+        });
+        words
+    };
+    words
+        .iter()
+        .map(|s| {
+            (0..s.len())
+                .step_by(2)
+                .map(|i| u8::from_str_radix(&s[i..i + 2], 16).unwrap())
+                .collect()
+        })
+        .collect()
+}
+
+fn relational_fixture(table: bool, alternate: bool) -> Fixture {
+    let mut f = Fixture::new(vec![]);
+    f.lines.clear();
+    f.functions.clear();
+    let ops = relational_core(table, alternate);
+    let mut at = 0x700;
+    for (index, bytes) in ops.iter().enumerate() {
+        let looping = table && index + 2 == ops.len();
+        f.row(
+            at,
+            None,
+            bytes,
+            ".",
+            if looping {
+                "CONDITIONAL_JUMP"
+            } else {
+                "FALL_THROUGH"
+            },
+            if looping { "728" } else { "-" },
+        );
+        at += bytes.len();
+    }
+    f
+}
+
+fn relational_search(f: &Fixture, table: bool) -> Output {
+    let (rom, source, _) = f.inputs();
+    let config = f.data("reader-config.json", json!({"families":[if table { "indexed-eight-word-copy" } else { "token-distance12-length4-plus3" }]}));
+    command(&[
+        "assets",
+        "search",
+        &rom,
+        "--config",
+        &config,
+        "--retained-source",
+        &source,
+        "--output",
+        &f.path("report.json"),
+        "--json",
+    ])
+}
+
+#[test]
+fn relational_reader_joins_original_instructions_without_inventing_functions() {
+    for table in [false, true] {
+        for alternate in [false, true] {
+            let f = relational_fixture(table, alternate);
+            let result = relational_search(&f, table);
+            assert!(
+                result.status.success(),
+                "{}",
+                String::from_utf8_lossy(&result.stderr)
+            );
+            let report: Value =
+                serde_json::from_slice(&fs::read(f.path("report.json")).unwrap()).unwrap();
+            let source: Value =
+                serde_json::from_slice(&fs::read(f.path("report.callers.json")).unwrap()).unwrap();
+            assert_eq!(
+                source["readers"][0]["status"],
+                "RETAINED_INSTRUCTIONS_COMPATIBLE"
+            );
+            assert!(source["readers"][0]["function_entry"].is_null());
+            assert_eq!(
+                source["readers"][0]["rows"].as_array().unwrap().len(),
+                relational_core(table, alternate).len()
+            );
+            assert_eq!(
+                report["report"]["leads"][0]["reader_core"]["source_status"],
+                "retained-instructions-compatible"
+            );
+            assert_eq!(
+                report["report"]["leads"][0]["source_provenance"]["reader_indices"],
+                json!([0])
+            );
+        }
+    }
+}
+
+#[test]
+fn relational_reader_refuses_subsets_wrong_boundaries_flows_and_interior_entries() {
+    for variant in 0..4 {
+        let mut f = relational_fixture(true, false);
+        match variant {
+            0 => {
+                f.lines.remove(2);
+            }
+            1 => {
+                f.lines[0] = f.lines[0].replace("bf3412\tffffff", "bf\tff");
+            }
+            2 => {
+                let i = f.lines.len() - 2;
+                f.lines[i] = f.lines[i].replace("\t728", "\t-");
+            }
+            _ => {
+                f.row(
+                    0x800,
+                    None,
+                    &[0xe9, 0xfe, 0xfe],
+                    ".",
+                    "UNCONDITIONAL_JUMP",
+                    "701",
+                );
+            }
+        }
+        let result = relational_search(&f, true);
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        let source: Value =
+            serde_json::from_slice(&fs::read(f.path("report.callers.json")).unwrap()).unwrap();
+        assert_eq!(source["readers"][0]["status"], "HOLD");
+        let report: Value =
+            serde_json::from_slice(&fs::read(f.path("report.json")).unwrap()).unwrap();
+        assert_eq!(
+            report["report"]["leads"][0]["reader_core"]["source_status"],
+            "raw-byte-match"
+        );
+    }
+}
+
+#[test]
+fn relational_source_status_cannot_be_forged_by_rehashing_a_checkpoint() {
+    for mode in 0..3 {
+        let mut f = relational_fixture(true, false);
+        if mode == 1 {
+            f.lines.remove(2);
+        }
+        let (rom, source, _) = f.inputs();
+        let config = f.data(
+            "reader-config.json",
+            json!({"families":["indexed-eight-word-copy"]}),
+        );
+        let mut input = json!({"id":"synthetic","path":rom});
+        if mode != 0 {
+            input["retained_source"] = json!(source);
+        }
+        let manifest = f.data(
+            "reader-batch.json",
+            json!({"schema":"swankit-format-search-inputs/1","inputs":[input]}),
+        );
+        let output = f.path("reader-batch");
+        let base = [
+            "assets",
+            "search-corpus",
+            &manifest,
+            "--config",
+            &config,
+            "--output",
+            &output,
+            "--json",
+        ];
+        assert!(command(&base).status.success());
+        let path = fs::read_dir(PathBuf::from(&output).join("leads"))
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
+        let mut v: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        v["report"]["leads"][0]["reader_core"]["source_status"] = json!(if mode == 2 {
+            "raw-byte-match"
+        } else {
+            "retained-instructions-compatible"
+        });
+        let typed: ws_discover::search::SearchReport =
+            serde_json::from_value(v["report"].clone()).unwrap();
+        v["report_sha256"] = json!(ws_assets::sha256_hex(&serde_json::to_vec(&typed).unwrap()));
+        fs::write(path, serde_json::to_vec_pretty(&v).unwrap()).unwrap();
+        let mut resume = base.to_vec();
+        resume.push("--resume");
+        assert!(!command(&resume).status.success());
+    }
+}
 impl Fixture {
     fn new(ops: Vec<(Vec<u8>, &str, &str)>) -> Self {
         Self::with_prefix(ops, vec![(vec![0x50], "SP", "FALL_THROUGH")])

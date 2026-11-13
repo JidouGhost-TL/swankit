@@ -17,3 +17,9 @@ format leads without runtime evidence. The CLI exposes single-file and resumable
 parallel manifest searches. This is separate from `discover`, which consumes
 explicit evidence and verifies draft maps. Search leads are not accepted assets;
 see [format search](../../docs/format-search.md).
+
+The opt-in `indexed-eight-word-copy` and `token-distance12-length4-plus3`
+families return versioned relational-code captures through normal search.
+Optional identity-bound retained listings can qualify their original instruction
+boundaries; caller input, bank backing and resource/codec profiles remain open.
+These families do not change default searches or external signature semantics.

@@ -55,6 +55,8 @@ pub struct ProvenanceReference {
     pub sidecar: String,
     pub sha256: String,
     pub constructor_indices: Vec<usize>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reader_indices: Vec<usize>,
 }
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Producer {
@@ -77,6 +79,22 @@ pub struct SourceRow {
     pub logical: u32,
     pub physical: usize,
     pub bytes: String,
+}
+
+/// Original instruction boundaries only; no entry or source-profile inference.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct ReaderJoin {
+    pub family: Family,
+    pub pattern: String,
+    pub version: u16,
+    pub lead_offset: usize,
+    pub lead_sha256: String,
+    pub core_logical: Option<u32>,
+    pub function_entry: Option<u32>,
+    pub status: String,
+    pub hold: Option<String>,
+    pub rows: Vec<SourceRow>,
+    pub recorded_alternate_entries: Vec<u32>,
 }
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Constructor {
@@ -160,6 +178,8 @@ pub struct Sidecar {
     pub unresolved_flow_sites: Vec<UnresolvedFlow>,
     pub constructors: Vec<Constructor>,
     pub callers: Vec<Caller>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub readers: Vec<ReaderJoin>,
     pub limitations: Vec<String>,
 }
 #[derive(Debug)]
@@ -208,6 +228,7 @@ fn listing(
     rom: &[u8],
     attachment: &Attachment,
     input: &[u8],
+    require_functions: bool,
 ) -> Result<(BTreeMap<u32, Function>, Vec<Instruction>)> {
     if input.len() > MAX_LISTING_BYTES
         || input.len() != attachment.listing.bytes
@@ -327,7 +348,7 @@ fn listing(
             _ => return Err(bad("unsupported or partial listing row")),
         }
     }
-    if ins.is_empty() || functions.is_empty() {
+    if ins.is_empty() || (require_functions && functions.is_empty()) {
         return Err(bad("empty/partial listing"));
     }
     let ins: Vec<_> = ins.into_values().collect();
@@ -643,10 +664,14 @@ pub fn analyze(
         || a.rom_bytes != rom.len()
         || a.rom_sha256.to_ascii_lowercase() != ws_assets::sha256_hex(rom)
         || a.rom_sha256.to_ascii_lowercase() != report.rom_sha256
-        || !report
-            .options
-            .families
-            .contains(&Family::BankedQueueConstructor)
+        || !report.options.families.iter().any(|f| {
+            matches!(
+                f,
+                Family::BankedQueueConstructor
+                    | Family::IndexedEightWordCopy
+                    | Family::TokenDistance12Length4Plus3
+            )
+        })
     {
         return Err(bad("attachment ROM/configuration identity differs"));
     }
@@ -674,7 +699,15 @@ pub fn analyze(
     {
         return Err(bad("overlapping logical mappings"));
     }
-    let (functions, ins) = listing(rom, a, input)?;
+    let (functions, ins) = listing(
+        rom,
+        a,
+        input,
+        report
+            .options
+            .families
+            .contains(&Family::BankedQueueConstructor),
+    )?;
     let incoming: BTreeSet<_> = ins.iter().flat_map(|i| i.targets.iter().copied()).collect();
     // A recorded entry inside a listed instruction has no compatible retained
     // decode. Do not apply that instruction's transfer to an alternate entry.
@@ -726,6 +759,118 @@ pub fn analyze(
             flow: i.flow.clone(),
         })
         .collect();
+    let mut readers = Vec::new();
+    for lead in report.leads.iter().filter(|l| {
+        matches!(
+            l.family,
+            Family::IndexedEightWordCopy | Family::TokenDistance12Length4Plus3
+        )
+    }) {
+        let span = rom
+            .get(lead.offset..lead.offset.saturating_add(lead.stored_length))
+            .ok_or_else(|| bad("reader lead bounds"))?;
+        let (length, expected) =
+            crate::search::reader_pattern(lead.family, span, &rom[..lead.offset])
+                .ok_or_else(|| bad("reader core pattern differs"))?;
+        let declared = lead
+            .reader_core
+            .as_ref()
+            .ok_or_else(|| bad("reader captures absent"))?;
+        if length != lead.stored_length
+            || ws_assets::sha256_hex(span) != lead.stored_sha256
+            || expected.pattern != declared.pattern
+            || expected.version != declared.version
+            || expected.variant != declared.variant
+            || expected.captures != declared.captures
+        {
+            return Err(bad("reader lead identity/captures differ"));
+        }
+        let mut joined = ReaderJoin {
+            family: lead.family,
+            pattern: expected.pattern.clone(),
+            version: expected.version,
+            lead_offset: lead.offset,
+            lead_sha256: lead.stored_sha256.clone(),
+            core_logical: None,
+            function_entry: None,
+            status: "HOLD".into(),
+            hold: Some("unique retained instruction boundary absent".into()),
+            rows: Vec::new(),
+            recorded_alternate_entries: Vec::new(),
+        };
+        let candidates: Vec<_> = ins
+            .iter()
+            .filter(|i| i.physical == Some(lead.offset))
+            .collect();
+        if candidates.len() == 1 {
+            let first = candidates[0];
+            joined.core_logical = Some(first.at);
+            let lengths = crate::search::reader_instruction_lengths(&expected);
+            let end = first
+                .at
+                .checked_add(length as u32)
+                .ok_or_else(|| bad("reader logical span wraps"))?;
+            let mut cursor = first.at;
+            let mut physical = lead.offset;
+            let mut compatible = true;
+            let mut core_function = first.function;
+            for (index, n) in lengths.iter().copied().enumerate() {
+                let Some(row) = ins
+                    .binary_search_by_key(&cursor, |i| i.at)
+                    .ok()
+                    .map(|n| &ins[n])
+                else {
+                    compatible = false;
+                    break;
+                };
+                let loop_row =
+                    lead.family == Family::IndexedEightWordCopy && index + 2 == lengths.len();
+                let flow_ok = if loop_row {
+                    row.flow == "CONDITIONAL_JUMP" && row.targets == [first.at + 40]
+                } else {
+                    row.flow == "FALL_THROUGH" && row.targets.is_empty()
+                };
+                if row.bytes.len() != n
+                    || row.physical != Some(physical)
+                    || !flow_ok
+                    || row.function != core_function
+                    || incoming
+                        .range((cursor + 1)..(cursor + n as u32))
+                        .next()
+                        .is_some()
+                {
+                    compatible = false;
+                    break;
+                }
+                joined.rows.push(SourceRow {
+                    logical: row.at,
+                    physical,
+                    bytes: byte_hex(&row.bytes),
+                });
+                cursor += n as u32;
+                physical += n;
+            }
+            if compatible && cursor == end {
+                joined.status = "RETAINED_INSTRUCTIONS_COMPATIBLE".into();
+                joined.hold = None;
+                joined.function_entry = core_function.take();
+                joined.recorded_alternate_entries = ins
+                    .iter()
+                    .filter(|i| i.at < first.at || i.at >= end)
+                    .flat_map(|i| i.targets.iter().copied())
+                    .filter(|t| *t > first.at && *t < end)
+                    .collect::<BTreeSet<_>>()
+                    .into_iter()
+                    .collect();
+            } else {
+                joined.hold = Some(
+                    "reader boundaries, original mapping, function membership or flow roles differ"
+                        .into(),
+                );
+            }
+        }
+        readers.push(joined);
+    }
     let mut constructors = Vec::new();
     for lead in report
         .leads
@@ -981,15 +1126,28 @@ pub fn analyze(
             }
         }
     }
+    let has_readers = !readers.is_empty();
     Ok(Sidecar {
         schema: SIDECAR_SCHEMA.into(),
-        policy: "immediate-lanes-neutral-constructor-prefix-v2".into(),
-        assurance: "retained-direct-flow-candidate; incomplete-listing".into(),
+        policy: if has_readers {
+            "relational-reader-instruction-join-v1"
+        } else {
+            "immediate-lanes-neutral-constructor-prefix-v2"
+        }
+        .into(),
+        assurance: if has_readers {
+            "retained-reader-join-candidates; entry-input-profile-open"
+        } else {
+            "retained-direct-flow-candidate; incomplete-listing"
+        }
+        .into(),
         rom_sha256: report.rom_sha256.clone(),
         rom_bytes: rom.len(),
         attachment_sha256: attachment_sha256.to_ascii_lowercase(),
         listing_sha256: a.listing.sha256.to_ascii_lowercase(),
-        mapping_sha256: ws_assets::sha256_hex(&serde_json::to_vec(&a.mapping).map_err(|e| bad(e.to_string()))?),
+        mapping_sha256: ws_assets::sha256_hex(
+            &serde_json::to_vec(&a.mapping).map_err(|e| bad(e.to_string()))?,
+        ),
         listed_instructions: ins.len(),
         unmapped_instructions: ins.iter().filter(|i| i.physical.is_none()).count(),
         recorded_direct_targets: incoming.len(),
@@ -997,13 +1155,22 @@ pub fn analyze(
         unresolved_flow_sites,
         constructors,
         callers,
-        limitations: vec![
+        readers,
+        limitations: {
+            let mut limits = vec![
             "Retained direct-flow candidates only; indirect/unexported entries and listing correctness are not proven complete. No project/code adoption or execution claim.".into(),
             "Unknown register values remain HOLD; no arithmetic folding, memory-value propagation, branch joins or callee-preservation inference.".into(),
             "Caller arguments describe function-entry values. Downstream pointer resolution also requires the retained exact neutral entry-to-core prefix; no register rewrite, callee preservation or alternate entry is assumed.".into(),
             "Pointer leads use only explicitly reviewed original mapping/bank policy. No table extent, complete object, codec, output, media, SDK or runtime ownership follows.".into(),
             "Unmapped/unvisited code is preserved; absence of a retained match is not absence of code or resources.".into(),
             "Only retained constructor code leads are analyzed; stride, budget and retention limits are not whole-listing constructor coverage.".into(),
-        ],
+            ];
+            if has_readers {
+                limits.pop();
+                limits.push("Reader joins verify exact original bytes, each listed instruction boundary and family-specific flow roles only. A missing function record is not fabricated into a containing function.".into());
+                limits.push("Recorded alternate entries and unrecorded/indirect control flow do not establish whole-core invocation. Header, helper, input, segment/bank, SDK and resource semantics remain OPEN.".into());
+            }
+            limits
+        },
     })
 }

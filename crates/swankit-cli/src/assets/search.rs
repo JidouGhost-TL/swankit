@@ -174,21 +174,46 @@ fn attach_source(
     }
     let hash = ws_assets::sha256_hex(&bytes);
     for lead in &mut found.report.leads {
-        if lead.family != search::Family::BankedQueueConstructor {
-            continue;
-        }
+        // Checkpoints are recomputed, never allowed to retain a stale reference
+        // or a claimed source status that the current attachment cannot bind.
+        lead.source_provenance = None;
         let indices = provenance
             .constructors
             .iter()
             .enumerate()
-            .filter(|(_, c)| c.lead_offset == lead.offset && c.lead_sha256 == lead.stored_sha256)
+            .filter(|(_, c)| {
+                lead.family == search::Family::BankedQueueConstructor
+                    && c.lead_offset == lead.offset
+                    && c.lead_sha256 == lead.stored_sha256
+            })
             .map(|(n, _)| n)
             .collect::<Vec<_>>();
-        if !indices.is_empty() {
+        let reader_indices = provenance
+            .readers
+            .iter()
+            .enumerate()
+            .filter(|(_, r)| {
+                r.family == lead.family
+                    && r.lead_offset == lead.offset
+                    && r.lead_sha256 == lead.stored_sha256
+            })
+            .map(|(n, _)| n)
+            .collect::<Vec<_>>();
+        if let Some(core) = lead.reader_core.as_mut() {
+            core.source_status = search::ReaderSourceStatus::RawByteMatch;
+            if reader_indices
+                .iter()
+                .any(|i| provenance.readers[*i].status == "RETAINED_INSTRUCTIONS_COMPATIBLE")
+            {
+                core.source_status = search::ReaderSourceStatus::RetainedInstructionsCompatible;
+            }
+        }
+        if !indices.is_empty() || !reader_indices.is_empty() {
             lead.source_provenance = Some(ProvenanceReference {
                 sidecar: sidecar.into(),
                 sha256: hash.clone(),
                 constructor_indices: indices,
+                reader_indices,
             });
         }
     }
@@ -303,6 +328,11 @@ fn one(index: usize, input: &Input, ctx: &BatchContext<'_>) -> Result<BatchEntry
                 .leads
                 .iter()
                 .any(|l| l.source_provenance.is_some())
+            || found.report.leads.iter().any(|l| {
+                l.reader_core
+                    .as_ref()
+                    .is_some_and(|r| r.source_status != search::ReaderSourceStatus::RawByteMatch)
+            })
         {
             return Err("unexpected retained provenance at unconfigured checkpoint".into());
         }

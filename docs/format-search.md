@@ -70,6 +70,8 @@ the distinct directory occurrences; occurrence counts remain unchanged.
 | `counted-relative-directory16` | A little-endian relative-u16 directory whose entry count is inferred from its minimum offset, followed by positive 16-byte-unit counted records that form a contiguous span | Individual bounded raw records from a directory-shaped group; payload meanings and table use remain unknown |
 | `reader-signature` | An external exact or per-bit-masked pattern | A byte-pattern match, possibly related reader code |
 | `banked-queue-constructor` | Explicit opt-in fixed-register instruction core with equal queue-pointer literals | A code-pattern lead retaining literal operands; instruction boundaries, callers and data remain unproven |
+| `indexed-eight-word-copy` | Explicit opt-in index equality, eight-word copy count, exact loop target and DS/SS store variants | A relational code-core lead with bounded operand captures |
+| `token-distance12-length4-plus3` | Explicit opt-in repeated pointer slot and consistent AL/DL arithmetic variants | A two-byte arithmetic-core lead; no header, flags or copy-helper profile |
 | `reference-bytes` | An external exact, nonuniform block of at least 16 bytes | A matching reference chunk in ROM; matching decoded chunks are also recorded on codec leads |
 
 Hardware layouts follow [the cited display rules](hardware.md#display-snapshot-rules).
@@ -275,9 +277,48 @@ Counts describe configured byte-pattern candidates, not supported games or
 assets; a configured zero is not proof of absence. `max_stored` is a decoder/raw
 resource bound and does not truncate this fixed code-inspection span.
 
-## Optional retained-source caller evidence
+## Relational reader cores
 
-An explicitly configured `banked-queue-constructor` search can additionally read
+Select these detectors explicitly; neither is in the default family list:
+
+```json
+{
+  "families": ["indexed-eight-word-copy", "token-distance12-length4-plus3"],
+  "budget_scope": "per-family"
+}
+```
+
+```sh
+swankit assets search image.bin --config readers.json --output readers.json.out --json
+```
+
+Each matching lead retains its physical `offset`, code `stored_length` and byte
+digest. Its optional `reader_core` object adds a bounded `pattern`, `version: 1`,
+`variant`, `source_status` and typed `captures`. Raw recognition reports
+`source_status: "raw-byte-match"`. `decoded_length` remains null: these are code
+spans, not decoded resources. Prefix probes, stride, retention and the selected
+budget policy bound this search. Retention caps do not measure independent
+readers or supported games, and a configured zero is not absence.
+
+The table core captures slot/index/source/destination literals, literal ES and
+the DS/SS store variant. The source offset is
+`(source_base + zero_extend(entry_AL)) & 65535`; the destination offset is
+`(destination_base + ((index_byte << 4) & 255)) & 65535`. The literal copy count
+is eight words. Literal ES is not a physical ROM bank, and source base zero is
+not a null pointer. `preceding_shift4_store` records only the exact ten bytes
+immediately before the core; it is not an admission gate or proof every entry
+executes those bytes. Alternate entries can bypass that shift or the copy.
+
+The arithmetic core captures a signed BP-relative pointer slot and the
+`al-si-ax` or `dl-cx-dx` register variant. The two-byte arithmetic produces
+`(first << 4) + (second >> 4)` and `(second & 15) + 3`. It does not determine
+flag order/polarity, header units, initialized history, helper behavior,
+resource start, SDK ancestry or runtime invocation. Such facts require a
+separate source profile and complete output evidence.
+
+## Optional retained-source instruction and caller evidence
+
+An explicitly configured built-in code family can additionally read
 an external, identity-bound instruction listing:
 
 ```sh
@@ -290,12 +331,12 @@ This writes `leads.json` and `leads.callers.json`. Alternatively,
 `--output` is supplied. The automatic sidecar locator is relative to the report's
 directory. An explicitly supplied locator is preserved as supplied, relative to
 the invocation directory unless absolute. Both outputs refuse input overlap or
-existing files. No attachment means no new report fields and no caller analysis;
+existing files. No attachment means no retained-source fields or caller analysis;
 defaults, external signatures and ordinary search results remain unchanged.
 
 A batch input can use an optional `retained_source` path alongside `id`, `path`,
 `sha256` and `config`. Its path is relative to the manifest. Sidecars are stored
-under `provenance/` and referenced by the constructor code leads and their file
+under `provenance/` and referenced by the supported code leads and their file
 envelope. Resume verifies original/configuration/executable/report identities,
 the attachment and listing hashes, and recomputes caller evidence before accepting
 the sidecar. Changing caller values and updating stored hashes is insufficient.
@@ -339,7 +380,7 @@ paths or resource payloads added to it:
   instruction hex, same-length mask hex, registers read, registers written,
   assembly text and comma-separated hexadecimal direct targets or `-`.
 
-Include the complete retained export, including unowned instructions and other
+For constructor caller analysis, include the complete retained export, including unowned instructions and other
 functions, rather than only the chosen caller. All recorded direct targets can
 invalidate a reaching definition. Counts/membership, byte boundaries, mapped
 original bytes and global targets are checked; masks never replace literal
@@ -361,9 +402,28 @@ calls, original blocks, producer locations for both register lanes, explicit
 unknown reasons and optional source-pointer leads. It retains the global recorded
 direct-entry edges, unresolved flow sites, original segmented function identities
 and, when available, the original instruction that caused a value to be held.
-Only constructor-family leads
-receive references; external reader signatures retain their previous meaning.
+Constructor leads use `constructor_indices` in `source_provenance`; the two
+relational reader families use the additive `reader_indices` into the sidecar's
+`readers` array. External reader signatures retain their previous meaning.
 Code spans stay code spans, and no decoded output length is invented.
+
+Reader-only attachments may contain `I` rows with containing function `-` and
+no `F` rows. This permits an honest instruction-boundary join without inventing
+a containing function. Each complete original opcode extent must match the
+family's instruction lengths and contiguous logical/physical range; every
+non-loop role must be fallthrough, and the table LOOP must target its exact
+load instruction. Missing rows, changed boundaries, unmapped bytes, mixed
+function membership or recorded entries inside an instruction leave the reader
+join at `HOLD`. Other malformed identities/listings are refused as before.
+If constructor analysis is also selected, its function requirements still apply.
+
+A compatible reader entry reports `RETAINED_INSTRUCTIONS_COMPATIBLE`, original
+rows, optional containing function and recorded alternate entries. Its lead's
+`reader_core.source_status` becomes `retained-instructions-compatible`.
+Unrecorded/indirect entries remain unknown; compatible instruction boundaries
+do not prove whole-core invocation, caller values, segment backing or a source
+profile. A held join preserves the raw lead. The listing/mapping is an explicit
+identity-bound input, not authentication or inferred hardware bank state.
 
 Caller arguments describe values at the constructor's function entry. They are
 not automatically values at the matched core. The constructor's

@@ -1,6 +1,12 @@
 //! ROM-only leads, not asset maps or evidence of runtime use.
 //! Hardware layouts: docs/hardware.md and WSdev Display/Screen, Display/Palette.
 mod banked_constructor;
+mod reader_cores;
+
+pub use reader_cores::{
+    Captures as ReaderCaptures, DestinationSegment, Match as ReaderCore, SecondByteRegister,
+    SourceStatus as ReaderSourceStatus, Variant as ReaderVariant,
+};
 
 use formatkit_core::{Error, Reader, Result};
 use serde::{Deserialize, Serialize};
@@ -33,6 +39,10 @@ pub enum Family {
     ReaderSignature,
     /// Explicit opt-in fixed-role code pattern; no flow or asset inference.
     BankedQueueConstructor,
+    /// Opt-in relational arithmetic core; no stream/header profile is inferred.
+    TokenDistance12Length4Plus3,
+    /// Opt-in indexed eight-word copy; source backing and entry values stay open.
+    IndexedEightWordCopy,
     ReferenceBytes,
 }
 
@@ -194,6 +204,8 @@ pub struct Lead {
     pub reference_matches_truncated: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_provenance: Option<crate::retained::ProvenanceReference>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reader_core: Option<ReaderCore>,
 }
 
 /// Structural occurrence identity; aliases and alternative inferred bases remain
@@ -508,6 +520,85 @@ struct PreparedPattern<'a> {
     finder: memchr::memmem::Finder<'a>,
     sha256: String,
 }
+
+pub(crate) fn reader_pattern(
+    family: Family,
+    src: &[u8],
+    preceding: &[u8],
+) -> Option<(usize, ReaderCore)> {
+    match family {
+        Family::IndexedEightWordCopy => reader_cores::table(src, preceding),
+        Family::TokenDistance12Length4Plus3 => reader_cores::token(src),
+        _ => None,
+    }
+}
+
+pub(crate) fn reader_instruction_lengths(core: &ReaderCore) -> Vec<usize> {
+    reader_cores::instruction_lengths(core)
+}
+
+fn reader_core_leads(
+    rom: &[u8],
+    options: &Options,
+    report: &mut SearchReport,
+    kept: &mut BTreeMap<Family, Vec<Lead>>,
+) {
+    for (family, prefix) in [
+        (Family::IndexedEightWordCopy, &[0xbf][..]),
+        (
+            Family::TokenDistance12Length4Plus3,
+            &[0x4b, 0x26, 0x8a, 0x0f][..],
+        ),
+    ] {
+        if !options.families.contains(&family) {
+            continue;
+        }
+        let finder = memchr::memmem::Finder::new(prefix);
+        let mut start = 0;
+        while start < rom.len() {
+            let Some(found) = finder.find(&rom[start..]) else {
+                break;
+            };
+            let offset = start + found;
+            start = offset + 1;
+            if !offset.is_multiple_of(options.stride) {
+                continue;
+            }
+            if budget_used(report) >= options.max_probes {
+                report.complete_for_configured_scan = false;
+                report
+                    .counts
+                    .entry(family)
+                    .or_default()
+                    .probes_skipped_by_budget += 1;
+                break;
+            }
+            report.signature_probes += 1;
+            report.counts.entry(family).or_default().probes += 1;
+            let Some((length, core)) = reader_pattern(family, &rom[offset..], &rom[..offset])
+            else {
+                report.counts.entry(family).or_default().rejected_probes += 1;
+                continue;
+            };
+            if !promising(report, kept, family, offset, 250) {
+                continue;
+            }
+            retain(report, kept, Lead {
+                family, offset, stored_length: length, decoded_length: None,
+                stored_sha256: ws_assets::sha256_hex(&rom[offset..offset + length]),
+                decoded_sha256: None, signature_id: Some(format!("{}-v{}", core.pattern, core.version)),
+                rank: 250,
+                evidence: "Relational instruction bytes matched with bounded literal captures. This is not proof of instruction boundaries, a callable routine, a source profile or resource ownership.".into(),
+                requires: vec![
+                    "Join every original instruction boundary before treating the range as retained code; entry paths and callee effects remain separate.".into(),
+                    "Establish input values and segment/bank backing; an arithmetic core does not establish header units, flag order, helper behavior, stream start, media or SDK ancestry.".into(),
+                ],
+                reference_matches: Vec::new(), reference_matches_truncated: false,
+                source_provenance: None, reader_core: Some(core), directory_provenance: None,
+            });
+        }
+    }
+}
 fn budget_used(report: &SearchReport) -> usize {
     report.decoder_probes
         + report.signature_probes
@@ -602,7 +693,7 @@ fn sgd1_tile_grid_leads(
                 evidence: "The SGD1 tag, positive byte grid, declared full record size and 16-byte-per-cell area agree; this structural match does not establish field meanings, a reader, runtime use or asset identity.".into(),
                 requires: vec!["Establish the resource reader, field semantics, palette and runtime context before assigning meaning to this bounded record.".into()],
                 reference_matches: Vec::new(),
-                reference_matches_truncated: false, source_provenance: None,
+                reference_matches_truncated: false, source_provenance: None, reader_core: None,
             });
         }
     }
@@ -843,7 +934,7 @@ fn counted_relative_directory16_leads(
                             evidence: "A relative-u16 directory, positive 16-byte-unit record headers and a contiguous raw record run matched; directory aliases are retained. This structural match does not establish payload meaning, a reader, runtime use or asset identity.".into(),
                             requires: vec!["Establish the table base, reader and record meanings before assigning a format or using the record as an asset.".into()],
                             reference_matches: Vec::new(),
-                            reference_matches_truncated: false, source_provenance: None,
+                            reference_matches_truncated: false, source_provenance: None, reader_core: None,
                         });
                     }
                 }
@@ -1020,7 +1111,7 @@ fn exact_patterns(
                 stored_sha256:pattern.sha256.clone(), decoded_sha256:None, signature_id:Some(pattern.signature.id.clone()),rank,
                 evidence:if family==Family::ReferenceBytes { "Exact external reference bytes occur in the ROM; this does not establish a unique origin, loader or whole resource." } else { "Exact external reader pattern matched; resource format and use remain unconfirmed." }.into(),
                 requires:vec!["Establish original reference provenance, reader/caller context and complete resource boundaries; duplicates remain possible.".into()],
-                reference_matches:Vec::new(), reference_matches_truncated:false, source_provenance:None,
+                reference_matches:Vec::new(), reference_matches_truncated:false, source_provenance:None, reader_core:None,
             });
         }
     }
@@ -1106,6 +1197,7 @@ fn search_shared(rom: &[u8], options: &Options) -> Result<SearchReport> {
         .collect();
     let mut kept = BTreeMap::new();
     exact_patterns(rom, &patterns, &mut report, &mut kept);
+    reader_core_leads(rom, options, &mut report, &mut kept);
     if enabled.contains(&Family::Sgd1TileGrid) {
         sgd1_tile_grid_leads(rom, options, &mut report, &mut kept);
     }
@@ -1176,7 +1268,7 @@ fn search_shared(rom: &[u8], options: &Options) -> Result<SearchReport> {
                 decoded_sha256: Some(ws_assets::sha256_hex(&decoded.bytes)), signature_id: None, rank,
                 evidence: "Complete bounded parse using the existing decoder with empty initial history; no original-output comparison.".into(),
                 requires: vec!["Find the actual reader/caller and establish the stream start, bank context and header ownership.".into(), "Compare the complete output and recover the selector domain before declaring an asset family.".into()],
-                reference_matches: matches, reference_matches_truncated: truncated, source_provenance: None,
+                reference_matches: matches, reference_matches_truncated: truncated, source_provenance: None, reader_core: None,
             });
         }
         if offset % 2 == 0 {
@@ -1191,7 +1283,7 @@ fn search_shared(rom: &[u8], options: &Options) -> Result<SearchReport> {
                         signature_id: None, rank: 100,
                         evidence: format!("{explanation} This is a layout heuristic, not a unique signature."),
                         requires: vec!["Find the consumer, boundaries and display context; distinguish numeric tables from graphics data.".into()],
-                        reference_matches: Vec::new(), reference_matches_truncated: false, source_provenance: None,
+                        reference_matches: Vec::new(), reference_matches_truncated: false, source_provenance: None, reader_core: None,
                     });
                 }
             }
@@ -1236,7 +1328,7 @@ fn search_shared(rom: &[u8], options: &Options) -> Result<SearchReport> {
                             evidence: "Bounded 16-byte descriptor relations and map-word constraints matched; this does not establish a format, reader context, runtime use or asset identity.".into(),
                             requires: vec!["Establish the actual reader, header ownership, bank context and complete resource boundaries before treating this as a resource.".into()],
                             reference_matches: Vec::new(),
-                            reference_matches_truncated: false, source_provenance: None,
+                            reference_matches_truncated: false, source_provenance: None, reader_core: None,
                         });
                     }
                 }
@@ -1271,7 +1363,7 @@ fn search_shared(rom: &[u8], options: &Options) -> Result<SearchReport> {
                                 "Bind retained caller bytes/flow and register-lane clobber facts before resolving any selector: reset on calls, branches, gaps and every recorded incoming target; unknown indirect entries remain HOLD.".into(),
                                 "Establish original bank/table identities, complete resource boundaries, consumer and runtime/output ownership; no SDK, codec, asset or support claim follows.".into(),
                             ],
-                            reference_matches: Vec::new(), reference_matches_truncated: false, source_provenance: None,
+                            reference_matches: Vec::new(), reference_matches_truncated: false, source_provenance: None, reader_core: None,
                         });
                     }
                 } else {
@@ -1317,7 +1409,7 @@ fn search_shared(rom: &[u8], options: &Options) -> Result<SearchReport> {
                         signature_id: Some(signature.id.clone()), rank,
                         evidence: if signature.family == Family::ReaderSignature { "External masked reader pattern matched; code use and resource format remain unconfirmed." } else { "Exact external reference bytes occur in the ROM; this does not establish the loader, unique origin or complete asset extent." }.into(),
                         requires: vec![if signature.family == Family::ReaderSignature { "Disassemble the match, compare nonrelocated operands and follow its callers/resource tables in this ROM." } else { "Check reference provenance, all duplicate ROM locations, complete source extent and the actual loader; captures are not assets." }.into()],
-                        reference_matches: Vec::new(), reference_matches_truncated: false, source_provenance: None,
+                        reference_matches: Vec::new(), reference_matches_truncated: false, source_provenance: None, reader_core: None,
                     });
                 } else {
                     report
