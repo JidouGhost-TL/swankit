@@ -922,7 +922,9 @@ fn exact_end_match_does_not_invent_budget_incompleteness() {
 
 #[test]
 fn independent_family_budget_recovers_starved_family_and_reports_completion() {
-    let rom = vec![0xff; 32];
+    // An even first target requires a second directory probe. Odd targets
+    // can now be rejected completely within the one-probe budget.
+    let rom = vec![0xfe; 32];
     let mut config = serde_json::json!({
         "families": ["counted-relative-directory16", "tile-map-record16"],
         "stride": 32, "max_probes": 1

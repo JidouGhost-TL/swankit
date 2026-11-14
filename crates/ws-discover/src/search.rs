@@ -754,7 +754,10 @@ fn counted_relative_directory16_parse(
         Err(_) => return CountedDirectory16Parse::Rejected { probes: 0 },
     };
     let mut probes = 1;
-    if first < 2 {
+    // The directory is a whole number of u16 entries. Every contiguous
+    // record adds a two-byte header and sixteen-byte units, so every target
+    // is even relative to the table base, including aliases and reordering.
+    if first < 2 || first % 2 != 0 {
         return CountedDirectory16Parse::Rejected { probes };
     }
     if probes >= available_probes {
@@ -787,6 +790,9 @@ fn counted_relative_directory16_parse(
             Ok(value) => usize::from(value),
             Err(_) => return CountedDirectory16Parse::Rejected { probes },
         };
+        if value % 2 != 0 {
+            return CountedDirectory16Parse::Rejected { probes };
+        }
         minimum = minimum.min(value);
         offsets.push(value);
         let count = index + 1;
@@ -1463,6 +1469,57 @@ mod counted_directory16_tests {
         match counted_relative_directory16_parse(&bytes, 100) {
             CountedDirectory16Parse::Match { entries, .. } => assert_eq!(entries.len(), 3),
             other => panic!("expected three directory entries, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn odd_first_target_rejects_before_following_its_header() {
+        let bytes = vec![0xff; 1_200_000];
+        assert!(matches!(
+            counted_relative_directory16_parse(&bytes, 1),
+            CountedDirectory16Parse::Rejected { probes: 1 }
+        ));
+    }
+
+    #[test]
+    fn odd_later_target_rejects_before_another_table_word() {
+        let mut bytes = vec![0u8; 24];
+        bytes[..8].copy_from_slice(&[6, 0, 7, 0, 6, 0, 1, 0]);
+        assert!(matches!(
+            counted_relative_directory16_parse(&bytes, 3),
+            CountedDirectory16Parse::Rejected { probes: 3 }
+        ));
+    }
+
+    #[test]
+    fn even_aliases_and_reordered_records_still_match() {
+        for offsets in [
+            vec![2u16],
+            vec![6, 6, 6],
+            vec![42, 6, 24],
+            vec![26, 8, 26, 8],
+        ] {
+            let directory_bytes = offsets.len() * 2;
+            let last = usize::from(*offsets.iter().max().unwrap());
+            let mut bytes = vec![0u8; last + 18];
+            for (index, &offset) in offsets.iter().enumerate() {
+                bytes[index * 2..index * 2 + 2].copy_from_slice(&offset.to_le_bytes());
+                bytes[usize::from(offset)..usize::from(offset) + 2]
+                    .copy_from_slice(&1u16.to_le_bytes());
+            }
+            assert_eq!(usize::from(*offsets.iter().min().unwrap()), directory_bytes);
+            match counted_relative_directory16_parse(&bytes, 100) {
+                CountedDirectory16Parse::Match { entries, .. } => {
+                    assert_eq!(
+                        entries
+                            .iter()
+                            .map(|e| e.relative_offset)
+                            .collect::<Vec<_>>(),
+                        offsets.iter().map(|&v| usize::from(v)).collect::<Vec<_>>()
+                    );
+                }
+                other => panic!("valid even directory rejected: {other:?}"),
+            }
         }
     }
 }

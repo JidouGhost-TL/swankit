@@ -105,7 +105,9 @@ run. Each distinct target must begin with a positive little-endian u16 unit
 count and contain exactly `2 + 16 * count` bytes. Sorted distinct records must
 start immediately after the directory and continue without gaps or overlap;
 repeated directory targets remain repeated leads. Only the directory words
-are interpreted as offsets, never record payload words. Group validation checks
+are interpreted as offsets, never record payload words. Because the directory
+and every record have even byte lengths, odd relative offsets are rejected
+before following them; this preserves aliases and reordered entries. Group validation checks
 each referenced span against the ROM input bounds regardless of `max_stored`;
 only records whose individual spans fit `max_stored` are emitted, so one larger
 record does not suppress smaller members of a valid group. Every directory word
