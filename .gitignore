@@ -4,3 +4,4 @@
 __pycache__/
 *.pyc
 /crates/swankit-py/release-licenses/
+AGENTS.md
