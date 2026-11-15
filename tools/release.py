@@ -168,11 +168,16 @@ def validate_promotion(receipt, manifest_raw, packet, repo, run, artifact, tag, 
     require(artifact.get("digest") == receipt.get("artifact_digest")
             and re.fullmatch(r"sha256:[0-9a-f]{64}", artifact.get("digest", "")), "artifact digest approval mismatch")
     corpus = receipt.get("corpus", {})
-    require(corpus.get("exit_code") == 0 and corpus.get("required") is True
+    expected_args = ["--workspace", "--all-features", "--locked", "--release", "--test", "corpus"]
+    require(corpus.get("scope") == "workspace-all-features-release-corpus"
+            and [a for a in corpus.get("cargo_args", []) if a != "--offline"] == expected_args,
+            "corpus scope is not the complete required workspace gate")
+    require(type(corpus.get("exit_code")) is int and corpus["exit_code"] == 0 and corpus.get("required") is True
             and corpus.get("write") is False
             and type(corpus.get("tests_passed")) is int and corpus["tests_passed"] > 0
             and type(corpus.get("groups_passed")) is int and corpus["groups_passed"] > 0
-            and corpus.get("tests_failed") == 0
+            and all(type(corpus.get(key)) is int and corpus[key] == 0
+                    for key in ("tests_failed", "tests_ignored", "tests_filtered"))
             and corpus.get("wheel_sha256") == contents["files"][contents["wheel"]]
             and corpus.get("source_commit") == manifest["source_commit"], "corpus receipt not qualified")
     require(manifest.get("checks") == {"ci": "PASS", "packet_smoke": "PASS"}, "candidate checks missing")
