@@ -3,3 +3,4 @@
 *.rs.bk
 __pycache__/
 *.pyc
+/crates/swankit-py/release-licenses/

@@ -6,6 +6,7 @@ import csv
 import gzip
 import hashlib
 import io
+import importlib.util
 import json
 from pathlib import Path
 import re
@@ -17,6 +18,9 @@ from urllib.parse import unquote, urlsplit
 import zipfile
 
 NOTICES = ("LICENSE-MIT", "LICENSE-APACHE", "NOTICE")
+_LICENSE_SPEC = importlib.util.spec_from_file_location("dependency_licenses", Path(__file__).with_name("collect-dependency-licenses.py"))
+DEPENDENCY_LICENSES = importlib.util.module_from_spec(_LICENSE_SPEC)
+_LICENSE_SPEC.loader.exec_module(DEPENDENCY_LICENSES)
 
 
 def sha(data):
@@ -67,6 +71,7 @@ def guide_payload(root):
     names.update(p.relative_to(root).as_posix() for p in (root / "docs").rglob("*")
                  if p.is_file() and p.suffix in (".md", ".json"))
     names.update(p.relative_to(root).as_posix() for p in (root / "crates").rglob("README.md"))
+    names = {name for name in names if "/release-licenses/" not in name}
     def read_guide(name):
         path = root / name
         if (not path.is_file() or path.is_symlink()
@@ -93,7 +98,7 @@ def validate_links(payload):
             raise ValueError(f"missing offline guide target: {name}: {target}")
 
 
-def wheel_audit(path, root, scratch):
+def wheel_audit(path, root, scratch, dependency_bundle=None):
     with zipfile.ZipFile(path) as archive:
         names = archive.namelist()
         if len(names) != len(set(names)):
@@ -121,6 +126,13 @@ def wheel_audit(path, root, scratch):
             matches = [n for n in names if n.endswith(".dist-info/licenses/" + notice)]
             if len(matches) != 1 or archive.read(matches[0]) != (root / notice).read_bytes():
                 raise ValueError(f"wheel notice mismatch: {notice}")
+        if dependency_bundle is not None:
+            expected = {p.relative_to(dependency_bundle).as_posix(): p.read_bytes()
+                        for p in dependency_bundle.rglob("*") if p.is_file()}
+            prefix = next(n for n in names if n.endswith(".dist-info/RECORD")).rsplit("/", 1)[0] + "/licenses/release-licenses/"
+            actual = {n[len(prefix):]: archive.read(n) for n in names if n.startswith(prefix)}
+            if actual != expected:
+                raise ValueError("wheel dependency notices differ or are missing")
         metadata = [n for n in names if n.endswith(".dist-info/METADATA")]
         tags = [n for n in names if n.endswith(".dist-info/WHEEL")]
         extensions = [n for n in names if n.endswith(".so")]
@@ -156,9 +168,14 @@ def package(root, cli, wheel, output, source_commit):
     if command(str(cli), "--version").strip() != f"swankit {version}":
         raise ValueError("CLI version differs from source package")
     payload = guide_payload(root)
+    dependency_bundle = root / "crates/swankit-py/release-licenses"
+    dependency_inventory = DEPENDENCY_LICENSES.verify_bundle(dependency_bundle, sha((root / "Cargo.lock").read_bytes()))
+    for path in dependency_bundle.rglob("*"):
+        if path.is_file():
+            payload["third-party-licenses/" + path.relative_to(dependency_bundle).as_posix()] = path.read_bytes()
     cli_elf = elf_audit(cli)
     with tempfile.TemporaryDirectory(prefix="swankit-package-") as temporary:
-        wheel_info = wheel_audit(wheel, root, Path(temporary))
+        wheel_info = wheel_audit(wheel, root, Path(temporary), dependency_bundle)
     if f"Version: {version}\n" not in wheel_info["metadata"]:
         raise ValueError("wheel version differs from source package")
     if "cp311-abi3-" not in wheel_info["wheel_metadata"] or "x86_64" not in wheel_info["wheel_metadata"]:
@@ -172,6 +189,9 @@ def package(root, cli, wheel, output, source_commit):
                "cli_sha256": sha(cli.read_bytes()), "wheel_sha256": sha(wheel.read_bytes()),
                "cli_elf": cli_elf, "wheel": wheel_info,
                "scope": "Supplied artifacts and source hashes; no reproducible-build or platform-matrix claim."}
+    binding["dependency_licenses"] = {"inventory_sha256": sha((dependency_bundle / "DEPENDENCIES.json").read_bytes()),
+                                      "scope": dependency_inventory["scope"],
+                                      "packages": len(dependency_inventory["packages"])}
     binding_bytes = (json.dumps(binding, indent=2, sort_keys=True) + "\n").encode()
     prefix = f"swankit-{version}-linux-x86_64"
     tarball = prefix + ".tar.gz"

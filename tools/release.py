@@ -3,6 +3,7 @@
 import argparse
 import datetime
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -17,8 +18,14 @@ import tomllib
 
 SHA = re.compile(r"[0-9a-f]{64}\Z")
 COMMIT = re.compile(r"[0-9a-f]{40}\Z")
+PRIVATE_PAYLOAD_SUFFIXES = (".ws", ".wsc", ".pc2", ".sav", ".bin", ".eep", ".eeprom", ".rom", ".srm",
+                          ".sram", ".state", ".sta", ".mss", ".wav", ".pcm", ".ogg", ".flac", ".png",
+                          ".jpg", ".jpeg", ".bmp")
 FORMATKIT = {"formatkit-" + name for name in
              ("core", "layout", "catalog", "runtime", "pixel", "codec", "corpus", "corpus-test")}
+_LICENSE_SPEC = importlib.util.spec_from_file_location("dependency_licenses", Path(__file__).with_name("collect-dependency-licenses.py"))
+DEPENDENCY_LICENSES = importlib.util.module_from_spec(_LICENSE_SPEC)
+_LICENSE_SPEC.loader.exec_module(DEPENDENCY_LICENSES)
 
 
 def digest(raw):
@@ -81,9 +88,7 @@ def wheel_payload(wheel):
                 "unsafe wheel member")
         require(member.filename.endswith((".py", ".pyi", ".so")) or leaf == "py.typed"
                 or ".dist-info/" in member.filename, "unexpected wheel payload")
-        require(not member.filename.lower().endswith((".ws", ".wsc", ".pc2", ".sav", ".bin", ".eep",
-                    ".eeprom", ".rom", ".srm", ".sram", ".state", ".sta", ".mss", ".wav", ".pcm",
-                    ".ogg", ".flac", ".png", ".jpg", ".jpeg", ".bmp")), "forbidden wheel payload")
+        require(not member.filename.lower().endswith(PRIVATE_PAYLOAD_SUFFIXES), "forbidden wheel payload")
         if not member.filename.endswith(".so"):
             text_privacy(wheel.read(member))
 
@@ -95,7 +100,9 @@ def packet_files(packet):
         if path.is_file():
             name = path.relative_to(packet).as_posix()
             relative(name)
+            require(not name.lower().endswith(PRIVATE_PAYLOAD_SUFFIXES), "forbidden packet file")
             require(name in {"LICENSE-MIT", "LICENSE-APACHE", "NOTICE", "SHA256SUMS"}
+                    or name.startswith("third-party-licenses/")
                     or name.endswith((".md", ".json", ".py", ".tar.gz", ".whl")), "forbidden packet file")
             if not name.endswith((".tar.gz", ".whl")):
                 text_privacy(path.read_bytes())
@@ -123,12 +130,22 @@ def validate_packet(packet, manifest):
     require(source["source_commit"] == manifest["source_commit"] and not source["source_status"],
             "dirty or different build source")
     require(source["source_files_sha256"]["Cargo.lock"] == manifest["lock_sha256"], "lock binding")
+    dependency_bundle = packet / "third-party-licenses"
+    DEPENDENCY_LICENSES.verify_bundle(dependency_bundle, manifest["lock_sha256"])
+    require(source.get("dependency_licenses", {}).get("inventory_sha256") ==
+            digest((dependency_bundle / "DEPENDENCIES.json").read_bytes()), "dependency inventory binding")
     wheels = [name for name in files if name.endswith(".whl")]
     archives = [name for name in files if name.endswith(".tar.gz")]
     require(len(wheels) == len(archives) == 1, "expected one wheel and CLI archive")
     require(files[wheels[0]] == source["wheel_sha256"], "wheel binding")
     with zipfile.ZipFile(packet / wheels[0]) as wheel:
         wheel_payload(wheel)
+        info = next(n for n in wheel.namelist() if n.endswith(".dist-info/RECORD"))
+        prefix = info.rsplit("/", 1)[0] + "/licenses/release-licenses/"
+        included = {n[len(prefix):]: wheel.read(n) for n in wheel.namelist() if n.startswith(prefix)}
+        expected = {p.relative_to(dependency_bundle).as_posix(): p.read_bytes()
+                    for p in dependency_bundle.rglob("*") if p.is_file()}
+        require(included == expected, "wheel dependency notices differ or are missing")
     require(FORMATKIT <= manifest.get("registry", {}).keys(), "missing registry evidence")
     for item in manifest["registry"].values():
         require(item.get("version") == "0.1.0" and item.get("source") ==

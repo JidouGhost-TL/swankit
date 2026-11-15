@@ -28,10 +28,21 @@ class ApprovalTests(unittest.TestCase):
         self.packet.mkdir(parents=True)
         self.commit = "a" * 40
         self.lock = "b" * 64
+        license_text = b"Synthetic dependency license text"
+        inventory = {"schema": "swankit-dependency-licenses/1",
+                     "scope": "all-resolved-packages-including-build-dev-and-target-specific",
+                     "lock_sha256": self.lock, "packages": [{"name": "synthetic", "version": "0.1.0",
+                     "declared_license": "MIT", "source": "workspace", "registry_checksum": None,
+                     "licenses": [{"source_path": "LICENSE", "bundle_path": "synthetic-0.1.0/LICENSE",
+                                  "bytes": len(license_text), "sha256": RELEASE.digest(license_text)}]}]}
+        inventory_raw = json.dumps(inventory).encode()
         wheel = io.BytesIO()
         with zipfile.ZipFile(wheel, "w") as out:
             out.writestr("swankit/_native.abi3.so", b"synthetic extension")
             out.writestr("swankit/__init__.py", b"# synthetic")
+            out.writestr("swankit-0.1.0.dist-info/RECORD", "")
+            out.writestr("swankit-0.1.0.dist-info/licenses/release-licenses/DEPENDENCIES.json", inventory_raw)
+            out.writestr("swankit-0.1.0.dist-info/licenses/release-licenses/synthetic-0.1.0/LICENSE", license_text)
         self.wheel_bytes = wheel.getvalue()
         archive = io.BytesIO()
         with tarfile.open(fileobj=archive, mode="w:gz") as out:
@@ -41,9 +52,12 @@ class ApprovalTests(unittest.TestCase):
         values = {"swankit-0.1.0-linux-x86_64.tar.gz": archive.getvalue(),
                   "swankit-0.1.0-cp311-abi3-linux_x86_64.whl": self.wheel_bytes,
                   "LICENSE-MIT": b"license", "LICENSE-APACHE": b"license", "NOTICE": b"notice",
+                  "third-party-licenses/DEPENDENCIES.json": inventory_raw,
+                  "third-party-licenses/synthetic-0.1.0/LICENSE": license_text,
                   "BUILD-SOURCE.json": json.dumps({"source_commit": self.commit, "source_status": [],
                        "source_files_sha256": {"Cargo.lock": self.lock},
                        "wheel_sha256": RELEASE.digest(self.wheel_bytes),
+                       "dependency_licenses": {"inventory_sha256": RELEASE.digest(inventory_raw)},
                        "cli_sha256": RELEASE.digest(b"cli")}).encode()}
         archive = io.BytesIO()
         with tarfile.open(fileobj=archive, mode="w:gz") as out:
@@ -54,7 +68,9 @@ class ApprovalTests(unittest.TestCase):
         values["swankit-0.1.0-linux-x86_64.tar.gz"] = archive.getvalue()
         values["SHA256SUMS"] = "".join(RELEASE.digest(b) + "  " + n + "\n" for n, b in sorted(values.items())).encode()
         for name, raw in values.items():
-            (self.packet / name).write_bytes(raw)
+            target = self.packet / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(raw)
         self.manifest = {"schema": "swankit-candidate/1", "version": "0.1.0", "source_commit": self.commit,
                          "lock_sha256": self.lock, "run_id": 4, "files": RELEASE.packet_files(self.packet),
                          "checks": {"ci": "PASS", "packet_smoke": "PASS"},

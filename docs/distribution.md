@@ -1,5 +1,15 @@
 # Offline distribution
 
+Release packets include `third-party-licenses/`: the declared license metadata,
+published package checksums and preserved upstream license/copyright texts for
+the entire resolved Cargo package inventory. This conservative inventory also
+includes build, development and target-specific packages; it does not claim
+that every listed package is linked into each binary. The wheel carries the
+same evidence under its distribution license directory. Generation occurs
+before the wheel is built and installed for testing. Packaging refuses missing,
+changed or mismatched notice files; these texts do not replace the project
+licenses or change upstream license terms.
+
 Maintainers can build and publish a reviewed private packet through the
 [manual release workflows](release.md). The main `swankit` executable is
 included; `wg-adapter` and `wg-decode` remain auxiliary source-build tools.

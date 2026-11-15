@@ -14,6 +14,9 @@ if [[ $wheel_artifacts == "$wheel_repo" || $wheel_artifacts == "$wheel_repo/"* ]
     return 64 2>/dev/null || exit 64
 fi
 wheel_run=$(mktemp -d "$wheel_artifacts/run.XXXXXXXX")
+cargo metadata --locked --all-features --format-version 1 > "$wheel_run/dependency-metadata.json"
+python tools/collect-dependency-licenses.py --metadata "$wheel_run/dependency-metadata.json" \
+    --lock Cargo.lock --output "$wheel_repo/crates/swankit-py/release-licenses"
 maturin build --release --manifest-path crates/swankit-py/Cargo.toml --locked --out "$wheel_run/wheels"
 wheel_install="$wheel_run/installed"
 python -m pip install --no-index --target "$wheel_install" "$wheel_run"/wheels/*.whl

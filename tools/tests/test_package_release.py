@@ -110,5 +110,43 @@ class ReleaseTests(unittest.TestCase):
                         PACKAGE.wheel_audit(path, ROOT, root)
 
 
+    def test_wheel_dependency_notices_match_authoritative_bundle(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            bundle = root / "bundle"
+            (bundle / "synthetic-0.1.0").mkdir(parents=True)
+            (bundle / "DEPENDENCIES.json").write_text("{}")
+            (bundle / "synthetic-0.1.0/LICENSE").write_text("Copyright synthetic\nSynthetic terms\n")
+            prefix = "swankit-0.1.0.dist-info/licenses/release-licenses/"
+            for case in ["valid", "missing", "changed"]:
+                members = {"swankit/_native.abi3.so": Path(sys.executable).resolve().read_bytes(),
+                           "swankit-0.1.0.dist-info/METADATA": b"Version: 0.1.0\n",
+                           "swankit-0.1.0.dist-info/WHEEL": b"Tag: cp311-abi3-manylinux_2_34_x86_64\n"}
+                members.update({"swankit-0.1.0.dist-info/licenses/" + n: (ROOT / n).read_bytes()
+                                for n in PACKAGE.NOTICES})
+                members.update({prefix + p.relative_to(bundle).as_posix(): p.read_bytes()
+                                for p in bundle.rglob("*") if p.is_file()})
+                key = prefix + "synthetic-0.1.0/LICENSE"
+                if case == "missing":
+                    del members[key]
+                elif case == "changed":
+                    members[key] = b"changed but correctly hashed"
+                record = "swankit-0.1.0.dist-info/RECORD"
+                rows = []
+                for name, raw in members.items():
+                    checksum = base64.urlsafe_b64encode(hashlib.sha256(raw).digest()).decode().rstrip("=")
+                    rows.append(f"{name},sha256={checksum},{len(raw)}\n")
+                members[record] = ("".join(rows) + record + ",,\n").encode()
+                path = root / (case + ".whl")
+                with zipfile.ZipFile(path, "w") as wheel:
+                    for name, raw in members.items():
+                        wheel.writestr(name, raw)
+                if case == "valid":
+                    PACKAGE.wheel_audit(path, ROOT, root, bundle)
+                else:
+                    with self.subTest(case=case), self.assertRaisesRegex(ValueError, "dependency notices"):
+                        PACKAGE.wheel_audit(path, ROOT, root, bundle)
+
+
 if __name__ == "__main__":
     unittest.main()

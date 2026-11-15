@@ -10,7 +10,7 @@ class PackageLicenseTests(unittest.TestCase):
         package = root / "crates" / "swankit-py"
         expected = ["LICENSE-MIT", "LICENSE-APACHE", "NOTICE"]
         metadata = tomllib.loads((package / "pyproject.toml").read_text())
-        self.assertEqual(metadata["project"]["license-files"], expected)
+        self.assertEqual(metadata["project"]["license-files"], expected + ["release-licenses/**/*"])
         for name in expected:
             with self.subTest(name=name):
                 self.assertEqual((root / name).read_bytes(), (package / name).read_bytes())
