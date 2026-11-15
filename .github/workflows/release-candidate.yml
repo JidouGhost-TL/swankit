@@ -1,0 +1,51 @@
+name: Release candidate
+on:
+  workflow_dispatch:
+    inputs:
+      source_commit:
+        description: Full current main commit to qualify
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: release-candidate-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Validate source selection
+        env:
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+        run: |
+          [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          test "$SOURCE_COMMIT" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+      - name: Verify private repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: test "$(gh api "repos/$GITHUB_REPOSITORY" --jq .private)" = true
+      - name: Build, qualify and package
+        env:
+          SWANKIT_RELEASE_ARTIFACTS: ${{ runner.temp }}/release-build
+          SWANKIT_RELEASE_RUN_ID: ${{ github.run_id }}
+        run: bash tools/release-candidate.sh
+      - name: Store immutable candidate
+        id: packet
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: candidate-${{ github.sha }}
+          path: ${{ runner.temp }}/release-build/candidate/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Candidate coordinates
+        env:
+          ARTIFACT_ID: ${{ steps.packet.outputs.artifact-id }}
+          ARTIFACT_DIGEST: ${{ steps.packet.outputs.artifact-digest }}
+        run: |
+          printf 'Candidate artifact: %s\nDigest: %s\n' "$ARTIFACT_ID" "$ARTIFACT_DIGEST" >> "$GITHUB_STEP_SUMMARY"
