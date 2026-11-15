@@ -80,6 +80,25 @@ fn counted_relative_directory16_options() -> Options {
 }
 
 #[test]
+fn counted_relative_directory16_repeated_prefixes_finish_within_same_budget() {
+    let mut rom = vec![0xaa; 900_000];
+    for offset in (10_000..rom.len()).step_by(10_000) {
+        rom[offset] = 0xab;
+    }
+    let report = search(
+        &rom,
+        &Options {
+            max_probes: 8_000_000,
+            ..counted_relative_directory16_options()
+        },
+    )
+    .unwrap();
+    assert!(report.complete_for_configured_scan);
+    assert!(report.counts[&Family::CountedRelativeDirectory16].probes <= 8_000_000);
+    assert!(report.counts[&Family::CountedRelativeDirectory16].probes >= 2 * (rom.len() - 3));
+}
+
+#[test]
 fn counted_relative_directory16_finds_seven_records_from_unsorted_minimum_offset() {
     let counts = [1, 2, 1, 3, 2, 1, 4];
     let entries = [4, 0, 6, 2, 1, 5, 3];

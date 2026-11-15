@@ -110,8 +110,20 @@ and every record have even byte lengths, odd relative offsets are rejected
 before following them; this preserves aliases and reordered entries. Group validation checks
 each referenced span against the ROM input bounds regardless of `max_stored`;
 only records whose individual spans fit `max_stored` are emitted, so one larger
-record does not suppress smaller members of a valid group. Every directory word
-and distinct record header inspected consumes `max_probes` in the selected budget scope. If that budget stops
+record does not suppress smaller members of a valid group. A distinct target
+inside the already bounded first record is rejected without scanning the rest
+of the directory. Long repeated offset prefixes use a shared equal-word-run
+index when the input and remaining budget can support it; aliases are expanded
+only after the group validates. A run query stops at a new value or the exact
+minimum-offset count boundary, including when following payload words happen
+to have the same value. Input byte parity does not constrain the table base.
+
+Index construction consumes two probes per compared pair of u16 words;
+each indexed table query consumes two probes (word read and endpoint lookup).
+Ordinary table reads and distinct record headers consume one probe each.
+Construction is included in `max_probes`, uses four index bytes per input byte,
+and is omitted for small inputs or insufficient remaining budget. The selected
+budget scope and retention order are unchanged. If that budget stops
 the scan, `complete_for_configured_scan` is false. This is a structural
 candidate rule, not evidence of payload encoding, resource meaning, a reader,
 runtime use, palette or asset identity.
