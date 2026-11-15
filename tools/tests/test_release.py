@@ -237,6 +237,22 @@ class ApprovalTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "machine path"):
             RELEASE.packet_files(self.packet)
 
+    def test_typed_wheel_markers_are_accepted_but_wheel_payload_leaks_refuse(self):
+        def check(values):
+            raw = io.BytesIO()
+            with zipfile.ZipFile(raw, "w") as archive:
+                for name, data in values.items():
+                    archive.writestr(name, data)
+            with zipfile.ZipFile(raw) as archive:
+                RELEASE.wheel_payload(archive)
+        check({"swankit/py.typed": "", "swankit/__init__.pyi": "def tiles() -> None: ...\n"})
+        for suffix in ("sram", "sav", "state", "mss", "eep", "rom", "pc2", "wav", "pcm", "png"):
+            with self.subTest(suffix=suffix), self.assertRaisesRegex(ValueError, "forbidden wheel"):
+                check({"swankit-0.1.0.dist-info/private." + suffix: "synthetic"})
+        for name in ("swankit/helper.py", "swankit/helper.pyi", "swankit-0.1.0.dist-info/METADATA"):
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError, "machine path"):
+                check({name: "/" + "home" + "/" + "synthetic" + "/" + "private"})
+
     def test_conflicting_release_body_refuses_before_new_tag(self):
         class API:
             def release(self, tag):
