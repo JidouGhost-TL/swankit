@@ -63,6 +63,31 @@ def registry(lock, metadata):
             for name, item in sorted(packages.items())}
 
 
+def text_privacy(raw):
+    content = raw.decode("utf-8")
+    require(not re.search(r"/(?:home|mnt|media|Users|root|tmp|srv|opt)/|[A-Z]:[\\/](?:Users|Documents)[\\/]", content),
+            "machine path in packet text")
+    require(not re.search(r"-----BEGIN (?:OPENSSH|RSA|EC) PRIVATE KEY-----|\b(?:ghp_|sk-proj-)[A-Za-z0-9]+", content),
+            "credential marker in packet text")
+
+
+def wheel_payload(wheel):
+    members = wheel.infolist()
+    require(len({m.filename for m in members}) == len(members), "duplicate wheel member")
+    for member in members:
+        relative(member.filename)
+        leaf = PurePosixPath(member.filename).name
+        require(not member.is_dir() and ((member.external_attr >> 16) & 0o170000) != 0o120000,
+                "unsafe wheel member")
+        require(member.filename.endswith((".py", ".pyi", ".so")) or leaf == "py.typed"
+                or ".dist-info/" in member.filename, "unexpected wheel payload")
+        require(not member.filename.lower().endswith((".ws", ".wsc", ".pc2", ".sav", ".bin", ".eep",
+                    ".eeprom", ".rom", ".srm", ".sram", ".state", ".sta", ".mss", ".wav", ".pcm",
+                    ".ogg", ".flac", ".png", ".jpg", ".jpeg", ".bmp")), "forbidden wheel payload")
+        if not member.filename.endswith(".so"):
+            text_privacy(wheel.read(member))
+
+
 def packet_files(packet):
     files = {}
     for path in sorted(packet.rglob("*")):
@@ -73,11 +98,7 @@ def packet_files(packet):
             require(name in {"LICENSE-MIT", "LICENSE-APACHE", "NOTICE", "SHA256SUMS"}
                     or name.endswith((".md", ".json", ".py", ".tar.gz", ".whl")), "forbidden packet file")
             if not name.endswith((".tar.gz", ".whl")):
-                content = path.read_text()
-                require(not re.search(r"/(?:home|mnt|media|Users|root|tmp|srv|opt)/|[A-Z]:[\\/](?:Users|Documents)[\\/]", content),
-                        "machine path in packet text")
-                require(not re.search(r"-----BEGIN (?:OPENSSH|RSA|EC) PRIVATE KEY-----|\b(?:ghp_|sk-proj-)[A-Za-z0-9]+", content),
-                        "credential marker in packet text")
+                text_privacy(path.read_bytes())
             files[name] = digest(path.read_bytes())
     return files
 
@@ -107,17 +128,7 @@ def validate_packet(packet, manifest):
     require(len(wheels) == len(archives) == 1, "expected one wheel and CLI archive")
     require(files[wheels[0]] == source["wheel_sha256"], "wheel binding")
     with zipfile.ZipFile(packet / wheels[0]) as wheel:
-        members = wheel.infolist()
-        require(len({m.filename for m in members}) == len(members), "duplicate wheel member")
-        for member in members:
-            relative(member.filename)
-            leaf = PurePosixPath(member.filename).name
-            require(not member.is_dir() and ((member.external_attr >> 16) & 0o170000) != 0o120000,
-                    "unsafe wheel member")
-            require(member.filename.endswith((".py", ".so")) or ".dist-info/" in member.filename,
-                    "unexpected wheel payload")
-            require(not member.filename.lower().endswith((".ws", ".wsc", ".sav", ".bin", ".eep", ".rom", ".srm")),
-                    "forbidden wheel payload")
+        wheel_payload(wheel)
     require(FORMATKIT <= manifest.get("registry", {}).keys(), "missing registry evidence")
     for item in manifest["registry"].values():
         require(item.get("version") == "0.1.0" and item.get("source") ==
