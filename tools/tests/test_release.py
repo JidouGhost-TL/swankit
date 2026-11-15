@@ -243,6 +243,26 @@ class ApprovalTests(unittest.TestCase):
         self.assertEqual([headers for _, headers in observed],
                          ["application/octet-stream", "application/vnd.github+json"])
 
+    def test_actions_archive_uses_json_accept_and_retains_binary_response(self):
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w") as archive:
+            archive.writestr("packet/README.md", "Synthetic guide")
+        raw = buffer.getvalue()
+        observed = []
+        class Opener:
+            def open(self, request, timeout):
+                observed.append(request.get_header("Accept"))
+                if request.get_header("Accept") != "application/vnd.github+json":
+                    raise urllib.error.HTTPError(request.full_url, 415, "Unsupported Media Type", {}, None)
+                return io.BytesIO(raw)
+        api = RELEASE.GitHub("owner/project", "synthetic")
+        destination = self.root / "downloaded"
+        with patch.object(RELEASE.urllib.request, "build_opener", return_value=Opener()):
+            RELEASE.download_artifact(api, 8, "sha256:" + RELEASE.digest(raw), destination)
+        self.assertEqual(observed, ["application/vnd.github+json"])
+        self.assertEqual((destination / "packet/README.md").read_text(), "Synthetic guide")
+        self.assertEqual((self.root / "candidate.zip").read_bytes(), raw)
+
     def test_forbidden_payload_and_machine_path_refused(self):
         private = self.packet / ("private." + "wsc")
         private.write_bytes(bytes(16))

@@ -232,11 +232,11 @@ class GitHub:
         self.root = "https://api.github.com/repos/" + repository
         self.token = token
 
-    def request(self, method, path, body=None, binary=False):
+    def request(self, method, path, body=None, binary=False, accept=None):
         url = path if path.startswith("https://") else self.root + path
         require(urllib.parse.urlsplit(url).hostname in {"api.github.com", "uploads.github.com"}, "untrusted API URL")
         headers = {"Authorization": "Bearer " + self.token,
-                   "Accept": "application/octet-stream" if binary and method == "GET" else "application/vnd.github+json",
+                   "Accept": accept or ("application/octet-stream" if binary and method == "GET" else "application/vnd.github+json"),
                    "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "swankit-release"}
         if body is not None:
             headers["Content-Type"] = "application/octet-stream" if binary else "application/json"
@@ -280,7 +280,9 @@ def safe_extract_zip(raw, destination):
 
 def download_artifact(api, artifact_id, expected_digest, destination):
     # NoCredentialRedirect removes authorization before every download redirect.
-    raw = api.request("GET", "/actions/artifacts/" + str(artifact_id) + "/zip", binary=True)
+    # The archive API negotiates JSON media before redirecting to binary storage.
+    raw = api.request("GET", "/actions/artifacts/" + str(artifact_id) + "/zip", binary=True,
+                      accept="application/vnd.github+json")
     require(raw is not None and "sha256:" + digest(raw) == expected_digest, "downloaded artifact digest mismatch")
     safe_extract_zip(raw, destination)
     (destination.parent / "candidate.zip").write_bytes(raw)
