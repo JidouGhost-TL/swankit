@@ -1,0 +1,81 @@
+name: Publish approved private release
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful candidate run
+        required: true
+        type: string
+      artifact_id:
+        description: Approved immutable candidate artifact
+        required: true
+        type: string
+      tag:
+        description: Approved version tag
+        required: true
+        default: v0.1.0
+        type: string
+      receipt:
+        description: Reviewed receipt under release-approvals on main
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: private-release-${{ inputs.tag }}
+  cancel-in-progress: false
+jobs:
+  validate:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Verify approved candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ inputs.run_id }}
+          ARTIFACT_ID: ${{ inputs.artifact_id }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          RECEIPT: ${{ inputs.receipt }}
+        run: bash tools/release-promote.sh validate
+  publish:
+    needs: validate
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Promote the same approved bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ inputs.run_id }}
+          ARTIFACT_ID: ${{ inputs.artifact_id }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          RECEIPT: ${{ inputs.receipt }}
+        run: bash tools/release-promote.sh publish
+  verify:
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Verify released download and installation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          RECEIPT: ${{ inputs.receipt }}
+        run: bash tools/release-verify.sh

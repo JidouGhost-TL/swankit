@@ -1,5 +1,9 @@
 # Offline distribution
 
+Maintainers can build and publish a reviewed private packet through the
+[manual release workflows](release.md). The main `swankit` executable is
+included; `wg-adapter` and `wg-decode` remain auxiliary source-build tools.
+
 A complete private release packet contains a Linux x86_64 CLI archive, a
 Python 3.11+ abi3 Linux x86_64 wheel, README.md, OFFLINE.md, all linked user
 and crate guides, JSON schemas, LICENSE-MIT, LICENSE-APACHE and NOTICE.
