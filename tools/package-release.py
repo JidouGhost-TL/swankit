@@ -18,6 +18,7 @@ from urllib.parse import unquote, urlsplit
 import zipfile
 
 NOTICES = ("LICENSE-MIT", "LICENSE-APACHE", "NOTICE")
+GENERATED_GUIDE_DIRS = {"target", "build", "dist", "node_modules", "__pycache__", "release-licenses"}
 _LICENSE_SPEC = importlib.util.spec_from_file_location("dependency_licenses", Path(__file__).with_name("collect-dependency-licenses.py"))
 DEPENDENCY_LICENSES = importlib.util.module_from_spec(_LICENSE_SPEC)
 _LICENSE_SPEC.loader.exec_module(DEPENDENCY_LICENSES)
@@ -44,6 +45,10 @@ def elf_audit(path):
             "glibc_symbol_minimum": needed[-1], "version_info": versions}
 
 
+def private_guide_path(name):
+    return any(part.startswith(".") or part in GENERATED_GUIDE_DIRS for part in Path(name).parts)
+
+
 def local_links(payload):
     for name, data in payload.items():
         if not name.endswith(".md"):
@@ -57,6 +62,8 @@ def local_links(payload):
                 raise ValueError(f"absolute guide link: {name}: {target}")
             parts = list(Path(name).parent.parts)
             for part in Path(decoded_path).parts:
+                if part not in (".", "..") and private_guide_path(part):
+                    raise ValueError(f"hidden or generated offline guide link: {name}: {target}")
                 if part == "..":
                     if not parts:
                         raise ValueError(f"guide link escapes packet: {name}: {target}")
@@ -71,8 +78,10 @@ def guide_payload(root):
     names.update(p.relative_to(root).as_posix() for p in (root / "docs").rglob("*")
                  if p.is_file() and p.suffix in (".md", ".json"))
     names.update(p.relative_to(root).as_posix() for p in (root / "crates").rglob("README.md"))
-    names = {name for name in names if "/release-licenses/" not in name}
+    names = {name for name in names if not private_guide_path(name)}
     def read_guide(name):
+        if private_guide_path(name):
+            raise ValueError(f"hidden or generated offline guide target: {name}")
         path = root / name
         if (not path.is_file() or path.is_symlink()
                 or not path.resolve().is_relative_to(root.resolve())):

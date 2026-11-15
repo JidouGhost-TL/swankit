@@ -49,6 +49,45 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "missing or unsafe"):
                 PACKAGE.guide_payload(root)
 
+    def test_generated_and_hidden_readmes_are_not_offline_guides(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for name in ["README.md", "CONTRIBUTING.md", *PACKAGE.NOTICES]:
+                (root / name).write_text("synthetic public guide")
+            expected = {}
+            for name in ["docs/guide.md", "docs/definition.json", "crates/example/README.md"]:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("{}" if name.endswith(".json") else "public guide")
+                expected[name] = path.read_bytes()
+            hidden = ["crates/example/.pytest_cache/README.md", "docs/.cache/hidden.md",
+                      "crates/example/target/README.md", "crates/example/__pycache__/README.md",
+                      "crates/example/release-licenses/dep/README.md"]
+            for name in hidden:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("cache content must not be distributed")
+            payload = PACKAGE.guide_payload(root)
+            self.assertTrue(expected.keys() <= payload.keys())
+            self.assertFalse(set(hidden) & payload.keys())
+            for name, raw in expected.items():
+                self.assertEqual(payload[name], raw)
+
+    def test_explicit_hidden_or_generated_guide_links_are_refused(self):
+        for target in [".git/config", "%2egit/config", "docs/.cache/hidden.md",
+                       "crates/example/.pytest_cache/README.md", "crates/example/target/README.md"]:
+            with tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                for name in ["CONTRIBUTING.md", *PACKAGE.NOTICES]:
+                    (root / name).write_text("public guide")
+                from urllib.parse import unquote
+                path = root / unquote(target)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("must never enter the packet")
+                (root / "README.md").write_text("[private](" + target + ")")
+                with self.subTest(target=target), self.assertRaisesRegex(ValueError, "hidden or generated"):
+                    PACKAGE.guide_payload(root)
+
     def test_encoded_absolute_links_are_refused_before_reading(self):
         from urllib.parse import quote
         with tempfile.TemporaryDirectory() as temporary:
