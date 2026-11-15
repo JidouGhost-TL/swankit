@@ -56,12 +56,16 @@ an uploaded file claims success. A minimal schema is:
   "artifact_id": 456,
   "artifact_digest": "sha256:TRANSPORT_ZIP_SHA256",
   "corpus": {
+    "scope": "workspace-all-features-release-corpus",
+    "cargo_args": ["--workspace", "--all-features", "--locked", "--release", "--test", "corpus"],
     "exit_code": 0,
     "required": true,
     "write": false,
     "tests_passed": 1,
     "groups_passed": 1,
     "tests_failed": 0,
+    "tests_ignored": 0,
+    "tests_filtered": 0,
     "source_commit": "FULL_QUALIFIED_COMMIT",
     "wheel_sha256": "TESTED_WHEEL_SHA256"
   }
@@ -69,8 +73,13 @@ an uploaded file claims success. A minimal schema is:
 ```
 
 Replace the teaching counts with actual nonzero results and every placeholder
-with the measured identity. Missing, failed, empty or mismatched qualification
-is refused. Keep machine paths, individual title data and private payloads out
+with the measured identity from the complete workspace gate. Package-only,
+filtered, ignored or differently scoped corpus runs do not qualify. `--offline`
+may be present in the recorded arguments; no test-name filter is allowed.
+Use the existing `tools/corpus-mounts.py` discovery for transitive read-only
+data roots rather than enumerating machine-specific storage locations.
+Missing, failed, empty or mismatched qualification is refused. Keep machine
+paths, individual title data and private payloads out
 of approval records. Use the same corpus runner infrastructure without
 substituting local library sources for the published dependencies.
 

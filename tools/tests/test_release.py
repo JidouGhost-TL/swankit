@@ -66,8 +66,11 @@ class ApprovalTests(unittest.TestCase):
                         "tag": "v0.1.0", "source_commit": self.commit, "lock_sha256": self.lock,
                         "manifest_sha256": RELEASE.digest(self.raw), "run_id": 4, "artifact_id": 8,
                         "artifact_digest": "sha256:" + "c" * 64,
-                        "corpus": {"exit_code": 0, "required": True, "write": False, "tests_passed": 2,
-                                   "groups_passed": 1, "tests_failed": 0, "source_commit": self.commit,
+                        "corpus": {"scope": "workspace-all-features-release-corpus",
+                                   "cargo_args": ["--workspace", "--all-features", "--locked", "--release", "--test", "corpus"],
+                                   "exit_code": 0, "required": True, "write": False, "tests_passed": 2,
+                                   "groups_passed": 1, "tests_failed": 0, "tests_ignored": 0, "tests_filtered": 0,
+                                   "source_commit": self.commit,
                                    "wheel_sha256": RELEASE.digest(self.wheel_bytes)}}
         self.repo = {"private": True, "full_name": "owner/project"}
         self.run = {"id": 4, "event": "workflow_dispatch", "conclusion": "success", "head_branch": "main",
@@ -98,6 +101,16 @@ class ApprovalTests(unittest.TestCase):
         for key, value in [("exit_code", 1), ("required", False), ("write", True), ("tests_passed", 0),
                            ("groups_passed", 0), ("tests_failed", 1), ("wheel_sha256", "d" * 64),
                            ("source_commit", "d" * 40)]:
+            before = copy.deepcopy(self.receipt)
+            self.receipt["corpus"][key] = value
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                self.validate()
+            self.receipt = before
+
+    def test_partial_filtered_or_unidentified_corpus_scope_refused(self):
+        for key, value in [("scope", "assets-only"), ("scope", None), ("tests_ignored", 1),
+                           ("tests_filtered", 1), ("cargo_args", ["-p", "ws-assets", "--test", "corpus"]),
+                           ("cargo_args", self.receipt["corpus"]["cargo_args"] + ["--", "one_case"])]:
             before = copy.deepcopy(self.receipt)
             self.receipt["corpus"][key] = value
             with self.subTest(key=key), self.assertRaises(ValueError):
