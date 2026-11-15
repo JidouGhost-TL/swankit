@@ -12,12 +12,14 @@ if [[ $artifacts == "$root" || $artifacts == "$root/"* ]]; then
     echo 'error: Python artifacts must be outside the repository' >&2
     exit 64
 fi
-formatkit_dir=${FORMATKIT_DIR:-"$root/../formatkit"}
-formatkit_dir=$(cd -- "$formatkit_dir" && pwd)
+if [[ $mode == --ci-corpus ]]; then
+    formatkit_dir=${FORMATKIT_DIR:-"$root/../formatkit"}
+    formatkit_dir=$(cd -- "$formatkit_dir" && pwd)
+fi
 common_dir=$(git -C "$root" rev-parse --path-format=absolute --git-common-dir)
 image=${SWANKIT_PYTHON_IMAGE:-swankit-python:local}
 docker build -f "$root/tools/python.Dockerfile" -t "$image" "$root"
-mounts=(-v "$root:/workspace/swankit" -v "$formatkit_dir:/workspace/formatkit:ro"
+mounts=(-v "$root:/workspace/swankit"
         -v "$artifacts:/artifacts" -v "$common_dir:$common_dir:ro")
 runtime_dir=${XDG_RUNTIME_DIR:-/tmp}
 mounts+=(-v "$runtime_dir:/runtime-locks")
@@ -26,6 +28,7 @@ if [[ -n ${SWANKIT_PROGRESS_LOG:-} ]]; then
     mounts+=(-v "$progress_parent:$progress_parent")
 fi
 if [[ $mode == --ci-corpus ]]; then
+    mounts+=(-v "$formatkit_dir:/workspace/formatkit:ro")
     corpus_dir=${FORMATKIT_CORPUS_DIR:?set an explicit staged corpus directory}
     corpus_dir=$(cd -- "$corpus_dir" && pwd)
     mounts+=(-v "$corpus_dir:$corpus_dir:ro")
@@ -49,6 +52,7 @@ docker run --rm --user "$(id -u):$(id -g)" --memory=4g --cpus=2 \
     -e SWANKIT_CI_CONTAINER=1 -e SWANKIT_PYTHON_ARTIFACTS=/artifacts \
     -e SWANKIT_PROGRESS_LOG="${SWANKIT_PROGRESS_LOG:-}" -e XDG_RUNTIME_DIR=/runtime-locks \
     -e FORMATKIT_CORPUS_DIR="${corpus_dir:-}" -e FORMATKIT_CORPUS_REQUIRED=1 \
+    -e FORMATKIT_DIR="${formatkit_dir:+/workspace/formatkit}" \
     -e SWANKIT_INTEROP_BOOTSTRAP="${SWANKIT_INTEROP_BOOTSTRAP:-0}" \
     "$image" bash -euc '
         mode=$1

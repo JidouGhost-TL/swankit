@@ -103,11 +103,11 @@ tests; the same wheel is used for Python corpus checks. Artifact directories
 stay external, and staged symlinks/reference files are mounted read-only.
 Interop bootstrap mode is forbidden during CI and required corpus validation.
 
-Formatkit packages are requested from crates.io at exactly `=0.1.0`. During
-development, `[patch.crates-io]` redirects them to the sibling `../formatkit`
-checkout. Relative paths keep machine locations out of Git. To switch off the
-override, remove the entire patch table, run `cargo update`, review and commit
-the changed lockfile, then run the gates. Publication remains disabled.
+Formatkit packages are resolved from crates.io at exactly `=0.1.0` using the
+committed lockfile. Ordinary builds, wheel creation and synthetic CI do not
+require a sibling checkout. A deliberate local dependency override must remain
+outside release qualification; release builds use the registry dependencies.
+Publication remains disabled.
 The safe corpus runner is supplied separately by the sibling checkout or
 `FORMATKIT_DIR`; the libraries remain pinned registry dependencies.
 
