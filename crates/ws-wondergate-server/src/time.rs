@@ -197,24 +197,7 @@ impl Rng for OsRng {
 
     #[cfg(windows)]
     fn fill(&mut self, buf: &mut [u8]) -> io::Result<()> {
-        use windows_sys::Win32::Security::Cryptography::{
-            BCryptGenRandom, BCRYPT_USE_SYSTEM_PREFERRED_RNG,
-        };
-        for chunk in buf.chunks_mut(u32::MAX as usize) {
-            // The system provider requires a null handle and writes only to this slice.
-            let status = unsafe {
-                BCryptGenRandom(
-                    std::ptr::null_mut(),
-                    chunk.as_mut_ptr(),
-                    chunk.len() as u32,
-                    BCRYPT_USE_SYSTEM_PREFERRED_RNG,
-                )
-            };
-            if status != 0 {
-                return Err(io::Error::other(format!("system RNG failed ({status:#x})")));
-            }
-        }
-        Ok(())
+        ws_platform::fill_random(buf)
     }
 
     #[cfg(not(any(unix, windows)))]

@@ -3,7 +3,18 @@ mod args;
 mod assets;
 mod discover;
 mod io;
+#[cfg(unix)]
 mod link;
+#[cfg(not(unix))]
+mod link {
+    use super::{Args, Result};
+
+    pub const HELP: &str = "The link relay requires a Unix system.";
+
+    pub fn run(_: &mut Args) -> Result<()> {
+        Err(HELP.into())
+    }
+}
 mod png;
 mod png_read;
 #[cfg(feature = "saves")]
@@ -44,7 +55,7 @@ The server loads bundled shared services and validated title definitions.
   wg-adapter [CONFIG.ini | ASDF] [--config CONFIG.ini] [--tap FILE] [--net tcp]
   wg-decode SERIAL.log [--header len16be|zero-then-len8]
 The same commands are available as stand-alone wg-adapter and wg-decode binaries.
-  link ENDPOINT_A ENDPOINT_B [--log FILE.tsv] [--latency-ms N] [--jitter-ms N --seed S] [--baud B]
+  link ENDPOINT_A ENDPOINT_B (Unix) [--log FILE.tsv] [--latency-ms N] [--jitter-ms N --seed S] [--baud B]
 Endpoints: tcp:HOST:PORT, listen:[HOST:]PORT (default 127.0.0.1), stdio,
            exec:COMMAND, device:PATH, wondergate[:CONFIG.ini].
 Raw data bytes only; no speed or timing. --baud applies only to devices.

@@ -6,7 +6,7 @@ rust-version.workspace = true
 license = "MIT AND (MIT OR Apache-2.0)"
 publish.workspace = true
 
-[dependencies]
+[target.'cfg(unix)'.dependencies]
 libc = "0.2"
 ws-wondergate = { path = "../ws-wondergate" }
 

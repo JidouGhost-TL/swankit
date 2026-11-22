@@ -65,29 +65,8 @@ pub(crate) fn file_identity(_: &Path, metadata: &Metadata) -> std::io::Result<Fi
 
 #[cfg(windows)]
 pub(crate) fn file_identity(path: &Path, _: &Metadata) -> std::io::Result<FileIdentity> {
-    use std::os::windows::io::AsRawHandle;
-    use windows_sys::Win32::Storage::FileSystem::{
-        FileIdInfo, GetFileInformationByHandleEx, FILE_ID_INFO,
-    };
-
-    let file = std::fs::File::open(path)?;
-    let mut identity = FILE_ID_INFO::default();
-    // The handle stays open and the output buffer is a writable FILE_ID_INFO.
-    let ok = unsafe {
-        GetFileInformationByHandleEx(
-            file.as_raw_handle(),
-            FileIdInfo,
-            (&mut identity as *mut FILE_ID_INFO).cast(),
-            std::mem::size_of::<FILE_ID_INFO>() as u32,
-        )
-    };
-    if ok == 0 {
-        return Err(std::io::Error::last_os_error());
-    }
-    Ok(FileIdentity(
-        identity.VolumeSerialNumber,
-        u128::from_le_bytes(identity.FileId.Identifier),
-    ))
+    let (volume, identifier) = ws_platform::file_id(path)?;
+    Ok(FileIdentity(volume, identifier))
 }
 
 #[cfg(not(any(unix, windows)))]

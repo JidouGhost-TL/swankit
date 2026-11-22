@@ -14,7 +14,6 @@ saves = ["swankit/saves"]
 [dependencies]
 ws-discover = { path = "../ws-discover" }
 ws-wondergate = { path = "../ws-wondergate" }
-ws-link = { path = "../ws-link" }
 ws-wondergate-server = { path = "../ws-wondergate-server", features = ["net"] }
 swankit-ffi = { path = "../swankit-ffi" }
 ws-assets = { path = "../ws-assets" }
@@ -45,6 +44,7 @@ path = "src/bin/wg-decode.rs"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
+ws-link = { path = "../ws-link" }
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "=0.61.2", features = ["Win32_Storage_FileSystem"] }
+ws-platform = { path = "../ws-platform" }

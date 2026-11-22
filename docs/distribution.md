@@ -25,6 +25,8 @@ The wheel itself contains the Python package and legal notices. New platform
 candidates also carry separate Windows x86-64, macOS Apple Silicon and macOS
 Intel CLI archives with license notices. The candidate manifest records which
 platform executed each archive. Consult the published release for availability.
+The `link` relay uses Unix endpoints. Direct serial-device endpoints require Linux.
+The Windows CLI includes the separate `wg-server` network service.
 
 The currently prepared artifacts require glibc 2.34 or newer according to their
 ELF versioned-symbol requirements. The packet's BUILD-SOURCE.json audits the

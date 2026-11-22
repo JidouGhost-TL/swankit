@@ -77,22 +77,31 @@ pub fn connect(addr: SocketAddr) -> io::Result<TcpStream> {
     } else {
         libc::AF_INET6
     };
+    #[cfg(not(target_vendor = "apple"))]
+    let socket_type = libc::SOCK_STREAM | libc::SOCK_NONBLOCK | libc::SOCK_CLOEXEC;
+    #[cfg(target_vendor = "apple")]
+    let socket_type = libc::SOCK_STREAM;
     // SAFETY: socket has no pointer arguments; the resulting fd is owned once.
-    let fd = unsafe {
-        libc::socket(
-            domain,
-            libc::SOCK_STREAM | libc::SOCK_NONBLOCK | libc::SOCK_CLOEXEC,
-            0,
-        )
-    };
+    let fd = unsafe { libc::socket(domain, socket_type, 0) };
     if fd < 0 {
         return Err(io::Error::last_os_error());
     }
     let owned = unsafe { OwnedFd::from_raw_fd(fd) };
+    #[cfg(target_vendor = "apple")]
+    {
+        // Darwin socket creation accepts the type alone. Set descriptor flags
+        // while the descriptor is still owned locally, before connecting.
+        if unsafe { libc::fcntl(fd, libc::F_SETFD, libc::FD_CLOEXEC) } < 0 {
+            return Err(io::Error::last_os_error());
+        }
+        nonblocking(fd)?;
+    }
     // SAFETY: correctly typed, initialized sockaddr structures and exact sizes.
     let status = match addr {
         SocketAddr::V4(a) => {
             let socket = libc::sockaddr_in {
+                #[cfg(target_vendor = "apple")]
+                sin_len: std::mem::size_of::<libc::sockaddr_in>() as u8,
                 sin_family: libc::AF_INET as _,
                 sin_port: a.port().to_be(),
                 sin_addr: libc::in_addr {
@@ -110,6 +119,8 @@ pub fn connect(addr: SocketAddr) -> io::Result<TcpStream> {
         }
         SocketAddr::V6(a) => {
             let socket = libc::sockaddr_in6 {
+                #[cfg(target_vendor = "apple")]
+                sin6_len: std::mem::size_of::<libc::sockaddr_in6>() as u8,
                 sin6_family: libc::AF_INET6 as _,
                 sin6_port: a.port().to_be(),
                 sin6_flowinfo: a.flowinfo(),

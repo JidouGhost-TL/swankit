@@ -28,6 +28,10 @@ CHECKS = {
 NOTICES = ("LICENSE-MIT", "LICENSE-APACHE", "NOTICE")
 
 
+def smoke_checks(target):
+    return CHECKS | {"unix-link-refusal"} if target == "x86_64-pc-windows-msvc" else CHECKS
+
+
 def digest(raw):
     return hashlib.sha256(raw).hexdigest()
 
@@ -109,7 +113,7 @@ def validate_receipt(receipt, target, source_commit, lock_sha256, version, packe
     if (receipt.get("schema") != "swankit-native-cli/1" or receipt.get("target") != target
             or receipt.get("source_commit") != source_commit or receipt.get("lock_sha256") != lock_sha256
             or receipt.get("version") != version or receipt.get("archive") != name
-            or receipt.get("status") != "PASS" or set(receipt.get("checks", [])) != CHECKS):
+            or receipt.get("status") != "PASS" or set(receipt.get("checks", [])) != smoke_checks(target)):
         raise ValueError("native CLI source or smoke receipt mismatch")
     host = receipt.get("tested_platform", {})
     if host.get("system") != system or host.get("machine") not in machines or not host.get("os_version"):

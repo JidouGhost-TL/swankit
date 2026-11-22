@@ -157,6 +157,11 @@ def cli_smoke(executable, work):
     checks += ["asset-verify", "asset-extract", "asset-replace", "returned-map-reuse", "wrong-identity-refusal", "search"]
     smoke_server(executable, work)
     checks.append("wondergate-listeners")
+    if os.name == "nt":
+        link = subprocess.run([str(executable), "link", "stdio", "exec:unused"],
+                              capture_output=True, text=True)
+        assert link.returncode and "link relay requires a Unix system" in link.stderr
+        checks.append("unix-link-refusal")
     return checks
 
 

@@ -93,6 +93,9 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $scratch = $env:RUNNER_TEMP
           cargo build --locked --release -p swankit-cli --bin swankit --target $env:TARGET
+          if ($env:TARGET -like '*-apple-darwin') {
+              cargo test --locked -p ws-link --target $env:TARGET --test relay
+          }
           cargo metadata --locked --all-features --format-version 1 > "$scratch/metadata.json"
           python tools/collect-dependency-licenses.py --metadata "$scratch/metadata.json" `
               --lock Cargo.lock --output "$scratch/native-licenses"

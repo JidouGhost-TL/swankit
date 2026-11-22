@@ -121,7 +121,7 @@ class ApprovalTests(unittest.TestCase):
                 "schema": "swankit-native-cli/1", "status": "PASS", "target": target, "version": "0.1.0",
                 "source_commit": self.commit, "lock_sha256": self.lock, "archive": archive,
                 "archive_sha256": RELEASE.digest((directory / archive).read_bytes()),
-                "executable_sha256": RELEASE.digest(raw), "checks": sorted(platform.CHECKS),
+                "executable_sha256": RELEASE.digest(raw), "checks": sorted(platform.smoke_checks(target)),
                 "tested_platform": {"system": system, "machine": machines[0], "os_version": "synthetic"},
             }
             (directory / "receipt.json").write_text(json.dumps(receipt))

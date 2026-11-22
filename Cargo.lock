@@ -510,10 +510,10 @@ dependencies = [
  "serde_json",
  "swankit",
  "swankit-ffi",
- "windows-sys",
  "ws-assets",
  "ws-discover",
  "ws-link",
+ "ws-platform",
  "ws-wondergate",
  "ws-wondergate-server",
 ]
@@ -722,6 +722,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "ws-platform"
+version = "0.1.0"
+dependencies = [
+ "windows-sys",
+]
+
+[[package]]
 name = "ws-rom"
 version = "0.1.0"
 dependencies = [
@@ -807,7 +814,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "windows-sys",
+ "ws-platform",
 ]
 
 [[package]]

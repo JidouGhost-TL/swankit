@@ -21,4 +21,4 @@ sha2 = { version = "0.10", optional = true }
 formatkit-corpus-test.workspace = true
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "=0.61.2", features = ["Win32_Security_Cryptography"] }
+ws-platform = { path = "../ws-platform" }

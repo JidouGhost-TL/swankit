@@ -1,4 +1,5 @@
 //! Ordered, bounded serial byte relay. Linux/Unix endpoints carry data only.
+#![cfg(unix)]
 mod endpoint;
 mod os;
 use endpoint::{End, Kind};

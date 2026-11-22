@@ -1,4 +1,6 @@
 //! Recorded byte payloads with independently frozen output expectations.
+#![cfg(unix)]
+
 use formatkit_core::{Error, Result};
 use formatkit_corpus_test::{hash_bytes, run_dir, Args, Digest};
 use serde_json::{json, Value};
