@@ -4,7 +4,8 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-publish.workspace = true
+publish = ["crates-io"]
+include = ["/src/**", "/README.md", "/LICENSE-MIT", "/LICENSE-APACHE", "/NOTICE"]
 description = "Checked WonderSwan save media, owner profiles and checksum rules"
 
 [dependencies]

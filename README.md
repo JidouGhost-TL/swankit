@@ -5,12 +5,19 @@ bindings, built on Formatkit mechanisms. Version 0.1 reads supported formats
 and provides checked save and mapped-asset editing. ROMs, save images and
 per-ROM asset maps are not included.
 
+## Rust library
+
+```sh
+cargo add swankit@0.1.0
+```
+
+The Rust release includes the library and its required support crates.
+
 ## Quick start
 
 The prepared distributions are a Linux x86_64 CLI archive and a Python 3.11+
-abi3 wheel for Linux x86_64 with glibc 2.34 or newer. They are currently private;
-crates and packages have not been published to registries. Using these
-distributions does not require Rust. The [offline distribution guide](docs/distribution.md)
+abi3 wheel for Linux x86_64 with glibc 2.34 or newer. These private GitHub
+distributions do not require Rust. The [offline distribution guide](docs/distribution.md)
 describes the complete packet, platform evidence and a synthetic first operation.
 
 ```sh
@@ -107,7 +114,6 @@ Formatkit packages are resolved from crates.io at exactly `=0.1.1` using the
 committed lockfile. Ordinary builds, wheel creation and synthetic CI do not
 require a sibling checkout. A deliberate local dependency override must remain
 outside release qualification; release builds use the registry dependencies.
-Publication remains disabled.
 The safe corpus runner is supplied separately by the sibling checkout or
 `FORMATKIT_DIR`; the libraries remain pinned registry dependencies.
 

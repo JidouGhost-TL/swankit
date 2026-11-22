@@ -19,11 +19,19 @@ class PackageLicenseTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[2]
         workspace = tomllib.loads((root / "Cargo.toml").read_text())["workspace"]
         self.assertFalse(workspace["package"]["publish"])
+        public_libraries = {
+            "swankit", "ws-rom", "ws-compress", "ws-gfx", "ws-text", "ws-sound",
+            "ws-patch", "ws-save", "ws-saves", "ws-assets", "ws-discover",
+        }
         for member in workspace["members"]:
             package = root / member
             metadata = tomllib.loads((package / "Cargo.toml").read_text())
             with self.subTest(package=member):
-                self.assertEqual(metadata["package"]["publish"], {"workspace": True})
+                package_metadata = metadata["package"]
+                expected_policy = ["crates-io"] if package_metadata["name"] in public_libraries else {"workspace": True}
+                self.assertEqual(package_metadata["publish"], expected_policy)
+                if expected_policy == ["crates-io"]:
+                    self.assertIn("/src/**", package_metadata["include"])
             for name in ["LICENSE-MIT", "LICENSE-APACHE", "NOTICE"]:
                 with self.subTest(package=member, notice=name):
                     self.assertFalse((package / name).is_symlink())

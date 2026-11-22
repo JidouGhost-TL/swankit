@@ -1,9 +1,9 @@
 # swankit
 
-Private product library composing the owner crates into one explicit
-`formatkit_runtime::ModuleCatalog`. `Toolkit::new` validates the composition;
-`catalog` exposes support metadata, `detect` uses owner content probes and
-`info` returns serialized cartridge facts from ws-rom. Typed extraction,
+Rust library for WonderSwan cartridge metadata, graphics, compression, text,
+sound, patches and saves. `Toolkit::new` validates the Formatkit module catalogue.
+`catalog` exposes support metadata, `detect` probes input bytes and
+`info` returns cartridge metadata. Typed extraction,
 rendering and IPS operations dispatch through the composed module identities
 and call the existing owner APIs. File I/O, text presentation and PNG writing
 belong to the CLI.
@@ -17,9 +17,8 @@ assert_eq!(found.selected.as_deref(), Some("ws-patch-ips"));
 
 Headerless formats contribute `EmbeddedFormatSupport` rows with explicit
 selection requirements. No extension or plausible decoding creates a global
-codec, graphics, text or sound match. Extract definitions are versioned JSON;
-see [CLI reference](../../docs/cli.md). Hardware policy remains in the owner
-crates and [hardware sources](../../docs/hardware.md).
+codec, graphics, text or sound match. Extraction uses versioned JSON definitions.
+ROMs, save images and per-ROM asset maps are supplied by the caller.
 
 Runtime rows use the legacy metadata state because the owner APIs return typed
 Rust values rather than Formatkit namespace/leaf callback contracts. They do
@@ -31,7 +30,8 @@ Synthetic tests cover composition, detection, extraction and malformed input.
 Dev-only corpus tests check external frozen owner facts through the serialized
 safe runner. Expectations and population counts remain outside Git.
 
-The default `saves` feature composes ws-save and ws-saves too. Media detection
+The default `saves` feature composes ws-save and ws-saves too.
+Registry distributions include the public definition catalogue. Media detection
 reports possible sizes and physical interpretations; definition candidates use
 positive program validity/checksum flags, excluding declared working regions.
 `detect_with_save_context` accepts explicit logical names, lookup tables and

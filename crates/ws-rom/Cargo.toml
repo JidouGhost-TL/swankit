@@ -4,7 +4,8 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-publish.workspace = true
+publish = ["crates-io"]
+include = ["/src/**", "/README.md", "/LICENSE-MIT", "/LICENSE-APACHE", "/NOTICE"]
 description = "Checked WonderSwan cartridge headers, facts and address mapping"
 readme = "README.md"
 

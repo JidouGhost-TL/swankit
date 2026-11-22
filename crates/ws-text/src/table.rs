@@ -354,8 +354,11 @@ impl TextDefinition {
 pub fn builtin_definition(id: &str) -> Result<TextDefinition> {
     let json = match id {
         "byte-pages-1" => include_bytes!("../data/byte-pages-1.json").as_slice(),
+        #[cfg(private_text_definitions)]
         "word-dialog-1" => include_bytes!("../data/word-dialog-1.json").as_slice(),
+        #[cfg(private_text_definitions)]
         "word-dialog-2" => include_bytes!("../data/word-dialog-2.json").as_slice(),
+        #[cfg(private_text_definitions)]
         "word-mask-1" => include_bytes!("../data/word-mask-1.json").as_slice(),
         "byte-prefix-1" => include_bytes!("../data/byte-prefix-1.json").as_slice(),
         _ => return Err(malformed("unknown builtin text definition")),

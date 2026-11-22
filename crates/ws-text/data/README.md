@@ -14,6 +14,8 @@ external enrollment ledger and milestone report.
 | `word-mask-1` | Reviewed merged glyph assignments and measured operand table: masked word indices, retained attribute bits, contextual dash aliases and a 1bpp font |
 | `byte-prefix-1` | Reviewed prefix-bank character assignments, pointer-table metadata, independently reproduced Python string dump and font sheets: two prefix banks, narrow cells, separate kana marks and 1bpp fonts |
 
+Registry builds include the public built-ins. Some development built-ins are distributed separately.
+
 Literal unknown-cell tags and explicit blank assignments follow the independent
 dump conventions. Blank-cell evidence was checked against the source font
 outside the repository; no glyph pixels are embedded here. Two paired half-cell

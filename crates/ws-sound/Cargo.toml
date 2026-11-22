@@ -4,7 +4,8 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-publish.workspace = true
+publish = ["crates-io"]
+include = ["/src/**", "/README.md", "/LICENSE-MIT", "/LICENSE-APACHE", "/NOTICE"]
 description = "Checked WonderSwan waves, sound driver records and bounded PCM previews"
 readme = "README.md"
 
@@ -13,7 +14,7 @@ serde = { version = "1", features = ["derive"] }
 formatkit-core.workspace = true
 formatkit-layout.workspace = true
 formatkit-catalog.workspace = true
-ws-rom = { path = "../ws-rom" }
+ws-rom = { path = "../ws-rom", version = "=0.1.0" }
 
 [dev-dependencies]
 formatkit-corpus-test.workspace = true

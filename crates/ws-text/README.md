@@ -1,6 +1,6 @@
 # ws-text
 
-Private, data-defined character maps, text tables and font strips. All byte
+Data-defined character maps, text tables and font strips. All byte
 reads use Formatkit's checked readers and fields. Glyph images use ws-gfx's
 tile renderer and the shared `formatkit_core::Image` type.
 
@@ -26,6 +26,8 @@ advance tables. The caller supplies the palette and resource limits.
 See [text definitions](../../docs/text-definitions.md) for the JSON/TSV schema,
 worked read/write examples, encoding policies and limitations, and
 [definition provenance](data/README.md) for the bundled data.
+
+Registry builds contain the public built-ins. Callers can load additional definitions explicitly with `TextDefinition::from_json`.
 
 Synthetic verification:
 
