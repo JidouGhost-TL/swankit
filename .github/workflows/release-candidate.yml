@@ -8,28 +8,21 @@ on:
         type: string
 permissions:
   contents: read
+env:
+  SOURCE_COMMIT: ${{ inputs.source_commit }}
 concurrency:
   group: release-candidate-${{ github.sha }}
   cancel-in-progress: false
 jobs:
   linux:
-    if: github.ref == 'refs/heads/main'
+    if: github.repository == 'JidouGhost-TL/swankit' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-      - name: Validate source selection
-        env:
-          SOURCE_COMMIT: ${{ inputs.source_commit }}
-        run: |
-          [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
-          test "$SOURCE_COMMIT" = "$GITHUB_SHA"
-          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
-      - name: Verify private repository
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: test "$(gh api "repos/$GITHUB_REPOSITORY" --jq .private)" = true
+      - name: Validate workflow identity and source
+        run: python3 -B tools/release.py workflow-context --workflow .github/workflows/release-candidate.yml
       - name: Build, qualify and package Linux CLI and wheel
         env:
           SWANKIT_RELEASE_ARTIFACTS: ${{ runner.temp }}/release-build
@@ -44,7 +37,7 @@ jobs:
           retention-days: 7
 
   native-cli:
-    if: github.ref == 'refs/heads/main'
+    if: github.repository == 'JidouGhost-TL/swankit' && github.ref == 'refs/heads/main'
     strategy:
       fail-fast: false
       matrix:
@@ -68,20 +61,15 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-      - name: Verify private repository and selected source
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SOURCE_COMMIT: ${{ inputs.source_commit }}
-        run: |
-          if ($env:SOURCE_COMMIT -cnotmatch '^[0-9a-f]{40}$' -or
-              $env:SOURCE_COMMIT -cne $env:GITHUB_SHA -or
-              (git rev-parse HEAD) -cne $env:SOURCE_COMMIT) { throw 'Source selection mismatch' }
-          if ((gh api "repos/$env:GITHUB_REPOSITORY" --jq .private) -ne 'true') {
-              throw 'The repository must be private'
-          }
       - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
         with:
           python-version: '3.13'
+      - name: Validate workflow identity and source
+        run: python -B tools/release.py workflow-context --workflow .github/workflows/release-candidate.yml
+      - name: Verify source privacy
+        env:
+          LOGNAME: jidoughost
+        run: python tools/check-private.py --worktree
       - name: Build, package and exercise the native CLI
         env:
           CARGO_HOME: ${{ runner.temp }}/swankit-cargo
@@ -92,11 +80,13 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $true
           $ErrorActionPreference = 'Stop'
           $scratch = $env:RUNNER_TEMP
+          cargo metadata --locked --all-features --format-version 1 > "$scratch/metadata.json"
+          python tools/release.py registry --lock Cargo.lock --metadata "$scratch/metadata.json" `
+              --output "$scratch/registry.json"
           cargo build --locked --release -p swankit-cli --bin swankit --target $env:TARGET
           if ($env:TARGET -like '*-apple-darwin') {
               cargo test --locked -p ws-link --target $env:TARGET --test relay
           }
-          cargo metadata --locked --all-features --format-version 1 > "$scratch/metadata.json"
           python tools/collect-dependency-licenses.py --metadata "$scratch/metadata.json" `
               --lock Cargo.lock --output "$scratch/native-licenses"
           python tools/release-platform.py --target $env:TARGET `
@@ -118,6 +108,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+      - name: Validate workflow identity and source
+        run: python3 -B tools/release.py workflow-context --workflow .github/workflows/release-candidate.yml
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
           name: release-linux-${{ github.run_attempt }}

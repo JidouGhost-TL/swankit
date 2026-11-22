@@ -18,6 +18,46 @@ SPEC = importlib.util.spec_from_file_location("release", Path(__file__).resolve(
 RELEASE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(RELEASE)
 
+REPOSITORY = "JidouGhost-TL/swankit"
+
+
+class WorkflowIdentityTests(unittest.TestCase):
+    def setUp(self):
+        self.commit = "a" * 40
+        self.env = {"GITHUB_REPOSITORY": REPOSITORY, "GITHUB_SERVER_URL": "https://github.com",
+                    "GITHUB_EVENT_NAME": "workflow_dispatch", "GITHUB_REF": "refs/heads/main",
+                    "GITHUB_SHA": self.commit, "GITHUB_WORKFLOW_SHA": self.commit}
+
+    def test_canonical_candidate_and_publication_context(self):
+        for workflow in (RELEASE.CANDIDATE_WORKFLOW, RELEASE.PUBLICATION_WORKFLOW):
+            with self.subTest(workflow=workflow):
+                env = dict(self.env, GITHUB_WORKFLOW_REF=f"{REPOSITORY}/{workflow}@refs/heads/main")
+                source = self.commit if workflow == RELEASE.CANDIDATE_WORKFLOW else None
+                RELEASE.validate_workflow_context(env, workflow, self.commit, source)
+
+    def test_refuse_fork_wrong_ref_workflow_and_source(self):
+        workflow = RELEASE.CANDIDATE_WORKFLOW
+        env = dict(self.env, GITHUB_WORKFLOW_REF=f"{REPOSITORY}/{workflow}@refs/heads/main")
+        alternatives = {
+            "GITHUB_REPOSITORY": "other/swankit",
+            "GITHUB_SERVER_URL": "https://example.invalid",
+            "GITHUB_EVENT_NAME": "pull_request_target",
+            "GITHUB_REF": "refs/tags/main",
+            "GITHUB_WORKFLOW_REF": f"{REPOSITORY}/{RELEASE.PUBLICATION_WORKFLOW}@refs/heads/main",
+            "GITHUB_SHA": "b" * 40,
+            "GITHUB_WORKFLOW_SHA": "b" * 40,
+        }
+        for key, value in alternatives.items():
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                RELEASE.validate_workflow_context(dict(env, **{key: value}), workflow, self.commit, self.commit)
+        for checkout, source in ((self.commit, None), (self.commit, "b" * 40), ("a" * 39, self.commit)):
+            with self.subTest(checkout=checkout, source=source), self.assertRaises(ValueError):
+                RELEASE.validate_workflow_context(env, workflow, checkout, source)
+
+    def test_api_client_rejects_other_repositories_before_any_request(self):
+        with self.assertRaisesRegex(ValueError, "unexpected release repository"):
+            RELEASE.GitHub("other/swankit", "synthetic")
+
 
 class ApprovalTests(unittest.TestCase):
     def setUp(self):
@@ -88,16 +128,16 @@ class ApprovalTests(unittest.TestCase):
                                    "groups_passed": 1, "tests_failed": 0, "tests_ignored": 0, "tests_filtered": 0,
                                    "source_commit": self.commit,
                                    "wheel_sha256": RELEASE.digest(self.wheel_bytes)}}
-        self.repo = {"private": True, "full_name": "owner/project"}
+        self.repo = {"private": False, "full_name": REPOSITORY, "fork": False}
         self.run = {"id": 4, "event": "workflow_dispatch", "conclusion": "success", "head_branch": "main",
                     "path": ".github/workflows/release-candidate.yml", "head_sha": self.commit,
-                    "head_repository": {"full_name": "owner/project"}}
+                    "repository": {"full_name": REPOSITORY}, "head_repository": {"full_name": REPOSITORY}}
         self.artifact = {"id": 8, "expired": False, "workflow_run": {"id": 4},
                          "name": "candidate-" + self.commit, "digest": self.receipt["artifact_digest"]}
 
     def validate(self):
         return RELEASE.validate_promotion(self.receipt, self.raw, self.packet, self.repo, self.run,
-                                          self.artifact, "v0.1.0", "owner/project")
+                                          self.artifact, "v0.1.0", REPOSITORY)
 
     def test_valid_synthetic_approval(self):
         self.assertEqual(self.validate()["source_commit"], self.commit)
@@ -195,18 +235,24 @@ class ApprovalTests(unittest.TestCase):
     def test_refuse_untrusted_failed_or_other_candidate(self):
         for key, value in [("event", "pull_request"), ("conclusion", "failure"), ("head_branch", "other"),
                            ("path", ".github/workflows/other.yml"), ("head_sha", "d" * 40),
-                           ("head_repository", {"full_name": "other/project"})]:
+                           ("repository", {"full_name": "other/project"}),
+                           ("head_repository", {"full_name": "other/project"}), ("head_repository", None)]:
             before = copy.deepcopy(self.run)
             self.run[key] = value
             with self.subTest(key=key), self.assertRaises(ValueError):
                 self.validate()
             self.run = before
 
-    def test_refuse_public_repo_or_expired_artifact(self):
-        self.repo["private"] = False
-        with self.assertRaisesRegex(ValueError, "private"):
-            self.validate()
-        self.repo["private"] = True
+    def test_repository_identity_is_required_regardless_of_visibility(self):
+        for visibility in (False, True):
+            self.repo["private"] = visibility
+            self.assertEqual(self.validate()["source_commit"], self.commit)
+            for changes in ({"fork": True}, {"full_name": "other/swankit"}):
+                with self.subTest(visibility=visibility, changes=changes), self.assertRaisesRegex(
+                        ValueError, "unexpected release repository"):
+                    RELEASE.validate_repository(dict(self.repo, **changes), REPOSITORY)
+
+    def test_refuse_expired_artifact(self):
         self.artifact["expired"] = True
         with self.assertRaisesRegex(ValueError, "expired"):
             self.validate()
@@ -306,7 +352,7 @@ class ApprovalTests(unittest.TestCase):
             def open(self, request, timeout):
                 observed.append((request.full_url, request.get_header("Accept")))
                 return io.BytesIO(b'{}' if request.get_header("Accept") == "application/vnd.github+json" else b"asset bytes")
-        api = RELEASE.GitHub("owner/project", "synthetic")
+        api = RELEASE.GitHub(REPOSITORY, "synthetic")
         with patch.object(RELEASE.urllib.request, "build_opener", return_value=Opener()):
             self.assertEqual(api.request("GET", "/releases/assets/1", binary=True), b"asset bytes")
             self.assertEqual(api.request("GET", ""), {})
@@ -325,7 +371,7 @@ class ApprovalTests(unittest.TestCase):
                 if request.get_header("Accept") != "application/vnd.github+json":
                     raise urllib.error.HTTPError(request.full_url, 415, "Unsupported Media Type", {}, None)
                 return io.BytesIO(raw)
-        api = RELEASE.GitHub("owner/project", "synthetic")
+        api = RELEASE.GitHub(REPOSITORY, "synthetic")
         destination = self.root / "downloaded"
         with patch.object(RELEASE.urllib.request, "build_opener", return_value=Opener()):
             RELEASE.download_artifact(api, 8, "sha256:" + RELEASE.digest(raw), destination)
@@ -361,20 +407,26 @@ class ApprovalTests(unittest.TestCase):
 
     def test_conflicting_release_body_refuses_before_new_tag(self):
         class API:
+            repository = REPOSITORY
+
             def release(self, tag):
                 return {"body": "unrelated", "tag_name": tag}
 
             def request(self, method, path, body=None, binary=False):
                 if method != "GET":
                     raise AssertionError("mutation before existing release conflict check")
-                return None
+                return {"full_name": REPOSITORY, "fork": False} if not path else None
         with self.assertRaisesRegex(ValueError, "existing release conflicts"):
             RELEASE.promote(API(), self.packet, self.raw, "v0.1.0")
 
     def test_existing_conflicting_tag_refuses_before_writes(self):
         class API:
+            repository = REPOSITORY
+
             def request(self, method, path, body=None, binary=False):
                 self.assert_read(method)
+                if not path:
+                    return {"full_name": REPOSITORY, "fork": False}
                 return {"object": {"type": "commit", "sha": "d" * 40}}
 
             @staticmethod
@@ -397,6 +449,8 @@ class ApprovalTests(unittest.TestCase):
         (self.root / "candidate.zip").write_bytes(b"approved transport archive")
         target = self.commit
         class API:
+            repository = REPOSITORY
+
             def __init__(self):
                 self.tag = None
                 self.record = None
@@ -438,12 +492,15 @@ class ApprovalTests(unittest.TestCase):
                     self.record.update(body)
                     return self.record
                 if path == "":
-                    return {"private": True}
+                    return {"private": False, "full_name": self.repository, "fork": False}
                 raise AssertionError((method, path))
         api = API()
         self.assertEqual(RELEASE.promote(api, self.packet, self.raw, "v0.1.0")["status"],
                          "PUBLISHED_AND_HASH_VERIFIED")
         writes = api.writes
+        RELEASE.promote(api, self.packet, self.raw, "v0.1.0")
+        self.assertEqual(api.writes, writes)
+        api.record["body"] = api.record["body"].replace("Swankit ", "Private swankit ", 1)
         RELEASE.promote(api, self.packet, self.raw, "v0.1.0")
         self.assertEqual(api.writes, writes)
         api.payloads[api.assets[0]["id"]] = b"different existing asset"

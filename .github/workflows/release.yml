@@ -1,4 +1,4 @@
-name: Publish approved private release
+name: Publish approved release
 on:
   workflow_dispatch:
     inputs:
@@ -21,11 +21,12 @@ on:
 permissions:
   contents: read
 concurrency:
+  # Preserve the per-tag lock for runs started before the workflow rename.
   group: private-release-${{ inputs.tag }}
   cancel-in-progress: false
 jobs:
   validate:
-    if: github.ref == 'refs/heads/main'
+    if: github.repository == 'JidouGhost-TL/swankit' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -34,6 +35,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+      - name: Validate workflow identity and source
+        run: python3 -B tools/release.py workflow-context --workflow .github/workflows/release.yml
       - name: Verify approved candidate
         env:
           GH_TOKEN: ${{ github.token }}
@@ -53,6 +56,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+      - name: Validate workflow identity and source
+        run: python3 -B tools/release.py workflow-context --workflow .github/workflows/release.yml
       - name: Promote the same approved bytes
         env:
           GH_TOKEN: ${{ github.token }}
@@ -71,6 +76,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+      - name: Validate workflow identity and source
+        run: python3 -B tools/release.py workflow-context --workflow .github/workflows/release.yml
       - name: Verify released download and installation
         env:
           GH_TOKEN: ${{ github.token }}

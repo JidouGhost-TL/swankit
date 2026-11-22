@@ -19,6 +19,10 @@ import tomllib
 
 SHA = re.compile(r"[0-9a-f]{64}\Z")
 COMMIT = re.compile(r"[0-9a-f]{40}\Z")
+REPOSITORY = "JidouGhost-TL/swankit"
+MAIN_REF = "refs/heads/main"
+CANDIDATE_WORKFLOW = ".github/workflows/release-candidate.yml"
+PUBLICATION_WORKFLOW = ".github/workflows/release.yml"
 PRIVATE_PAYLOAD_SUFFIXES = (".ws", ".wsc", ".pc2", ".sav", ".bin", ".eep", ".eeprom", ".rom", ".srm",
                           ".sram", ".state", ".sta", ".mss", ".wav", ".pcm", ".ogg", ".flac", ".png",
                           ".jpg", ".jpeg", ".bmp")
@@ -46,6 +50,25 @@ def digest(raw):
 def require(condition, message):
     if not condition:
         raise ValueError(message)
+
+
+def validate_repository(repo, repository):
+    require(repository == REPOSITORY and isinstance(repo, dict)
+            and repo.get("full_name") == REPOSITORY and repo.get("fork") is False,
+            "unexpected release repository")
+
+
+def validate_workflow_context(env, workflow, checkout, source_commit):
+    require(env.get("GITHUB_REPOSITORY") == REPOSITORY
+            and env.get("GITHUB_SERVER_URL") == "https://github.com", "unexpected workflow repository")
+    require(env.get("GITHUB_EVENT_NAME") == "workflow_dispatch"
+            and env.get("GITHUB_REF") == MAIN_REF, "unexpected workflow event or ref")
+    require(env.get("GITHUB_WORKFLOW_REF") == f"{REPOSITORY}/{workflow}@{MAIN_REF}",
+            "unexpected workflow file or ref")
+    require(COMMIT.fullmatch(checkout) and env.get("GITHUB_SHA") == checkout
+            and env.get("GITHUB_WORKFLOW_SHA") == checkout, "workflow source does not match checkout")
+    if workflow == CANDIDATE_WORKFLOW:
+        require(source_commit == checkout, "selected candidate source does not match checkout")
 
 
 def relative(name):
@@ -245,7 +268,7 @@ def assemble(candidate, native_root, source_commit, run_id):
 
 
 def validate_promotion(receipt, manifest_raw, packet, repo, run, artifact, tag, repository):
-    require(repo.get("private") is True and repo.get("full_name") == repository, "repository must be private")
+    validate_repository(repo, repository)
     manifest = json.loads(manifest_raw)
     contents = validate_packet(packet, manifest)
     require(receipt.get("schema") == CANDIDATE_SCHEMAS[manifest["schema"]]
@@ -256,8 +279,9 @@ def validate_promotion(receipt, manifest_raw, packet, repo, run, artifact, tag, 
     require(receipt.get("source_commit") == manifest["source_commit"]
             and receipt.get("lock_sha256") == manifest["lock_sha256"], "source approval mismatch")
     require(run.get("event") == "workflow_dispatch" and run.get("conclusion") == "success"
-            and run.get("head_branch") == "main" and run.get("path") == ".github/workflows/release-candidate.yml"
-            and run.get("head_repository", {}).get("full_name") == repository,
+            and run.get("head_branch") == "main" and run.get("path") == CANDIDATE_WORKFLOW
+            and (run.get("repository") or {}).get("full_name") == REPOSITORY
+            and (run.get("head_repository") or {}).get("full_name") == REPOSITORY,
             "not a successful trusted candidate run")
     require(run.get("head_sha") == manifest["source_commit"], "candidate run/source mismatch")
     require(receipt.get("run_id") == run.get("id") == manifest.get("run_id"), "run approval mismatch")
@@ -300,7 +324,8 @@ class NoCredentialRedirect(urllib.request.HTTPRedirectHandler):
 
 class GitHub:
     def __init__(self, repository, token):
-        require(re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository), "invalid repository")
+        require(repository == REPOSITORY, "unexpected release repository")
+        self.repository = repository
         self.root = "https://api.github.com/repos/" + repository
         self.token = token
 
@@ -369,6 +394,7 @@ def release_asset_names(packet, manifest):
 
 
 def promote(api, packet, manifest_raw, tag):
+    validate_repository(api.request("GET", ""), api.repository)
     manifest = json.loads(manifest_raw)
     target = manifest["source_commit"]
     tag_path = "/git/ref/tags/" + urllib.parse.quote(tag, safe="")
@@ -380,12 +406,14 @@ def promote(api, packet, manifest_raw, tag):
         require(obj["type"] == "commit" and obj["sha"] == target, "existing tag conflicts")
     marker = "Approved candidate manifest SHA-256: " + digest(manifest_raw)
     release = api.release(tag)
-    body = "Private swankit " + manifest["version"] + "\n\n" + marker + "\n\n" + \
+    body = "Swankit " + manifest["version"] + "\n\n" + marker + "\n\n" + \
         ("Linux, Windows, and macOS CLI archives with a Linux Python abi3 wheel. See the candidate manifest for tested platforms."
          if manifest["schema"] == "swankit-candidate/2"
          else "Linux x86_64 CLI and Python abi3 wheel; see the offline guides for tested platforms and limits.")
     if release:
-        require(release["body"] == body and release["tag_name"] == tag, "existing release conflicts")
+        legacy_body = body.replace("Swankit ", "Private swankit ", 1)
+        require(release["body"] in (body, legacy_body) and release["tag_name"] == tag,
+                "existing release conflicts")
     expected = dict(manifest["files"])
     expected["candidate-manifest.json"] = digest(manifest_raw)
     bundle = packet.parent.parent / "candidate.zip"
@@ -419,9 +447,9 @@ def promote(api, packet, manifest_raw, tag):
             asset = json.loads(uploaded)
             downloaded = api.request("GET", "/releases/assets/" + str(asset["id"]), binary=True)
             require(digest(downloaded) == expected[name], "uploaded asset digest mismatch")
+    validate_repository(api.request("GET", ""), api.repository)
     if release["draft"]:
         api.request("PATCH", "/releases/" + str(release["id"]), {"draft": False})
-    require(api.request("GET", "")["private"] is True, "repository visibility changed")
     return {"status": "PUBLISHED_AND_HASH_VERIFIED", "tag": tag, "source_commit": target,
             "release_id": release["id"], "manifest_sha256": digest(manifest_raw)}
 
@@ -429,6 +457,8 @@ def promote(api, packet, manifest_raw, tag):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="mode", required=True)
+    context = sub.add_parser("workflow-context")
+    context.add_argument("--workflow", choices=(CANDIDATE_WORKFLOW, PUBLICATION_WORKFLOW), required=True)
     reg = sub.add_parser("registry")
     reg.add_argument("--lock", type=Path, required=True)
     reg.add_argument("--metadata", type=Path, required=True)
@@ -462,6 +492,10 @@ def main():
     final.add_argument("--destination", type=Path, required=True)
     final.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
+    if args.mode == "workflow-context":
+        checkout = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+        validate_workflow_context(os.environ, args.workflow, checkout, os.environ.get("SOURCE_COMMIT"))
+        return
     if args.mode == "registry":
         result = registry(args.lock.read_bytes(), read_json(args.metadata))
     elif args.mode == "manifest":
@@ -488,7 +522,7 @@ def main():
         receipt = read_json(args.receipt)
         require(receipt.get("tag") == args.tag and re.fullmatch(r"v\d+\.\d+\.\d+", args.tag), "release tag mismatch")
         api = GitHub(args.repository, os.environ["GH_TOKEN"])
-        require(api.request("GET", "")["private"] is True, "repository must remain private")
+        validate_repository(api.request("GET", ""), args.repository)
         release = api.release(args.tag)
         require(release is not None and release["draft"] is False, "published release missing")
         assets = api.request("GET", "/releases/" + str(release["id"]) + "/assets?per_page=100")
@@ -521,6 +555,7 @@ def main():
         receipt = read_json(args.receipt)
         api = GitHub(args.repository, os.environ["GH_TOKEN"])
         repo = api.request("GET", "")
+        validate_repository(repo, args.repository)
         run = api.request("GET", "/actions/runs/" + str(args.run_id))
         artifact = api.request("GET", "/actions/artifacts/" + str(args.artifact_id))
         require(run is not None and artifact is not None, "candidate missing")

@@ -2,10 +2,9 @@
 
 [GitHub Releases](https://github.com/JidouGhost-TL/swankit/releases) provides the public CLI archives and Linux Python wheel. The Rust library is distributed through crates.io.
 
-The existing candidate and publishing workflows still require a private
-repository. They need an update before they can run on the public repository.
-The steps below document the existing workflow. Building a candidate does not
-create a tag or release. Publishing remains a separate owner-approved action.
+The release workflows run on the canonical `JidouGhost-TL/swankit` repository.
+Candidate builds have read-only repository access. Publishing and tag creation
+require a separate owner-approved workflow dispatch.
 
 ## Build a candidate
 
@@ -26,11 +25,16 @@ checker, without build caches or source mounts. The primary CLI is included;
 `wg-adapter` and `wg-decode` are source-build auxiliary executables, not part
 of this first packet.
 
-The assembly job checks the native archive and executable digests, lockfile,
+Each job checks that it is running the expected workflow on `main` and that
+the workflow and checkout match the selected commit. The assembly job checks
+the native archive and executable digests, lockfile,
 source commit, test receipts and notices. Run all jobs together when retrying
 a candidate so they use the same workflow attempt. The candidate artifact is named `candidate-<source commit>`. Record its run ID,
-artifact ID and archive digest from the run summary. Retention is 30 days,
-subject to repository policy. Download and retain the complete artifact while
+artifact ID and archive digest from the run summary. Actions artifacts and
+logs in the public repository are visible to signed-in users. Use only
+the committed source, registry dependencies and synthetic inputs in hosted
+candidate runs. Retention is 30 days, subject to repository policy. Download
+and retain the complete artifact while
 reviewing it. Expired candidates must be rebuilt and qualified again.
 
 `candidate-manifest.json` binds packet files and registry dependencies.
@@ -94,9 +98,9 @@ substituting local library sources for the published dependencies.
 
 ## Publish approved bytes
 
-After explicit owner approval, dispatch **Publish approved private release**
+After explicit owner approval, dispatch **Publish approved release**
 on `main` with the candidate run/artifact IDs, version tag and approved receipt
-path. The read-only job validates repository privacy, successful trusted run,
+path. The read-only job validates the canonical repository, successful workflow run,
 source/version, artifact expiry and ZIP digest, complete packet hashes and the
 corpus receipt. The publication job revalidates everything before writing.
 It never executes a program supplied by the candidate artifact.
