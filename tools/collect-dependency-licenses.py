@@ -11,6 +11,22 @@ import tomllib
 
 MARKERS = ("LICENSE", "LICENCE", "NOTICE", "COPYING", "COPYRIGHT", "UNLICENSE")
 
+# The published patch crate omits the workspace licenses. The core crate from
+# the same release commit contains the exact upstream root license files.
+PATCH_PACKAGE = ("formatkit-patch", "0.1.1")
+PATCH_CHECKSUM = "3f52f0aa583a4aa23467a59c9a90e95a4c6b01a86308acf5cabbaf35e539fb3b"
+PATCH_NOTICE_SOURCE = {
+    "repository": "https://github.com/JidouGhost-TL/formatkit",
+    "commit": "0b4d49adcbd28eebcc4ab48c4c5e4a1dd7ce213b",
+    "crate": "formatkit-core",
+    "version": "0.1.1",
+    "checksum": "44b87354d0873192aa4a6dd5d0376cbaa377efef7874c5fe3efe93618c41490d",
+}
+PATCH_NOTICES = {
+    "LICENSE-APACHE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "LICENSE-MIT": "06048a247dcb30b7118914e5fab9cc8e5d45f603b3c746fafc57f8fa62614662",
+}
+
 
 def sha(raw):
     return hashlib.sha256(raw).hexdigest()
@@ -49,6 +65,12 @@ def verify_bundle(root, lock_sha256=None):
             if len(raw) != item["bytes"] or sha(raw) != item["sha256"]:
                 raise ValueError("dependency notice bytes changed")
             expected.add(name)
+        if key == PATCH_PACKAGE:
+            notices = {x["source_path"]: x["sha256"] for x in package["licenses"]}
+            if (package.get("notice_source") != PATCH_NOTICE_SOURCE
+                    or package.get("registry_checksum") != PATCH_CHECKSUM
+                    or notices != PATCH_NOTICES or len(package["licenses"]) != len(PATCH_NOTICES)):
+                raise ValueError("Formatkit patch notice provenance differs")
     actual = set()
     for path in root.rglob("*"):
         if path.is_symlink():
@@ -58,6 +80,46 @@ def verify_bundle(root, lock_sha256=None):
     if actual != expected:
         raise ValueError("dependency notice inventory coverage differs")
     return inventory
+
+
+def registry_archive(cargo_home, name, version, checksum):
+    archives = list((cargo_home / "registry/cache").glob("*/" + name + "-" + version + ".crate"))
+    if len(archives) != 1:
+        raise ValueError("missing or ambiguous published archive: " + name)
+    raw = archives[0].read_bytes()
+    if sha(raw) != checksum:
+        raise ValueError("published archive checksum differs: " + name)
+    prefix = name + "-" + version + "/"
+    members = {}
+    with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as archive:
+        for member in archive:
+            if member.isfile() and member.name.startswith(prefix):
+                leaf = member.name[len(prefix):]
+                relative(leaf)
+                if leaf in members:
+                    raise ValueError("duplicate published archive member")
+                members[leaf] = archive.extractfile(member).read()
+    return members
+
+
+def patch_notices(cargo_home, patch_archive, patch_checksum):
+    evidence = PATCH_NOTICE_SOURCE
+    core_archive = registry_archive(cargo_home, evidence["crate"], evidence["version"], evidence["checksum"])
+    pairs = ((patch_archive, PATCH_PACKAGE[0]), (core_archive, evidence["crate"]))
+    if patch_checksum != PATCH_CHECKSUM:
+        raise ValueError("Formatkit patch archive identity differs")
+    for members, name in pairs:
+        manifest = tomllib.loads(members["Cargo.toml"].decode())["package"]
+        source = json.loads(members[".cargo_vcs_info.json"])["git"]
+        if (manifest["name"] != name or manifest["version"] != evidence["version"]
+                or manifest.get("repository") != evidence["repository"]
+                or manifest.get("license") != "MIT OR Apache-2.0"
+                or source["sha1"] != evidence["commit"] or source.get("dirty")):
+            raise ValueError("Formatkit shared notice source does not match release commit")
+    files = {name: core_archive[name] for name in PATCH_NOTICES}
+    if {name: sha(raw) for name, raw in files.items()} != PATCH_NOTICES:
+        raise ValueError("Formatkit notice bytes do not match published source")
+    return files
 
 
 def collect(metadata, lock_raw, cargo_home, output):
@@ -78,23 +140,8 @@ def collect(metadata, lock_raw, cargo_home, output):
         if source is not None:
             if source != "registry+https://github.com/rust-lang/crates.io-index" or not pin.get("checksum"):
                 raise ValueError("unqualified dependency source: " + name)
-            archives = list((cargo_home / "registry/cache").glob("*/" + name + "-" + version + ".crate"))
-            if len(archives) != 1:
-                raise ValueError("missing or ambiguous published archive: " + name)
-            raw_archive = archives[0].read_bytes()
             checksum = pin["checksum"]
-            if sha(raw_archive) != checksum:
-                raise ValueError("published archive checksum differs: " + name)
-            prefix = name + "-" + version + "/"
-            archive_members = {}
-            with tarfile.open(fileobj=io.BytesIO(raw_archive), mode="r:gz") as archive:
-                for member in archive:
-                    if member.isfile() and member.name.startswith(prefix):
-                        relative_name = member.name[len(prefix):]
-                        relative(relative_name)
-                        if relative_name in archive_members:
-                            raise ValueError("duplicate published archive member")
-                        archive_members[relative_name] = archive.extractfile(member).read()
+            archive_members = registry_archive(cargo_home, name, version, checksum)
         license_file = package.get("license_file")
         selected = set()
         for path in root.rglob("*"):
@@ -109,17 +156,26 @@ def collect(metadata, lock_raw, cargo_home, output):
                 explicit = explicit.relative_to(root)
             relative(explicit.as_posix())
             selected.add(explicit.as_posix())
-        if not selected or not (package.get("license") or license_file):
-            raise ValueError("missing declared license evidence: " + name)
         record = {"name": name, "version": version, "declared_license": package.get("license"),
                   "source": source or "workspace", "registry_checksum": checksum, "licenses": []}
-        for rel in sorted(selected):
-            path = root / rel
-            if path.is_symlink() or not path.is_file():
-                raise ValueError("missing or symbolic declared license: " + name)
-            raw = path.read_bytes()
-            if archive_members is not None and archive_members.get(rel) != raw:
-                raise ValueError("license differs from published archive: " + name)
+        files = {}
+        if (name, version) == PATCH_PACKAGE:
+            if archive_members is None or selected:
+                raise ValueError("unexpected Formatkit patch license input")
+            files = patch_notices(cargo_home, archive_members, checksum)
+            record["notice_source"] = PATCH_NOTICE_SOURCE
+        else:
+            for rel in selected:
+                path = root / rel
+                if path.is_symlink() or not path.is_file():
+                    raise ValueError("missing or symbolic declared license: " + name)
+                raw = path.read_bytes()
+                if archive_members is not None and archive_members.get(rel) != raw:
+                    raise ValueError("license differs from published archive: " + name)
+                files[rel] = raw
+        if not files or not (package.get("license") or license_file):
+            raise ValueError("missing declared license evidence: " + name)
+        for rel, raw in sorted(files.items()):
             destination = name + "-" + version + "/" + rel
             relative(destination)
             payload[destination] = raw

@@ -6,7 +6,9 @@ the entire resolved Cargo package inventory. This conservative inventory also
 includes build, development and target-specific packages; it does not claim
 that every listed package is linked into each binary. The wheel carries the
 same evidence under its distribution license directory. Generation occurs
-before the wheel is built and installed for testing. Packaging refuses missing,
+before the wheel is built and installed for testing. The notice inventory
+records the source commit and archive for the Formatkit 0.1.1 patch crate's
+workspace license files. Packaging refuses missing,
 changed or mismatched notice files; these texts do not replace the project
 licenses or change upstream license terms.
 

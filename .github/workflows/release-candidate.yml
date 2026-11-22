@@ -93,7 +93,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $scratch = $env:RUNNER_TEMP
           cargo build --locked --release -p swankit-cli --bin swankit --target $env:TARGET
-          cargo metadata --locked --format-version 1 > "$scratch/metadata.json"
+          cargo metadata --locked --all-features --format-version 1 > "$scratch/metadata.json"
           python tools/collect-dependency-licenses.py --metadata "$scratch/metadata.json" `
               --lock Cargo.lock --output "$scratch/native-licenses"
           python tools/release-platform.py --target $env:TARGET `
