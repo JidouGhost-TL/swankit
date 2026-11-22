@@ -17,19 +17,18 @@ The Rust release includes the library and its required support crates.
 
 ## Quick start
 
-The prepared distributions are a Linux x86_64 CLI archive and a Python 3.11+
-abi3 wheel for Linux x86_64 with glibc 2.34 or newer. These private GitHub
-distributions do not require Rust. The [offline distribution guide](docs/distribution.md)
-describes the complete packet, platform evidence and a synthetic first operation.
+Private GitHub binary releases include a platform archive for the CLI.
+The release's asset list identifies the available operating systems and architectures.
+Extract the appropriate archive, then run the executable directly.
 
-```sh
-tar -xzf swankit-0.1.0-linux-x86_64.tar.gz
-./swankit-0.1.0-linux-x86_64/swankit --version
-./swankit-0.1.0-linux-x86_64/swankit --help
-
-# Install into your chosen Python environment.
-python3 -m pip install --no-index ./swankit-0.1.0-cp311-abi3-manylinux_2_34_x86_64.whl
+```text
+./swankit --version
+./swankit --help
 ```
+
+Run `.\swankit.exe --version` from PowerShell on Windows. The Linux x86-64
+Python wheel supports Python 3.11 and newer. See the [offline distribution guide](docs/distribution.md)
+for installation and platform details.
 
 The following examples use `swankit` for the extracted executable. Keep original
 files and write edits to new paths. Choose a definition and field using their
