@@ -38,7 +38,7 @@ hexadecimal strings. Unknown fields are errors.
 | `kind` | `tiles`, `tilemap`, `palette`, `font`, `text`, `pointer-table`, `music`, `sound-effect`, `pcm`, `data-table`, `sprite-table`, `other` |
 | `offset`, `length` | File offset and declared stored/carrier length (see extent rules below). `length` may be omitted for terminated codecs (the codec's end marker defines it) and for text (the charmap's end control) |
 | `reserved_capacity` | Optional proven total owned allocation in bytes from `offset`, independent of the consumed stream extent. Defaults to the current stored extent; retained across in-place edits and cleared on relocation |
-| `codec`, `codec_params` | `raw` (default) or a `ws-compress` id: `ws-lz-rle-7f`, `ws-lz-bits-16`, `ws-lz-u8-zero`, `ws-lz-word16-msb`, `ws-lz-word-counted`, `ws-okumura-lzss` (with `decoded_length`, `bit_order`, `ring_fill`), `ws-lzss-u16-zero` or `ws-lzss-12` (parameters below) |
+| `codec`, `codec_params` | `raw` (default) or a `ws-compress` id: `ws-lz-rle-7f`, `ws-lz-bits-16`, `ws-lz-u8-zero`, `ws-lz-word16-msb`, `ws-lz-word-counted`, `ws-okumura-lzss` (with `decoded_length`, `bit_order`, `ring_fill`), `ws-lzss-u16-zero`, `ws-lzss-12` (parameters below), or `ws-lzs2` (decode-only) |
 | `address` | Descriptive CPU view (`window` c0/c2/c3, `bank`, `segment`, `offset`) |
 | `format` | Kind parameters (below) |
 | `relations` | `tiles` (tile sets with their VRAM slot `at`, optional `skip`), `palette` / `palettes`, `charmap`, `font`, `pointer_table`, `targets` (pointer table entries) |
@@ -126,6 +126,16 @@ an opaque pixel wins, and at most 32 sprites draw on one line. A screen's
 it per its window bit. A layer with `wrap` lies on the 256x256 screen plane:
 give `x`/`y` as its map position minus the scroll registers and positions
 wrap modulo 256, as hardware scrolling does.
+
+
+### LZS2 containers
+
+Use `ws-lzs2` with the ROM offset of the four-byte signature. The decoder reads
+the little-endian decoded length at header offset 4 and the token length at
+offset 8. Tokens start after the 16-byte header. The map's stored extent
+includes the header and the exact token span. A declared length must agree
+with consumption. This codec takes its sizes from the header and supports
+verification and extraction. Replacement is refused.
 
 ## References
 

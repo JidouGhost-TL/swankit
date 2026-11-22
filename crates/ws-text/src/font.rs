@@ -2,7 +2,7 @@
 use crate::{limit, malformed};
 use formatkit_core::{bytes_at, Image, Result};
 use serde::{Deserialize, Serialize};
-use ws_gfx::{render_atlas, Arrangement, AtlasLayout, Order, TileFormat};
+use ws_gfx::{render_atlas, render_mono_atlas, Arrangement, AtlasLayout, Order, TileFormat};
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -79,10 +79,10 @@ impl FontDefinition {
             .ok_or_else(|| malformed("font source offset overflow"))?;
         let source = bytes_at(bytes, offset, self.stride)?;
         let (tile_bytes, format) = match self.format {
-            FontFormat::Bpp1 => (8, TileFormat::Bpp2),
-            FontFormat::Bpp2 => (16, TileFormat::Bpp2),
-            FontFormat::Bpp4Planar => (32, TileFormat::Bpp4Planar),
-            FontFormat::Bpp4Packed => (32, TileFormat::Bpp4Packed),
+            FontFormat::Bpp1 => (8, None),
+            FontFormat::Bpp2 => (16, Some(TileFormat::Bpp2)),
+            FontFormat::Bpp4Planar => (32, Some(TileFormat::Bpp4Planar)),
+            FontFormat::Bpp4Packed => (32, Some(TileFormat::Bpp4Packed)),
         };
         let tiles = (self.tiles_wide as usize)
             .checked_mul(self.tiles_high as usize)
@@ -95,38 +95,32 @@ impl FontDefinition {
         }
         let mut data = Vec::new();
         for tile in 0..tiles {
-            let at = self
-                .tile_offsets
-                .get(tile)
-                .copied()
-                .unwrap_or(tile * tile_bytes);
-            let raw = bytes_at(source, at, tile_bytes)?;
-            if matches!(self.format, FontFormat::Bpp1) {
-                for &row in raw {
-                    data.extend_from_slice(&[row, 0]);
-                }
-            } else {
-                data.extend_from_slice(raw);
-            }
-        }
-        let image = render_atlas(
-            &data,
-            format,
-            palette,
-            AtlasLayout {
-                arrangement: Arrangement {
-                    tiles_wide: self.tiles_wide,
-                    tiles_high: self.tiles_high,
-                    order: match self.order {
-                        GlyphOrder::Row => Order::RowMajor,
-                        GlyphOrder::Column => Order::ColumnMajor,
-                    },
+            let at = self.tile_offsets.get(tile).copied().map_or_else(
+                || {
+                    tile.checked_mul(tile_bytes)
+                        .ok_or_else(|| malformed("font tile offset overflow"))
                 },
-                columns: 1,
-                scale: 1,
-                max_bytes: maximum_bytes,
+                Ok,
+            )?;
+            data.extend_from_slice(bytes_at(source, at, tile_bytes)?);
+        }
+        let layout = AtlasLayout {
+            arrangement: Arrangement {
+                tiles_wide: self.tiles_wide,
+                tiles_high: self.tiles_high,
+                order: match self.order {
+                    GlyphOrder::Row => Order::RowMajor,
+                    GlyphOrder::Column => Order::ColumnMajor,
+                },
             },
-        )?;
+            columns: 1,
+            scale: 1,
+            max_bytes: maximum_bytes,
+        };
+        let image = match format {
+            Some(format) => render_atlas(&data, format, palette, layout),
+            None => render_mono_atlas(&data, palette, layout),
+        }?;
         let advance = if let Some(table) = self.width_table {
             let at = table
                 .checked_add(index)

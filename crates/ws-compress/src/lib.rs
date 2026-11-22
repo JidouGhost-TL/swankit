@@ -10,6 +10,7 @@ pub mod lz_rle_7f;
 pub mod lz_u8_zero;
 pub mod lz_word16_msb;
 pub mod lz_word_counted;
+pub mod lzs2;
 pub mod lzss_12;
 pub mod lzss_12_ext;
 pub mod lzss_be_units;

@@ -67,3 +67,38 @@ Segment paragraphs are included before wrapping the physical CPU address to
 are converted to file offsets rather than reported as file positions. Output
 sets use the existing atomic preflight/overwrite safeguards (`--force` permits
 overwriting output files, never inputs).
+
+## Flat fixed-stride offset tables
+
+The same command accepts `swankit-fixed-stride-table/1` for a reviewed table
+of little-endian 32-bit offsets relative to a known data window. All fields
+outside the ROM identity are JSON numbers. Offsets and sizes are in bytes
+unless a configured multiplier says otherwise.
+
+```json
+{
+  "schema": "swankit-fixed-stride-table/1",
+  "rom": {"sha256": "0000000000000000000000000000000000000000000000000000000000000000", "size": 65536},
+  "table_offset": 0,
+  "entry_count": 2,
+  "entry_stride": 8,
+  "offset_field": 0,
+  "offset_unit": 1,
+  "data_offset": 256,
+  "data_length": 1024,
+  "size": {"kind": "explicit-u32", "field_offset": 4, "unit": 1},
+  "padding_min_bytes": 8
+}
+```
+
+`explicit-u32` reads an additional little-endian length from every row.
+`{"kind":"sequential-until","sentinel_end":1024}` instead takes lengths from
+successive offsets. The optional sentinel is relative to the data window and
+defaults to its length. Sequence offsets must be nondecreasing.
+
+The receipt includes absolute file offsets and retains zero-length rows. A Raw
+map can be emitted for disjoint nonempty ranges. With `padding_min_bytes` set,
+gaps of at least that size are reported if they are all zero, a repeated byte,
+or a repeated little-endian 32-bit word. These gaps are inspection candidates.
+The generated map leaves free-space declarations empty. Use the banked
+definition above for CPU segment and mapper coordinates.

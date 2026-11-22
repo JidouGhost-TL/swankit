@@ -12,6 +12,7 @@
 
 mod data;
 mod extract;
+pub mod fixed_table;
 mod font;
 mod gfx;
 pub mod map;
@@ -52,7 +53,11 @@ pub fn sha256_hex(bytes: &[u8]) -> String {
 
 /// Refuse a ROM whose identity differs from the map's.
 pub fn check_identity(map: &AssetMap, rom: &[u8]) -> Result<()> {
-    let size = map.rom.size.usize()?;
+    check_rom_identity(&map.rom, rom)
+}
+
+pub(crate) fn check_rom_identity(identity: &map::RomIdentity, rom: &[u8]) -> Result<()> {
+    let size = identity.size.usize()?;
     if rom.len() != size {
         return Err(malformed(format!(
             "ROM is {} bytes; the map describes {} bytes",
@@ -61,10 +66,10 @@ pub fn check_identity(map: &AssetMap, rom: &[u8]) -> Result<()> {
         )));
     }
     let actual = sha256_hex(rom);
-    if !actual.eq_ignore_ascii_case(&map.rom.sha256) {
+    if !actual.eq_ignore_ascii_case(&identity.sha256) {
         return Err(malformed(format!(
             "ROM SHA-256 {actual} differs from the map's {}",
-            map.rom.sha256
+            identity.sha256
         )));
     }
     Ok(())

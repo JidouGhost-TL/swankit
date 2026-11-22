@@ -182,6 +182,8 @@ pub enum Codec {
     LzssU16Zero,
     #[serde(rename = "ws-lzss-12")]
     Lzss12,
+    #[serde(rename = "ws-lzs2")]
+    Lzs2,
 }
 
 impl Codec {
@@ -195,6 +197,7 @@ impl Codec {
                 | Codec::LzWord16Msb
                 | Codec::LzWordCounted
                 | Codec::LzssU16Zero
+                | Codec::Lzs2
         )
     }
 }

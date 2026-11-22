@@ -251,9 +251,7 @@ impl RomFacts {
         let header = Header::parse(rom)?;
         let geometry = RomGeometry::new(rom.len())?;
         let covered = Reader::new(rom).bytes(rom.len() - 2)?;
-        let checksum_computed = covered
-            .iter()
-            .fold(0u16, |sum, byte| sum.wrapping_add((*byte).into()));
+        let checksum_computed = formatkit_core::checksum::sum_bytes_u16(covered, 0);
         Ok(Self {
             header,
             geometry,

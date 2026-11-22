@@ -58,7 +58,7 @@ pub fn fix_checksum(rom: &mut [u8]) -> Result<u16> {
         return Err(malformed("ROM too small for a footer"));
     }
     let n = rom.len() - 2;
-    let sum = rom[..n].iter().fold(0u16, |s, &b| s.wrapping_add(b.into()));
+    let sum = formatkit_core::checksum::sum_bytes_u16(&rom[..n], 0);
     rom[n..].copy_from_slice(&sum.to_le_bytes());
     Ok(sum)
 }
@@ -95,6 +95,12 @@ fn payloads(
     allocated: &mut Vec<Allocation>,
 ) -> Result<(BTreeMap<String, Vec<u8>>, usize)> {
     let asset = map.asset(&r.id)?;
+    if asset.codec == Codec::Lzs2 {
+        return Err(malformed(format!(
+            "{}: LZS2 assets are decode-only",
+            asset.id
+        )));
+    }
     Ok(match (&r.input, asset.kind) {
         (ReplaceInput::Image(img), Kind::Font) => {
             crate::font::unrender_font(map, charmaps, rom, &r.id, img)?

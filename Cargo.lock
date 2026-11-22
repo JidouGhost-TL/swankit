@@ -106,18 +106,16 @@ dependencies = [
 
 [[package]]
 name = "formatkit-catalog"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cabe61d0447822e51edf03281ee7125b8bc32335f0a5e90ba9c825b4c7b6d900"
+version = "0.1.2"
+source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=5f2b8e217766b558c68560989b6f80029290bc3c#5f2b8e217766b558c68560989b6f80029290bc3c"
 dependencies = [
  "formatkit-core",
 ]
 
 [[package]]
 name = "formatkit-codec"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fead4b212f1db3a688b72ebdac0aa7f97a32553715e5afe8adcbb830dfbd7c63"
+version = "0.1.2"
+source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=5f2b8e217766b558c68560989b6f80029290bc3c#5f2b8e217766b558c68560989b6f80029290bc3c"
 dependencies = [
  "formatkit-core",
  "lzma-rs",
@@ -126,9 +124,8 @@ dependencies = [
 
 [[package]]
 name = "formatkit-core"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44b87354d0873192aa4a6dd5d0376cbaa377efef7874c5fe3efe93618c41490d"
+version = "0.1.2"
+source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=5f2b8e217766b558c68560989b6f80029290bc3c#5f2b8e217766b558c68560989b6f80029290bc3c"
 dependencies = [
  "sha2",
  "thiserror",
@@ -137,15 +134,13 @@ dependencies = [
 
 [[package]]
 name = "formatkit-corpus"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0814fb553c1ff14096c5625d23366609a99bb663ac1dd0cd0bddf0af71314a7c"
+version = "0.1.2"
+source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=5f2b8e217766b558c68560989b6f80029290bc3c#5f2b8e217766b558c68560989b6f80029290bc3c"
 
 [[package]]
 name = "formatkit-corpus-test"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d70f26e5c775b2e20a15b94d1fc9d32ebed52613035b6f6e8c9d7fedf2bdaca2"
+version = "0.1.2"
+source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=5f2b8e217766b558c68560989b6f80029290bc3c#5f2b8e217766b558c68560989b6f80029290bc3c"
 dependencies = [
  "formatkit-core",
  "formatkit-corpus",
@@ -157,36 +152,32 @@ dependencies = [
 
 [[package]]
 name = "formatkit-layout"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74e88d430a30cb9a87fb7cc315bbcac4057920ad5dd0a911d85430f168e8eca4"
+version = "0.1.2"
+source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=5f2b8e217766b558c68560989b6f80029290bc3c#5f2b8e217766b558c68560989b6f80029290bc3c"
 dependencies = [
  "formatkit-core",
 ]
 
 [[package]]
 name = "formatkit-patch"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f52f0aa583a4aa23467a59c9a90e95a4c6b01a86308acf5cabbaf35e539fb3b"
+version = "0.1.2"
+source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=5f2b8e217766b558c68560989b6f80029290bc3c#5f2b8e217766b558c68560989b6f80029290bc3c"
 dependencies = [
  "formatkit-core",
 ]
 
 [[package]]
 name = "formatkit-pixel"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c8df2dfd940e5819542d3b64cd04698e968330cdf5f8b709e39e399c28a2876"
+version = "0.1.2"
+source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=5f2b8e217766b558c68560989b6f80029290bc3c#5f2b8e217766b558c68560989b6f80029290bc3c"
 dependencies = [
  "formatkit-core",
 ]
 
 [[package]]
 name = "formatkit-runtime"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ccd44b3d666af799d71e9f38af736fb78c615d8bd8b36e1dd74fee05cd44db9e"
+version = "0.1.2"
+source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=5f2b8e217766b558c68560989b6f80029290bc3c#5f2b8e217766b558c68560989b6f80029290bc3c"
 dependencies = [
  "formatkit-catalog",
  "formatkit-core",
@@ -651,6 +642,7 @@ version = "0.1.1"
 dependencies = [
  "formatkit-core",
  "formatkit-corpus-test",
+ "formatkit-layout",
  "serde",
  "serde_json",
  "sha2",

@@ -1,6 +1,7 @@
 //! Tile formats: <https://ws.nesdev.org/wiki/Display/Tile_Data>.
 use crate::{image, invalid};
-use formatkit_core::{Error, Image, Reader, Result};
+use formatkit_core::{bytes_at, Error, Image, Reader, Result};
+use formatkit_pixel::{BitOrder, IndexPolicy, NibbleOrder};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TileFormat {
@@ -41,16 +42,17 @@ pub fn decode_tile(data: &[u8], offset: usize, format: TileFormat) -> Result<[u8
     reader.skip(offset)?;
     let bytes = reader.bytes(format.bytes_per_tile())?;
     let mut indices = [0; 64];
-    let planes = if format == TileFormat::Bpp2 { 2 } else { 4 };
-    for y in 0..8 {
-        for x in 0..8 {
-            indices[y * 8 + x] = if format == TileFormat::Bpp4Packed {
-                (bytes[y * 4 + x / 2] >> (4 * (1 - x % 2))) & 15
-            } else {
-                (0..planes).fold(0, |v, p| {
+    if format == TileFormat::Bpp4Packed {
+        formatkit_pixel::unpack_4bpp_into(bytes, NibbleOrder::HighFirst, &mut indices)
+            .map_err(|_| invalid("packed tile bytes", bytes.len()))?;
+    } else {
+        let planes = if format == TileFormat::Bpp2 { 2 } else { 4 };
+        for y in 0..8 {
+            for x in 0..8 {
+                indices[y * 8 + x] = (0..planes).fold(0, |v, p| {
                     v | (((bytes[y * planes + p] >> (7 - x)) & 1) << p)
-                })
-            };
+                });
+            }
         }
     }
     Ok(indices)
@@ -60,16 +62,22 @@ pub fn decode_tile(data: &[u8], offset: usize, format: TileFormat) -> Result<[u8
 /// [`decode_tile`] (index bits above the format's depth are dropped).
 pub fn encode_tile(indices: &[u8; 64], format: TileFormat) -> Vec<u8> {
     let mut out = vec![0u8; format.bytes_per_tile()];
+    if format == TileFormat::Bpp4Packed {
+        formatkit_pixel::pack_4bpp_into(
+            indices,
+            NibbleOrder::HighFirst,
+            IndexPolicy::Mask,
+            &mut out,
+        )
+        .expect("a packed tile has 64 pixels and 32 bytes");
+        return out;
+    }
     let planes = if format == TileFormat::Bpp2 { 2 } else { 4 };
     for y in 0..8 {
         for x in 0..8 {
             let v = indices[y * 8 + x];
-            if format == TileFormat::Bpp4Packed {
-                out[y * 4 + x / 2] |= (v & 15) << (4 * (1 - x % 2));
-            } else {
-                for p in 0..planes {
-                    out[y * planes + p] |= ((v >> p) & 1) << (7 - x);
-                }
+            for p in 0..planes {
+                out[y * planes + p] |= ((v >> p) & 1) << (7 - x);
             }
         }
     }
@@ -144,6 +152,31 @@ pub fn render_atlas(
     if data.is_empty() || !data.len().is_multiple_of(format.bytes_per_tile()) {
         return Err(invalid("atlas tile bytes", data.len()));
     }
+    render_indexed_atlas(format.tile_count(data.len()), palette, layout, |tile| {
+        decode_tile(data, tile * format.bytes_per_tile(), format)
+    })
+}
+
+/// Render complete 8-byte monochrome tiles with the same arrangement as a hardware atlas.
+pub fn render_mono_atlas(data: &[u8], palette: &[[u8; 4]], layout: AtlasLayout) -> Result<Image> {
+    if data.is_empty() || !data.len().is_multiple_of(8) {
+        return Err(invalid("atlas tile bytes", data.len()));
+    }
+    render_indexed_atlas(data.len() / 8, palette, layout, |tile| {
+        let bytes = bytes_at(data, tile * 8, 8)?;
+        let mut indices = [0; 64];
+        formatkit_pixel::unpack_1bpp_into(bytes, BitOrder::MsbFirst, &mut indices)
+            .map_err(|_| invalid("monochrome tile bytes", bytes.len()))?;
+        Ok(indices)
+    })
+}
+
+fn render_indexed_atlas(
+    count: usize,
+    palette: &[[u8; 4]],
+    layout: AtlasLayout,
+    decode: impl Fn(usize) -> Result<[u8; 64]>,
+) -> Result<Image> {
     let a = layout.arrangement;
     if a.tiles_wide == 0 || a.tiles_high == 0 || layout.columns == 0 || layout.scale == 0 {
         return Err(invalid("atlas dimensions", 0));
@@ -156,7 +189,6 @@ pub fn render_atlas(
     let tpc = (a.tiles_wide as usize)
         .checked_mul(a.tiles_high as usize)
         .ok_or_else(overflow)?;
-    let count = format.tile_count(data.len());
     let rows = count.div_ceil(tpc).div_ceil(layout.columns as usize);
     let cw = a
         .tiles_wide
@@ -175,7 +207,7 @@ pub fn render_atlas(
         .ok_or_else(overflow)?;
     let mut out = image(width, height, layout.max_bytes, [0, 0, 0, 255])?;
     for tile in 0..count {
-        let indices = decode_tile(data, tile * format.bytes_per_tile(), format)?;
+        let indices = decode(tile)?;
         let cell = tile / tpc;
         let i = tile % tpc;
         let (cx, cy) = match a.order {

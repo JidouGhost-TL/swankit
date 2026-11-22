@@ -4,8 +4,8 @@ use crate::text::Charmaps;
 use crate::{malformed, AssetMap};
 use formatkit_core::{bytes_at, Result};
 use ws_compress::{
-    lz_bits_16, lz_rle_7f, lz_u8_zero, lz_word16_msb, lz_word_counted, lzss_12, lzss_u16_zero,
-    okumura, BitOrder, MAX_DECODED,
+    lz_bits_16, lz_rle_7f, lz_u8_zero, lz_word16_msb, lz_word_counted, lzs2, lzss_12,
+    lzss_u16_zero, okumura, BitOrder, MAX_DECODED,
 };
 
 /// Upper bound on the decoded bytes of one asset.
@@ -73,6 +73,12 @@ pub(crate) fn validate_codec_params(asset: &Asset) -> Result<()> {
         Codec::Lzss12 => {
             lzss12_params(asset)?;
         }
+        Codec::Lzs2 if asset.codec_params != Default::default() => {
+            return Err(malformed(format!(
+                "{}: LZS2 takes sizes from its header",
+                asset.id
+            )));
+        }
         _ => {}
     }
     Ok(())
@@ -123,8 +129,10 @@ pub fn decode_asset(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -
         | Codec::LzWord16Msb
         | Codec::LzWordCounted
         | Codec::LzssU16Zero
-        | Codec::Lzss12 => {
+        | Codec::Lzss12
+        | Codec::Lzs2 => {
             let outcome = match asset.codec {
+                Codec::Lzs2 => lzs2::decode(window, MAX_DECODED)?,
                 Codec::LzRle7f => lz_rle_7f::decode(window, MAX_DECODED)?,
                 Codec::LzBits16 => lz_bits_16::decode(window, MAX_DECODED)?,
                 Codec::LzU8Zero => lz_u8_zero::decode(window, MAX_DECODED)?,
@@ -366,6 +374,10 @@ pub fn encode_payload(asset: &Asset, decoded: &[u8]) -> Result<Vec<u8>> {
     match asset.codec {
         Codec::Raw => Ok(decoded.to_vec()),
         Codec::LzRle7f => lz_rle_7f::encode(decoded),
+        Codec::Lzs2 => Err(malformed(format!(
+            "{}: LZS2 assets are decode-only",
+            asset.id
+        ))),
         Codec::LzBits16 => lz_bits_16::encode(decoded),
         Codec::LzU8Zero => lz_u8_zero::encode(decoded),
         Codec::LzWord16Msb => lz_word16_msb::encode(decoded),

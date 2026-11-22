@@ -963,3 +963,119 @@ fn unit_carrier_cli_width_boundary() {
         }
     }
 }
+
+#[test]
+fn fixed_stride_table_resolves_ranges_and_reports_uniform_gaps() {
+    let fixture = Fixture::new();
+    let mut rom = vec![0; 64];
+    for (i, word) in [4u32, 4, 16, 2].into_iter().enumerate() {
+        rom[i * 4..i * 4 + 4].copy_from_slice(&word.to_le_bytes());
+    }
+    rom[20..24].copy_from_slice(b"data");
+    rom[24..32].copy_from_slice(&[1, 2, 3, 4, 1, 2, 3, 4]);
+    rom[32..34].copy_from_slice(b"ok");
+    rom[34..40].fill(255);
+    let input = fixture.put("input.wsc", &rom);
+    let mut definition = json!({
+        "schema": "swankit-fixed-stride-table/1",
+        "rom": {"size": rom.len(), "sha256": ws_assets::sha256_hex(&rom)},
+        "table_offset": 0, "entry_count": 2, "entry_stride": 8,
+        "offset_field": 0, "offset_unit": 1, "data_offset": 16, "data_length": 24,
+        "size": {"kind": "explicit-u32", "field_offset": 4, "unit": 1},
+        "padding_min_bytes": 4
+    });
+    let definition_path = fixture.json("table.json", definition.clone());
+    let receipt = fixture.path("receipt.json");
+    let map = fixture.path("map.json");
+    let result = value(&[
+        "assets",
+        "resolve-table",
+        &input,
+        &definition_path,
+        "--output",
+        &receipt,
+        "--map-out",
+        &map,
+        "--json",
+    ]);
+    assert_eq!(result["entries"][1]["offset"], 32);
+    assert_eq!(result["padding"][0]["kind"], "all-zero");
+    assert_eq!(result["padding"][1]["kind"], "repeated-word32");
+    assert_eq!(result["padding"][1]["fill"], 0x0403_0201);
+    assert_eq!(result["padding"][2]["fill"], 255);
+    let generated: Value = serde_json::from_slice(&fs::read(&map).unwrap()).unwrap();
+    assert!(generated["free_space"].as_array().is_none_or(Vec::is_empty));
+    let out = fixture.path("out");
+    let extraction = value(&["assets", "extract", &input, &map, &out, "--json"]);
+    assert_eq!(extraction["failures"], 0);
+    assert_eq!(
+        fs::read(std::path::Path::new(&out).join("entry.0000.bin")).unwrap(),
+        b"data"
+    );
+
+    definition["size"] = json!({"kind":"sequential-until","sentinel_end":20});
+    let sequence = fixture.json("sequence.json", definition.clone());
+    let seq_receipt = fixture.path("sequence-receipt.json");
+    let result = value(&[
+        "assets",
+        "resolve-table",
+        &input,
+        &sequence,
+        "--output",
+        &seq_receipt,
+        "--json",
+    ]);
+    assert_eq!(result["entries"][0]["length"], 12);
+    assert_eq!(result["entries"][1]["length"], 4);
+
+    definition["rom"]["sha256"] = json!("00".repeat(32));
+    let wrong = fixture.json("wrong.json", definition);
+    let refused = fixture.path("refused.json");
+    assert!(!command(&[
+        "assets",
+        "resolve-table",
+        &input,
+        &wrong,
+        "--output",
+        &refused
+    ])
+    .status
+    .success());
+    assert!(!std::path::Path::new(&refused).exists());
+}
+
+#[test]
+fn lzs2_asset_map_is_extractable_and_refuses_replacement() {
+    let fixture = Fixture::new();
+    let mut rom = vec![0; 65536];
+    rom[16..20].copy_from_slice(b"LZS2");
+    rom[20] = 5;
+    rom[24] = 4;
+    rom[32..36].copy_from_slice(&[0x40, b'A', 3, 0]);
+    let input = fixture.put("input.wsc", &rom);
+    let map = fixture.json(
+        "map.json",
+        json!({
+            "schema":"swankit-asset-map/1",
+            "rom":{"size":rom.len(),"sha256":ws_assets::sha256_hex(&rom)},
+            "assets":[{"id":"block","kind":"other","offset":16,"codec":"ws-lzs2"}]
+        }),
+    );
+    let out = fixture.path("out");
+    let result = value(&["assets", "extract", &input, &map, &out, "--json"]);
+    assert_eq!(result["failures"], 0);
+    let output = std::path::Path::new(&out);
+    assert_eq!(fs::read(output.join("block.bin")).unwrap(), b"AAAAA");
+    let index: Value =
+        serde_json::from_slice(&fs::read(output.join("index.json")).unwrap()).unwrap();
+    assert_eq!(index["assets"][0]["stored_length"], 20);
+    let edited = fixture.put("edited.bin", b"AAAAA");
+    let rejected = fixture.path("rejected.wsc");
+    assert!(!command(&[
+        "assets", "replace", &input, &map, "--id", "block", "--from", &edited, "-o", &rejected,
+        "--force"
+    ])
+    .status
+    .success());
+    assert!(!std::path::Path::new(&rejected).exists());
+}

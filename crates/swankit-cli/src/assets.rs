@@ -84,17 +84,43 @@ pub fn run(words: Vec<String>) -> Result<()> {
             let map_path = a.value("--map-out");
             a.finish(4)?;
             let rom = io::read(&a.positional[2], MAX_ROM)?;
-            let definition = ws_assets::parameters::TableDefinition::from_json(&io::read(
-                &a.positional[3],
-                1024 * 1024,
-            )?)?;
-            let result = ws_assets::parameters::resolve(&rom, &definition)?;
-            let mut files = vec![(
-                PathBuf::from(receipt_path),
-                serde_json::to_vec_pretty(&result)?,
-            )];
-            if let Some(path) = map_path {
-                files.push((PathBuf::from(path), result.asset_map()?.to_json()?));
+            let bytes = io::read(&a.positional[3], 1024 * 1024)?;
+            let schema: serde_json::Value = serde_json::from_slice(&bytes)?;
+            let (receipt, projection, message) =
+                if schema["schema"] == ws_assets::fixed_table::SCHEMA {
+                    let definition = serde_json::from_slice(&bytes)?;
+                    let result = ws_assets::fixed_table::resolve(&rom, &definition)?;
+                    let message = format!(
+                        "{} table entries, {} uniform padding candidates",
+                        result.entries.len(),
+                        result.padding.len()
+                    );
+                    let projection = map_path.as_ref().map(|_| result.asset_map()).transpose()?;
+                    let message = if json_mode {
+                        serde_json::to_string(&result)?
+                    } else {
+                        message
+                    };
+                    (serde_json::to_vec_pretty(&result)?, projection, message)
+                } else {
+                    let definition = ws_assets::parameters::TableDefinition::from_json(&bytes)?;
+                    let result = ws_assets::parameters::resolve(&rom, &definition)?;
+                    let message = format!(
+                        "{} source mapping: {} distinct slice(s)",
+                        result.decision,
+                        result.slices.len()
+                    );
+                    let projection = map_path.as_ref().map(|_| result.asset_map()).transpose()?;
+                    let message = if json_mode {
+                        serde_json::to_string(&result)?
+                    } else {
+                        message
+                    };
+                    (serde_json::to_vec_pretty(&result)?, projection, message)
+                };
+            let mut files = vec![(PathBuf::from(receipt_path), receipt)];
+            if let (Some(path), Some(map)) = (map_path, projection) {
+                files.push((PathBuf::from(path), map.to_json()?));
             }
             output::write(
                 files,
@@ -104,15 +130,7 @@ pub fn run(words: Vec<String>) -> Result<()> {
                 ],
                 force,
             )?;
-            if json_mode {
-                println!("{}", serde_json::to_string(&result)?);
-            } else {
-                println!(
-                    "{} source mapping: {} distinct slice(s)",
-                    result.decision,
-                    result.slices.len()
-                );
-            }
+            println!("{message}");
             Ok(())
         }
         "extract" => {
