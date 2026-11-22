@@ -173,6 +173,24 @@ fn format_set_field_enforces_constraints_unless_explicitly_skipped() {
 }
 
 #[test]
+fn gather_beat_supply_points_enforce_the_documented_maximum() {
+    let format = ws_saves::formats()
+        .unwrap()
+        .into_iter()
+        .find(|format| format.definition()["id"] == "SD_Gundam_G_Generation_-_Gather_Beat_Japan")
+        .unwrap();
+    let mut bytes = vec![0; 32768];
+    format.set_field(&mut bytes, 5, &json!(999_999)).unwrap();
+    let before = bytes.clone();
+    assert!(format.set_field(&mut bytes, 5, &json!(1_000_000)).is_err());
+    assert_eq!(bytes, before);
+    format
+        .set_field_with_options(&mut bytes, 5, &json!(1_000_000), true)
+        .unwrap();
+    assert_eq!(&bytes[0x5006..0x500a], &1_000_000u32.to_le_bytes());
+}
+
+#[test]
 fn v2_packed_bcd_digit_limit_matches_schema() {
     let mut d = definition();
     d["schema"] = json!("swankit-save-def/2");
