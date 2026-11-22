@@ -1,7 +1,8 @@
 # Python bindings
 
-`swankit` is a private Python package for Python 3.11 and newer. Its PyO3
-extension uses `abi3-py311`. Objects hold the existing Rust facts, definitions,
+`swankit` provides Python bindings for Python 3.11 and newer. Download the
+Linux x86-64 wheel from [GitHub Releases](https://github.com/JidouGhost-TL/swankit/releases).
+Its PyO3 extension uses `abi3-py311`. Objects hold the existing Rust facts, definitions,
 images, decoded streams, waves and PCM types. The Python layer only re-exports
 these objects and provides an optional Pillow conversion.
 

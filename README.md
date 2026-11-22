@@ -17,17 +17,17 @@ The Rust release includes the library and its required support crates.
 
 ## Quick start
 
-Private GitHub binary releases include a platform archive for the CLI.
-The release's asset list identifies the available operating systems and architectures.
-Extract the appropriate archive, then run the executable directly.
+Download the CLI archive for your platform from [GitHub Releases](https://github.com/JidouGhost-TL/swankit/releases).
+[Version 0.1.1](https://github.com/JidouGhost-TL/swankit/releases/tag/v0.1.1) provides CLI builds for Linux x86-64, Windows x86-64, macOS Apple Silicon and macOS Intel.
+Extract the archive and run the executable directly.
 
 ```text
 ./swankit --version
 ./swankit --help
 ```
 
-Run `.\swankit.exe --version` from PowerShell on Windows. The Linux x86-64
-Python wheel supports Python 3.11 and newer. See the [offline distribution guide](docs/distribution.md)
+Run `.\swankit.exe --version` from PowerShell on Windows. The release also includes a
+Linux x86-64 wheel for Python 3.11 and newer. See the [offline distribution guide](docs/distribution.md)
 for installation and platform details.
 
 The following examples use `swankit` for the extracted executable. Keep original
@@ -216,7 +216,7 @@ recorded repair bytes and trees.
 
 [Python bindings](docs/python.md) expose the Rust facts, detection, RGBA tiles
 and palettes, codecs and consumed extents, text definitions, sound previews,
-transactional saves and IPS operations as the private `swankit` package.
+transactional saves and IPS operations as the `swankit` Python package.
 `tools/python-container.sh` builds and tests its Python 3.11+ abi3 wheel inside
 a container, keeping wheel artifacts external. `--python-bindings` in the
 staging tool enrolls a new parity selection from existing frozen owner specs.

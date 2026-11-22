@@ -12,35 +12,33 @@ workspace license files. Packaging refuses missing,
 changed or mismatched notice files; these texts do not replace the project
 licenses or change upstream license terms.
 
-Maintainers can build and publish a reviewed private packet through the
-[manual release workflows](release.md). The main `swankit` executable is
-included; `wg-adapter` and `wg-decode` remain auxiliary source-build tools.
+Download the offline packet or individual files from [GitHub Releases](https://github.com/JidouGhost-TL/swankit/releases).
+[Version 0.1.1](https://github.com/JidouGhost-TL/swankit/releases/tag/v0.1.1) provides CLI archives for
+Linux x86-64, Windows x86-64, macOS Apple Silicon and macOS Intel, and a
+Linux x86-64 abi3 wheel for Python 3.11 and newer. The candidate manifest
+records which platforms executed each archive.
 
-The first private release packet contains a Linux x86_64 CLI archive, a
-Python 3.11+ abi3 Linux x86_64 wheel, README.md, OFFLINE.md, all linked user
-and crate guides, JSON schemas, LICENSE-MIT, LICENSE-APACHE and NOTICE.
-Use OFFLINE.md for the exact archive and wheel filenames. The CLI archive
-contains the same guide tree; the outer tree supplies guides beside the wheel.
-The wheel itself contains the Python package and legal notices. New platform
-candidates also carry separate Windows x86-64, macOS Apple Silicon and macOS
-Intel CLI archives with license notices. The candidate manifest records which
-platform executed each archive. Consult the published release for availability.
+The packet includes the CLI and wheel, README.md, OFFLINE.md, the linked user
+and crate guides, JSON schemas and license notices. Use OFFLINE.md for the
+exact archive and wheel filenames. The wheel contains the Python package and
+legal notices. The main `swankit` executable is included. The `wg-adapter` and
+`wg-decode` executables are available as auxiliary source-build tools. See
+[release maintenance](release.md) for the current workflow requirements.
 The `link` relay uses Unix endpoints. Direct serial-device endpoints require Linux.
 The Windows CLI includes the separate `wg-server` network service.
 
-The currently prepared artifacts require glibc 2.34 or newer according to their
-ELF versioned-symbol requirements. The packet's BUILD-SOURCE.json audits the
+The Linux CLI and wheel require glibc 2.34 or newer according to their ELF
+versioned-symbol requirements. The packet's BUILD-SOURCE.json audits the
 CLI and native extension separately; a wheel tag is not evidence about the CLI.
 Symbol requirements establish a lower bound, not execution on the oldest
-runtime. Linux x86_64, Python 3.11 and glibc 2.36 were exercised; a wider
-Python/glibc matrix, other operating systems and other architectures remain
-untested. Do not install these artifacts on an incompatible platform.
+runtime. The Linux x86-64 Python wheel was exercised with Python 3.11 and
+glibc 2.36. A wider Python and glibc matrix remains untested.
 
 Extract the CLI archive and run its executable directly. Installing the
 existing wheel into your chosen environment uses no registry or Rust compiler:
 
 ```sh
-python3 -m pip install --no-index --no-deps ./swankit-0.1.0-cp311-abi3-manylinux_2_34_x86_64.whl
+python3 -m pip install --no-index --no-deps ./swankit-0.1.1-cp311-abi3-manylinux_2_34_x86_64.whl
 ```
 
 The optional `swankit.to_pil` helper needs a separately supplied Pillow package.

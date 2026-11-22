@@ -1,9 +1,11 @@
-# Private release maintenance
+# Release maintenance
 
-Release automation has two manual workflows. Building a candidate does not
+[GitHub Releases](https://github.com/JidouGhost-TL/swankit/releases) provides the public CLI archives and Linux Python wheel. The Rust library is distributed through crates.io.
+
+The existing candidate and publishing workflows still require a private
+repository. They need an update before they can run on the public repository.
+The steps below document the existing workflow. Building a candidate does not
 create a tag or release. Publishing remains a separate owner-approved action.
-The repository is private. These workflows build and publish private GitHub
-releases. The public Rust library is distributed separately through crates.io.
 
 ## Build a candidate
 

@@ -6,7 +6,8 @@ excomm use and tap inspection. The matching `swankit wg-adapter` and
 [WonderGate raw mode](wondergate.md#raw-executables) for arguments, environment
 configuration, EOF behavior and the lossless byte log.
 
-Build the private binary with `cargo build -p swankit-cli --locked`. The
+Download the CLI from [GitHub Releases](https://github.com/JidouGhost-TL/swankit/releases)
+or build it with `cargo build -p swankit-cli --locked`. The
 examples assume the resulting `swankit` is on PATH. Use `--help` for syntax
 and `--version` (or `-V`) to print the package version.
 Hardware interpretation comes from the owner crates and
