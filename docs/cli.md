@@ -366,7 +366,7 @@ swankit wg-server --data TEST_DATA --wire TEST_WIRE \
 The numeric bind address defaults to loopback and ports default to 80/5555.
 Port zero requests an ephemeral port; startup prints both actual addresses.
 The clock defaults to system UTC; fixed-clock digits are UTC, with gettime
-converted to JST. Entropy defaults to the Unix OS source; an unsigned 64-bit
+converted to JST. Entropy comes from the operating system on Unix and Windows. An unsigned 64-bit
 decimal seed opts into deterministic test tokens. Records append to `DATA_DIR/journal.jsonl`, and
 lossless transactions append to `WIRE_DIR/wire.jsonl` with raw byte sidecars.
 Terminate the owned process with the normal operating-system signal. Each
