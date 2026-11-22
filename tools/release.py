@@ -21,8 +21,10 @@ COMMIT = re.compile(r"[0-9a-f]{40}\Z")
 PRIVATE_PAYLOAD_SUFFIXES = (".ws", ".wsc", ".pc2", ".sav", ".bin", ".eep", ".eeprom", ".rom", ".srm",
                           ".sram", ".state", ".sta", ".mss", ".wav", ".pcm", ".ogg", ".flac", ".png",
                           ".jpg", ".jpeg", ".bmp")
-FORMATKIT = {"formatkit-" + name for name in
+LEGACY_FORMATKIT = {"formatkit-" + name for name in
              ("core", "layout", "catalog", "runtime", "pixel", "codec", "corpus", "corpus-test")}
+FORMATKIT = LEGACY_FORMATKIT | {"formatkit-patch"}
+FORMATKIT_VERSION = "0.1.1"
 _LICENSE_SPEC = importlib.util.spec_from_file_location("dependency_licenses", Path(__file__).with_name("collect-dependency-licenses.py"))
 DEPENDENCY_LICENSES = importlib.util.module_from_spec(_LICENSE_SPEC)
 _LICENSE_SPEC.loader.exec_module(DEPENDENCY_LICENSES)
@@ -56,7 +58,7 @@ def registry(lock, metadata):
                 if p["name"].startswith("formatkit-")}
     require(FORMATKIT <= packages.keys(), "missing pinned registry dependency")
     for name, item in packages.items():
-        require(item["version"] == "0.1.0" and item.get("source") ==
+        require(item["version"] == FORMATKIT_VERSION and item.get("source") ==
                 "registry+https://github.com/rust-lang/crates.io-index"
                 and SHA.fullmatch(item.get("checksum", "")), "non-registry dependency: " + name)
     found = {p["name"] for p in metadata["packages"] if p["name"].startswith("formatkit-")}
@@ -146,9 +148,12 @@ def validate_packet(packet, manifest):
         expected = {p.relative_to(dependency_bundle).as_posix(): p.read_bytes()
                     for p in dependency_bundle.rglob("*") if p.is_file()}
         require(included == expected, "wheel dependency notices differ or are missing")
-    require(FORMATKIT <= manifest.get("registry", {}).keys(), "missing registry evidence")
-    for item in manifest["registry"].values():
-        require(item.get("version") == "0.1.0" and item.get("source") ==
+    dependencies = manifest.get("registry", {})
+    historical = dependencies.keys() == LEGACY_FORMATKIT
+    require(historical or FORMATKIT <= dependencies.keys(), "missing registry evidence")
+    version = "0.1.0" if historical else FORMATKIT_VERSION
+    for item in dependencies.values():
+        require(item.get("version") == version and item.get("source") ==
                 "registry+https://github.com/rust-lang/crates.io-index"
                 and SHA.fullmatch(item.get("checksum", "")), "invalid registry evidence")
     guides = {name: checksum for name, checksum in files.items()

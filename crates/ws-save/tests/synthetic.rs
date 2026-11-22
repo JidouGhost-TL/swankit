@@ -43,6 +43,24 @@ fn standard_crc_vectors_and_arithmetic_variants() {
 }
 
 #[test]
+fn reflected_crc_adapter_keeps_custom_parameters_and_swap() {
+    let input: Vec<u8> = (0..=255).collect();
+    for polynomial in [0x8408, 0xa001, 0xf80f] {
+        for swap_bytes in [false, true] {
+            let crc = Crc16 {
+                polynomial,
+                seed: 0x52a1,
+                xor_out: 0xd70c,
+                swap_bytes,
+            };
+            for bytes in [&input[..0], &input[..1], &input[..31], &input[..]] {
+                assert_eq!(crc.compute(bytes), crc.compute_table(bytes));
+            }
+        }
+    }
+}
+
+#[test]
 fn owner_and_word_bounds_preserve_surroundings() {
     let mut bytes = [0u8; 128];
     bytes[0x60..0x64].copy_from_slice(&[11, 12, 13, 37]);

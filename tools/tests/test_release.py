@@ -74,7 +74,7 @@ class ApprovalTests(unittest.TestCase):
         self.manifest = {"schema": "swankit-candidate/1", "version": "0.1.0", "source_commit": self.commit,
                          "lock_sha256": self.lock, "run_id": 4, "files": RELEASE.packet_files(self.packet),
                          "checks": {"ci": "PASS", "packet_smoke": "PASS"},
-                         "registry": {name: {"version": "0.1.0", "source":
+                         "registry": {name: {"version": RELEASE.FORMATKIT_VERSION, "source":
                               "registry+https://github.com/rust-lang/crates.io-index", "checksum": "a" * 64}
                                       for name in RELEASE.FORMATKIT}}
         self.raw = json.dumps(self.manifest).encode()
@@ -176,12 +176,12 @@ class ApprovalTests(unittest.TestCase):
             self.assertFalse((self.root / "extracted").exists())
 
     def test_registry_rejects_path_git_and_missing_checksums(self):
-        entries = [{"name": n, "version": "0.1.0", "source": "registry+https://github.com/rust-lang/crates.io-index",
+        entries = [{"name": n, "version": RELEASE.FORMATKIT_VERSION, "source": "registry+https://github.com/rust-lang/crates.io-index",
                     "checksum": "a" * 64} for n in sorted(RELEASE.FORMATKIT)]
         def lock(items):
             return "\n".join("[[package]]\n" + "\n".join(f'{k} = "{v}"' for k, v in e.items()) for e in items).encode()
         metadata = {"packages": entries}
-        self.assertEqual(len(RELEASE.registry(lock(entries), metadata)), 8)
+        self.assertEqual(len(RELEASE.registry(lock(entries), metadata)), 9)
         for replacement in (None, "git+https://example.invalid/source"):
             changed = copy.deepcopy(entries)
             changed[0]["source"] = replacement
@@ -193,6 +193,17 @@ class ApprovalTests(unittest.TestCase):
         del changed[0]["checksum"]
         with self.assertRaises(ValueError):
             RELEASE.registry(lock(changed), metadata)
+
+    def test_previous_release_packet_keeps_its_historical_registry_pins(self):
+        old = self.manifest["registry"].pop("formatkit-patch")
+        with self.assertRaisesRegex(ValueError, "invalid registry evidence"):
+            RELEASE.validate_packet(self.packet, self.manifest)
+        for entry in self.manifest["registry"].values():
+            entry["version"] = "0.1.0"
+        RELEASE.validate_packet(self.packet, self.manifest)
+        self.manifest["registry"]["formatkit-patch"] = old
+        with self.assertRaisesRegex(ValueError, "invalid registry evidence"):
+            RELEASE.validate_packet(self.packet, self.manifest)
 
     def test_real_redirect_never_forwards_authorization(self):
         observed = []

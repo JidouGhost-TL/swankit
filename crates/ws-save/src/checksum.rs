@@ -94,23 +94,14 @@ impl Crc16 {
         swap_bytes: false,
     };
     pub fn compute(self, bytes: &[u8]) -> u16 {
-        let mut c = self.seed;
-        for &byte in bytes {
-            c ^= u16::from(byte);
-            for _ in 0..8 {
-                c = if c & 1 != 0 {
-                    (c >> 1) ^ self.polynomial
-                } else {
-                    c >> 1
-                };
-            }
+        formatkit_core::checksum::Crc16Params {
+            polynomial: self.polynomial,
+            seed: self.seed,
+            xor_out: self.xor_out,
+            reflected: true,
+            swap_bytes: self.swap_bytes,
         }
-        c ^= self.xor_out;
-        if self.swap_bytes {
-            c.swap_bytes()
-        } else {
-            c
-        }
+        .compute(bytes)
     }
     /// Table-driven counterpart for parity with table-based save algorithms.
     pub fn compute_table(self, bytes: &[u8]) -> u16 {

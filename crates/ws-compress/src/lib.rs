@@ -18,6 +18,7 @@ pub mod lzss_u16_zero;
 pub mod mask16_fill;
 pub mod okumura;
 
+use formatkit_codec::sliding_window::{append_match, MatchError};
 pub use formatkit_codec::{BitOrder, DecodeOutcome};
 use formatkit_core::{Error, Result};
 
@@ -54,20 +55,18 @@ fn copy_match(
     count: usize,
     limit: usize,
 ) -> Result<()> {
-    grow(out, count, limit)?;
-    if distance == 0 || distance > out.len().saturating_add(history.len()) {
-        return Err(Error::InvalidField {
+    append_match(out, history, distance, count, limit).map_err(|error| match error {
+        MatchError::OutputLimit => Error::ResourceLimit {
+            resource: "decoded bytes",
+            requested: out
+                .len()
+                .checked_add(count)
+                .map_or(u64::MAX, |end| end as u64),
+            limit: limit as u64,
+        },
+        MatchError::Distance => Error::InvalidField {
             what: "back-reference distance beyond available history",
             value: distance as u64,
-        });
-    }
-    for _ in 0..count {
-        let value = if distance > out.len() {
-            history[history.len() - (distance - out.len())]
-        } else {
-            out[out.len() - distance]
-        };
-        out.push(value);
-    }
-    Ok(())
+        },
+    })
 }

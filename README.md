@@ -103,7 +103,7 @@ tests; the same wheel is used for Python corpus checks. Artifact directories
 stay external, and staged symlinks/reference files are mounted read-only.
 Interop bootstrap mode is forbidden during CI and required corpus validation.
 
-Formatkit packages are resolved from crates.io at exactly `=0.1.0` using the
+Formatkit packages are resolved from crates.io at exactly `=0.1.1` using the
 committed lockfile. Ordinary builds, wheel creation and synthetic CI do not
 require a sibling checkout. A deliberate local dependency override must remain
 outside release qualification; release builds use the registry dependencies.
