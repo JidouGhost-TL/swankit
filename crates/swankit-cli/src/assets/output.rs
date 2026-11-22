@@ -1,7 +1,10 @@
 //! Asset output sets: preflight every destination, stage beside it, and roll
 //! back completed publications on ordinary I/O errors. This is not a filesystem
 //! transaction across crashes, concurrent writers or multiple filesystems.
-use crate::Result;
+use crate::{
+    io::{file_identity, FileIdentity},
+    Result,
+};
 use std::{
     collections::BTreeSet,
     fs::{self, Metadata, OpenOptions},
@@ -12,22 +15,17 @@ use std::{
 
 static NEXT_STAGE: AtomicU64 = AtomicU64::new(0);
 
-fn same_file(a: &Metadata, b: &Metadata) -> bool {
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::MetadataExt;
-        a.dev() == b.dev() && a.ino() == b.ino()
-    }
-    #[cfg(not(unix))]
-    {
-        let _ = (a, b);
-        false
-    }
+struct ExistingFile {
+    identity: FileIdentity,
+    metadata: Metadata,
 }
 
-fn existing(path: &Path) -> Result<Option<Metadata>> {
+fn existing(path: &Path) -> Result<Option<ExistingFile>> {
     match fs::symlink_metadata(path) {
-        Ok(m) if m.is_file() => Ok(Some(m)),
+        Ok(metadata) if metadata.is_file() => Ok(Some(ExistingFile {
+            identity: file_identity(path, &metadata)?,
+            metadata,
+        })),
         Ok(_) => Err(format!(
             "output must be a regular file, not a symlink or directory: {}",
             path.display()
@@ -40,7 +38,7 @@ fn existing(path: &Path) -> Result<Option<Metadata>> {
 
 struct Destination {
     path: PathBuf,
-    original: Option<Metadata>,
+    original: Option<ExistingFile>,
     stage: Option<PathBuf>,
     published: bool,
 }
@@ -51,11 +49,9 @@ impl Destination {
         let unchanged = match (&self.original, &current) {
             (None, None) => true,
             (Some(a), Some(b)) => {
-                #[cfg(unix)]
-                let identity = same_file(a, b);
-                #[cfg(not(unix))]
-                let identity = true;
-                identity && a.len() == b.len() && a.modified()? == b.modified()?
+                a.identity == b.identity
+                    && a.metadata.len() == b.metadata.len()
+                    && a.metadata.modified()? == b.metadata.modified()?
             }
             _ => false,
         };
@@ -138,7 +134,7 @@ impl Destination {
 }
 
 /// Refuse output aliases of inputs or each other, including directory symlink
-/// aliases and (on Unix) hard links. Leaf symlinks are always refused.
+/// aliases and hard links. Leaf symlinks are always refused.
 pub(super) fn write(files: Vec<(PathBuf, Vec<u8>)>, inputs: &[PathBuf], force: bool) -> Result<()> {
     write_with(files, inputs, force, |_| Ok(()))
 }
@@ -149,12 +145,17 @@ fn write_with(
     force: bool,
     mut before_publish: impl FnMut(usize) -> Result<()>,
 ) -> Result<()> {
-    if cfg!(not(unix)) {
-        return Err("safe asset output publication is unsupported on this platform: file identity checks require Unix".into());
+    if !cfg!(any(unix, windows)) {
+        return Err("safe asset output publication requires file identity checks".into());
     }
     let protected = inputs
         .iter()
-        .map(|path| Ok((fs::canonicalize(path)?, fs::metadata(path)?)))
+        .map(|path| {
+            Ok((
+                fs::canonicalize(path)?,
+                file_identity(path, &fs::metadata(path)?)?,
+            ))
+        })
         .collect::<Result<Vec<_>>>()?;
     let mut paths = BTreeSet::new();
     let mut destinations: Vec<Destination> = Vec::new();
@@ -170,14 +171,17 @@ fn write_with(
         let original = existing(&path)?;
         if !paths.insert(path.clone())
             || destinations.iter().any(|d| match (&original, &d.original) {
-                (Some(a), Some(b)) => same_file(a, b),
+                (Some(a), Some(b)) => a.identity == b.identity,
                 _ => false,
             })
         {
             return Err(format!("asset outputs alias the same file: {}", path.display()).into());
         }
-        if protected.iter().any(|(input, metadata)| {
-            *input == path || original.as_ref().is_some_and(|m| same_file(m, metadata))
+        if protected.iter().any(|(input, identity)| {
+            *input == path
+                || original
+                    .as_ref()
+                    .is_some_and(|file| file.identity == *identity)
         }) {
             return Err(format!("asset output aliases an input: {}", path.display()).into());
         }

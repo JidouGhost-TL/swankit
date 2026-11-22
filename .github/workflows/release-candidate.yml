@@ -12,7 +12,7 @@ concurrency:
   group: release-candidate-${{ github.sha }}
   cancel-in-progress: false
 jobs:
-  build:
+  linux:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     steps:
@@ -30,17 +30,116 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: test "$(gh api "repos/$GITHUB_REPOSITORY" --jq .private)" = true
-      - name: Build, qualify and package
+      - name: Build, qualify and package Linux CLI and wheel
         env:
           SWANKIT_RELEASE_ARTIFACTS: ${{ runner.temp }}/release-build
           SWANKIT_RELEASE_RUN_ID: ${{ github.run_id }}
         run: bash tools/release-candidate.sh
+      - name: Store Linux packet
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-linux-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/release-build/candidate/
+          if-no-files-found: error
+          retention-days: 7
+
+  native-cli:
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2025
+            target: x86_64-pc-windows-msvc
+            executable: swankit.exe
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            executable: swankit
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+            executable: swankit
+    runs-on: ${{ matrix.runner }}
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Verify private repository and selected source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_COMMIT: ${{ inputs.source_commit }}
+        run: |
+          if ($env:SOURCE_COMMIT -cnotmatch '^[0-9a-f]{40}$' -or
+              $env:SOURCE_COMMIT -cne $env:GITHUB_SHA -or
+              (git rev-parse HEAD) -cne $env:SOURCE_COMMIT) { throw 'Source selection mismatch' }
+          if ((gh api "repos/$env:GITHUB_REPOSITORY" --jq .private) -ne 'true') {
+              throw 'The repository must be private'
+          }
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: '3.13'
+      - name: Build, package and exercise the native CLI
+        env:
+          CARGO_HOME: ${{ runner.temp }}/swankit-cargo
+          CARGO_TARGET_DIR: ${{ runner.temp }}/swankit-target
+          TARGET: ${{ matrix.target }}
+          BINARY: ${{ matrix.executable }}
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $ErrorActionPreference = 'Stop'
+          $scratch = $env:RUNNER_TEMP
+          cargo build --locked --release -p swankit-cli --bin swankit --target $env:TARGET
+          cargo metadata --locked --format-version 1 > "$scratch/metadata.json"
+          python tools/collect-dependency-licenses.py --metadata "$scratch/metadata.json" `
+              --lock Cargo.lock --output "$scratch/native-licenses"
+          python tools/release-platform.py --target $env:TARGET `
+              --executable "$env:CARGO_TARGET_DIR/$env:TARGET/release/$env:BINARY" `
+              --licenses "$scratch/native-licenses" --output "$scratch/native-cli" `
+              --scratch "$scratch/native-smoke"
+      - name: Store tested native archive and receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cli-${{ matrix.target }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/native-cli/
+          if-no-files-found: error
+          retention-days: 7
+
+  candidate:
+    needs: [linux, native-cli]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: release-linux-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/assembled
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: cli-*-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/native-download
+      - name: Validate and assemble all platform archives
+        run: |
+          mkdir "$RUNNER_TEMP/native"
+          shopt -s nullglob
+          for artifact in "$RUNNER_TEMP/native-download/"cli-*-"$GITHUB_RUN_ATTEMPT"; do
+            name=${artifact##*/}
+            name=${name#cli-}
+            mv -- "$artifact" "$RUNNER_TEMP/native/${name%-"$GITHUB_RUN_ATTEMPT"}"
+          done
+          python3 tools/release.py assemble --candidate "$RUNNER_TEMP/assembled" \
+            --native "$RUNNER_TEMP/native" --source-commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID"
       - name: Store immutable candidate
         id: packet
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: candidate-${{ github.sha }}
-          path: ${{ runner.temp }}/release-build/candidate/
+          path: ${{ runner.temp }}/assembled/
           if-no-files-found: error
           retention-days: 30
       - name: Candidate coordinates

@@ -1,6 +1,6 @@
 use crate::Result;
 use std::{
-    fs::OpenOptions,
+    fs::{Metadata, OpenOptions},
     io::{Read, Write},
     path::Path,
 };
@@ -54,6 +54,50 @@ pub fn write(path: &str, bytes: &[u8], force: bool) -> Result<()> {
     Ok(())
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) struct FileIdentity(u64, u128);
+
+#[cfg(unix)]
+pub(crate) fn file_identity(_: &Path, metadata: &Metadata) -> std::io::Result<FileIdentity> {
+    use std::os::unix::fs::MetadataExt;
+    Ok(FileIdentity(metadata.dev(), u128::from(metadata.ino())))
+}
+
+#[cfg(windows)]
+pub(crate) fn file_identity(path: &Path, _: &Metadata) -> std::io::Result<FileIdentity> {
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Storage::FileSystem::{
+        FileIdInfo, GetFileInformationByHandleEx, FILE_ID_INFO,
+    };
+
+    let file = std::fs::File::open(path)?;
+    let mut identity = FILE_ID_INFO::default();
+    // The handle stays open and the output buffer is a writable FILE_ID_INFO.
+    let ok = unsafe {
+        GetFileInformationByHandleEx(
+            file.as_raw_handle(),
+            FileIdInfo,
+            (&mut identity as *mut FILE_ID_INFO).cast(),
+            std::mem::size_of::<FILE_ID_INFO>() as u32,
+        )
+    };
+    if ok == 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    Ok(FileIdentity(
+        identity.VolumeSerialNumber,
+        u128::from_le_bytes(identity.FileId.Identifier),
+    ))
+}
+
+#[cfg(not(any(unix, windows)))]
+pub(crate) fn file_identity(_: &Path, _: &Metadata) -> std::io::Result<FileIdentity> {
+    Err(std::io::Error::new(
+        std::io::ErrorKind::Unsupported,
+        "file identity is unavailable on this platform",
+    ))
+}
+
 /// Refuse a save output that resolves to an input, including filesystem aliases.
 #[cfg(feature = "saves")]
 pub fn ensure_distinct_path(output: &str, input: &str) -> Result<()> {
@@ -76,16 +120,16 @@ pub fn ensure_distinct_path(output: &str, input: &str) -> Result<()> {
     if input_canonical == output_canonical {
         return Err("save output aliases its input".into());
     }
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::MetadataExt;
-        if output_path.exists() {
-            let a = std::fs::metadata(input_path)?;
-            let b = std::fs::metadata(output_path)?;
-            if a.dev() == b.dev() && a.ino() == b.ino() {
+    match std::fs::metadata(output_path) {
+        Ok(output_metadata) => {
+            if file_identity(input_path, &std::fs::metadata(input_path)?)?
+                == file_identity(output_path, &output_metadata)?
+            {
                 return Err("save output aliases its input".into());
             }
         }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(error.into()),
     }
     Ok(())
 }

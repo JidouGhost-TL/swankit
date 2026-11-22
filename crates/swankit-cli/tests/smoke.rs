@@ -501,6 +501,9 @@ fn save_v2_flags_are_independent_atomic_and_protect_input_aliases() {
         ])
         .status
         .success());
+    }
+    #[cfg(any(unix, windows))]
+    {
         let hard = f.path("hardlink.save");
         fs::hard_link(&input, &hard).unwrap();
         assert!(!command(&[

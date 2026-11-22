@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import shutil
 import subprocess
 import tarfile
 import urllib.error
@@ -28,6 +29,14 @@ FORMATKIT_VERSION = "0.1.1"
 _LICENSE_SPEC = importlib.util.spec_from_file_location("dependency_licenses", Path(__file__).with_name("collect-dependency-licenses.py"))
 DEPENDENCY_LICENSES = importlib.util.module_from_spec(_LICENSE_SPEC)
 _LICENSE_SPEC.loader.exec_module(DEPENDENCY_LICENSES)
+
+_PLATFORM_SPEC = importlib.util.spec_from_file_location("release_platform", Path(__file__).with_name("release-platform.py"))
+PLATFORM = importlib.util.module_from_spec(_PLATFORM_SPEC)
+_PLATFORM_SPEC.loader.exec_module(PLATFORM)
+CANDIDATE_SCHEMAS = {
+    "swankit-candidate/1": "swankit-release-approval/1",
+    "swankit-candidate/2": "swankit-release-approval/2",
+}
 
 
 def digest(raw):
@@ -95,7 +104,7 @@ def wheel_payload(wheel):
             text_privacy(wheel.read(member))
 
 
-def packet_files(packet):
+def packet_files(packet, platform_names=()):
     files = {}
     for path in sorted(packet.rglob("*")):
         require(not path.is_symlink(), "symbolic packet entry")
@@ -105,19 +114,29 @@ def packet_files(packet):
             require(not name.lower().endswith(PRIVATE_PAYLOAD_SUFFIXES), "forbidden packet file")
             require(name in {"LICENSE-MIT", "LICENSE-APACHE", "NOTICE", "SHA256SUMS"}
                     or name.startswith("third-party-licenses/")
+                    or name in platform_names
                     or name.endswith((".md", ".json", ".py", ".tar.gz", ".whl")), "forbidden packet file")
-            if not name.endswith((".tar.gz", ".whl")):
+            if name not in platform_names and not name.endswith((".tar.gz", ".whl")):
                 text_privacy(path.read_bytes())
             files[name] = digest(path.read_bytes())
     return files
 
 
 def validate_packet(packet, manifest):
-    require(manifest.get("schema") == "swankit-candidate/1", "candidate schema")
+    schema = manifest.get("schema")
+    require(schema in CANDIDATE_SCHEMAS, "candidate schema")
     require(COMMIT.fullmatch(manifest.get("source_commit", "")), "source commit")
     require(re.fullmatch(r"\d+\.\d+\.\d+", manifest.get("version", "")), "version")
     require(SHA.fullmatch(manifest.get("lock_sha256", "")), "lock digest")
-    files = packet_files(packet)
+    native = manifest.get("native_cli")
+    platform_names = set()
+    if schema == "swankit-candidate/2":
+        require(isinstance(native, dict) and native.keys() == PLATFORM.TARGETS.keys(),
+                "incomplete native CLI matrix")
+        platform_names = {PLATFORM.archive_spec(manifest["version"], target)[0] for target in native}
+    else:
+        require(native is None, "unexpected native CLI matrix")
+    files = packet_files(packet, platform_names)
     require(files == manifest.get("files"), "packet inventory or bytes changed")
     require({"BUILD-SOURCE.json", "SHA256SUMS", "LICENSE-MIT", "LICENSE-APACHE", "NOTICE"}
             <= files.keys(), "incomplete packet")
@@ -137,8 +156,22 @@ def validate_packet(packet, manifest):
     require(source.get("dependency_licenses", {}).get("inventory_sha256") ==
             digest((dependency_bundle / "DEPENDENCIES.json").read_bytes()), "dependency inventory binding")
     wheels = [name for name in files if name.endswith(".whl")]
-    archives = [name for name in files if name.endswith(".tar.gz")]
-    require(len(wheels) == len(archives) == 1, "expected one wheel and CLI archive")
+    archives = [name for name in files if name.endswith(".tar.gz") and name not in platform_names]
+    require(len(wheels) == len(archives) == 1, "expected one Linux wheel and CLI archive")
+    require(archives[0] == "swankit-" + manifest["version"] + "-linux-x86_64.tar.gz", "unexpected Linux archive name")
+    if native:
+        notices = PLATFORM.notices_from(packet, dependency_bundle)
+        for target, receipt in native.items():
+            PLATFORM.validate_receipt(receipt, target, manifest["source_commit"], manifest["lock_sha256"],
+                                      manifest["version"], packet, notices)
+        smoke = manifest.get("packet_smoke", {})
+        require(smoke.get("status") == "PASS" and smoke.get("cli_sha256") == source["cli_sha256"]
+                and smoke.get("wheel_sha256") == source["wheel_sha256"]
+                and set(smoke.get("checks", [])) == PLATFORM.CHECKS | {"installed-wheel-core"}
+                and smoke.get("platform", {}).get("system") == "Linux"
+                and smoke["platform"].get("machine") == "x86_64"
+                and smoke["platform"].get("release") and smoke["platform"].get("libc"),
+                "Linux platform smoke evidence missing")
     require(files[wheels[0]] == source["wheel_sha256"], "wheel binding")
     with zipfile.ZipFile(packet / wheels[0]) as wheel:
         wheel_payload(wheel)
@@ -157,7 +190,7 @@ def validate_packet(packet, manifest):
                 "registry+https://github.com/rust-lang/crates.io-index"
                 and SHA.fullmatch(item.get("checksum", "")), "invalid registry evidence")
     guides = {name: checksum for name, checksum in files.items()
-              if name not in {wheels[0], archives[0], "SHA256SUMS"}}
+              if name not in platform_names | {wheels[0], archives[0], "SHA256SUMS"}}
     prefix = "swankit-" + manifest["version"] + "-linux-x86_64/"
     with tarfile.open(packet / archives[0], "r:gz") as archive:
         names = set()
@@ -174,16 +207,50 @@ def validate_packet(packet, manifest):
         require(len(executable) == 1, "missing CLI")
         require(names == {prefix + name for name in guides} | {prefix + "swankit"}, "incomplete archive guides")
         require(digest(archive.extractfile(executable[0]).read()) == source["cli_sha256"], "CLI binding")
-    return {"wheel": wheels[0], "archive": archives[0], "files": files}
+    return {"wheel": wheels[0], "archive": archives[0], "native": platform_names, "files": files}
+
+
+def assemble(candidate, native_root, source_commit, run_id):
+    manifest_path = candidate / "candidate-manifest.json"
+    manifest = read_json(manifest_path)
+    require(manifest["schema"] == "swankit-candidate/1" and manifest["source_commit"] == source_commit
+            and manifest["run_id"] == run_id, "Linux candidate does not match workflow source")
+    packet = candidate / "packet"
+    validate_packet(packet, manifest)
+    notices = PLATFORM.notices_from(packet, packet / "third-party-licenses")
+    receipts = {}
+    inputs = {path.name: path for path in native_root.iterdir()}
+    require(inputs.keys() == PLATFORM.TARGETS.keys(), "native artifact set differs")
+    for target, directory in inputs.items():
+        require(directory.is_dir() and not directory.is_symlink(), "invalid native artifact directory")
+        receipt = read_json(directory / "receipt.json")
+        PLATFORM.validate_receipt(receipt, target, source_commit, manifest["lock_sha256"],
+                                  manifest["version"], directory, notices)
+        require({path.name for path in directory.iterdir()} == {"receipt.json", receipt["archive"]},
+                "unexpected native artifact files")
+        receipts[target] = receipt
+    for target, receipt in receipts.items():
+        name = receipt["archive"]
+        destination = packet / name
+        require(not destination.exists(), "native archive destination already exists")
+        shutil.copyfile(inputs[target] / name, destination)
+    platform_names = {receipt["archive"] for receipt in receipts.values()}
+    files = packet_files(packet, platform_names)
+    (packet / "SHA256SUMS").write_text("".join(
+        f"{checksum}  {name}\n" for name, checksum in sorted(files.items()) if name != "SHA256SUMS"))
+    manifest.update(schema="swankit-candidate/2", native_cli=receipts,
+                    files=packet_files(packet, platform_names))
+    validate_packet(packet, manifest)
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
 
 
 def validate_promotion(receipt, manifest_raw, packet, repo, run, artifact, tag, repository):
     require(repo.get("private") is True and repo.get("full_name") == repository, "repository must be private")
-    require(receipt.get("schema") == "swankit-release-approval/1"
-            and receipt.get("accepted") is True and receipt.get("independent_review") is True,
-            "missing reviewed approval")
     manifest = json.loads(manifest_raw)
     contents = validate_packet(packet, manifest)
+    require(receipt.get("schema") == CANDIDATE_SCHEMAS[manifest["schema"]]
+            and receipt.get("accepted") is True and receipt.get("independent_review") is True,
+            "missing reviewed approval for candidate schema")
     require(tag == "v" + manifest["version"] and receipt.get("tag") == tag, "tag/version mismatch")
     require(receipt.get("manifest_sha256") == digest(manifest_raw), "manifest approval mismatch")
     require(receipt.get("source_commit") == manifest["source_commit"]
@@ -293,6 +360,14 @@ def download_artifact(api, artifact_id, expected_digest, destination):
     (destination.parent / "candidate.zip").write_bytes(raw)
 
 
+def release_asset_names(packet, manifest):
+    contents = validate_packet(packet, manifest)
+    return contents["native"] | {
+        contents["wheel"], contents["archive"], "candidate-manifest.json", "SHA256SUMS",
+        "BUILD-SOURCE.json", f"swankit-{manifest['version']}-packet.zip",
+    }
+
+
 def promote(api, packet, manifest_raw, tag):
     manifest = json.loads(manifest_raw)
     target = manifest["source_commit"]
@@ -306,7 +381,9 @@ def promote(api, packet, manifest_raw, tag):
     marker = "Approved candidate manifest SHA-256: " + digest(manifest_raw)
     release = api.release(tag)
     body = "Private swankit " + manifest["version"] + "\n\n" + marker + "\n\n" + \
-        "Linux x86_64 CLI and Python abi3 wheel; see the offline guides for tested platforms and limits."
+        ("Linux, Windows, and macOS CLI archives with a Linux Python abi3 wheel. See the candidate manifest for tested platforms."
+         if manifest["schema"] == "swankit-candidate/2"
+         else "Linux x86_64 CLI and Python abi3 wheel; see the offline guides for tested platforms and limits.")
     if release:
         require(release["body"] == body and release["tag_name"] == tag, "existing release conflicts")
     expected = dict(manifest["files"])
@@ -314,13 +391,9 @@ def promote(api, packet, manifest_raw, tag):
     bundle = packet.parent.parent / "candidate.zip"
     expected["swankit-" + manifest["version"] + "-packet.zip"] = digest(bundle.read_bytes())
     assets = api.request("GET", "/releases/" + str(release["id"]) + "/assets?per_page=100") if release else []
-    require(len(assets) < 100, "unexpected release asset pagination")
+    names = release_asset_names(packet, manifest)
     by_name = {asset["name"]: asset for asset in assets}
-    # Ship one packet archive, wheel and manifest; docs are inside the archive.
-    names = {n for n in expected if n.endswith((".tar.gz", ".whl"))}
-    names |= {"candidate-manifest.json", "SHA256SUMS", "BUILD-SOURCE.json",
-              "swankit-" + manifest["version"] + "-packet.zip"}
-    require(by_name.keys() <= names, "unexpected existing release asset")
+    require(len(assets) == len(by_name) and by_name.keys() <= names, "unexpected existing release asset")
     for name, asset in by_name.items():
         raw = api.request("GET", "/releases/assets/" + str(asset["id"]), binary=True)
         require(digest(raw) == expected[name], "existing asset conflicts")
@@ -340,7 +413,7 @@ def promote(api, packet, manifest_raw, tag):
         else:
             require(release["draft"] is True, "published release is incomplete")
             raw = (manifest_raw if name == "candidate-manifest.json" else bundle.read_bytes()
-                   if name.endswith("-packet.zip") else (packet / name).read_bytes())
+                   if name == f"swankit-{manifest['version']}-packet.zip" else (packet / name).read_bytes())
             uploaded = api.request("POST", release["upload_url"].split("{", 1)[0] + "?name=" + urllib.parse.quote(name), raw, binary=True)
             # Binary upload returns JSON, despite its request content type.
             asset = json.loads(uploaded)
@@ -368,6 +441,11 @@ def main():
     make.add_argument("--smoke", type=Path, required=True)
     make.add_argument("--environment", type=Path, required=True)
     make.add_argument("--output", type=Path, required=True)
+    combine = sub.add_parser("assemble")
+    combine.add_argument("--candidate", type=Path, required=True)
+    combine.add_argument("--native", type=Path, required=True)
+    combine.add_argument("--source-commit", required=True)
+    combine.add_argument("--run-id", type=int, required=True)
     pub = sub.add_parser("promote")
     pub.add_argument("--receipt", type=Path, required=True)
     pub.add_argument("--repository", required=True)
@@ -403,6 +481,9 @@ def main():
         require(smoke_receipt.get("cli_sha256") == source_binding["cli_sha256"]
                 and smoke_receipt.get("wheel_sha256") == source_binding["wheel_sha256"], "smoke artifact mismatch")
         validate_packet(args.packet, result)
+    elif args.mode == "assemble":
+        assemble(args.candidate, args.native, args.source_commit, args.run_id)
+        return
     elif args.mode == "download-release":
         receipt = read_json(args.receipt)
         require(receipt.get("tag") == args.tag and re.fullmatch(r"v\d+\.\d+\.\d+", args.tag), "release tag mismatch")
@@ -421,7 +502,14 @@ def main():
         manifest = json.loads(manifest_raw)
         require(digest(manifest_raw) == receipt.get("manifest_sha256")
                 and manifest["source_commit"] == receipt.get("source_commit"), "published manifest mismatch")
-        validate_packet(args.destination / "packet", manifest)
+        packet = args.destination / "packet"
+        names = release_asset_names(packet, manifest)
+        by_name = {asset["name"]: asset for asset in assets}
+        require(len(assets) == len(by_name) and by_name.keys() == names, "published asset set differs")
+        for name in sorted(names - {bundle_name}):
+            expected = digest(manifest_raw) if name == "candidate-manifest.json" else manifest["files"][name]
+            downloaded = api.request("GET", "/releases/assets/" + str(by_name[name]["id"]), binary=True)
+            require(downloaded is not None and digest(downloaded) == expected, "published asset digest mismatch")
         tag_ref = api.request("GET", "/git/ref/tags/" + urllib.parse.quote(args.tag, safe=""))["object"]
         if tag_ref["type"] == "tag":
             tag_ref = api.request("GET", "/git/tags/" + tag_ref["sha"])["object"]

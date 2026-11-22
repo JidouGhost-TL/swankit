@@ -510,6 +510,7 @@ dependencies = [
  "serde_json",
  "swankit",
  "swankit-ffi",
+ "windows-sys",
  "ws-assets",
  "ws-discover",
  "ws-link",
@@ -806,6 +807,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "windows-sys",
 ]
 
 [[package]]

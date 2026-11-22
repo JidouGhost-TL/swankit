@@ -2,8 +2,8 @@
 
 Release automation has two manual workflows. Building a candidate does not
 create a tag or release. Publishing remains a separate owner-approved action.
-Keep the repository private and all Rust crates unpublishable. No registry
-upload is performed.
+The repository is private. These workflows build and publish private GitHub
+releases. The public Rust library is distributed separately through crates.io.
 
 ## Build a candidate
 
@@ -13,14 +13,20 @@ are intentionally refused: the source, workflow run head and manifest must
 identify the same reviewed commit. Dependencies resolve from the committed
 registry lockfile; no sibling source checkout or dependency credential is used.
 
-The workflow runs containerized CI and packages the exact installed/tested
-wheel with the release CLI, documentation, schemas and notices. A separate
+The Linux job runs containerized CI and packages the tested wheel and CLI
+with documentation, schemas and notices. Windows x86-64, macOS Apple Silicon
+and macOS Intel jobs build the primary CLI natively and test the executable
+from its archive. The checks exercise synthetic cartridge and IPS files,
+save edits, mapped assets, hard-link refusal and local WonderGate listeners.
+Build logs and the candidate manifest record the tested host versions. A separate
 compiler-free Python runtime receives only the packet and synthetic smoke
 checker, without build caches or source mounts. The primary CLI is included;
 `wg-adapter` and `wg-decode` are source-build auxiliary executables, not part
 of this first packet.
 
-The candidate artifact is named `candidate-<source commit>`. Record its run ID,
+The assembly job checks the native archive and executable digests, lockfile,
+source commit, test receipts and notices. Run all jobs together when retrying
+a candidate so they use the same workflow attempt. The candidate artifact is named `candidate-<source commit>`. Record its run ID,
 artifact ID and archive digest from the run summary. Retention is 30 days,
 subject to repository policy. Download and retain the complete artifact while
 reviewing it. Expired candidates must be rebuilt and qualified again.
@@ -41,14 +47,15 @@ Commit a maintainer-reviewed `release-approvals/<candidate-id>.json` on `main`
 after independent review and root acceptance. This approval commit is newer
 than the qualified source commit; the release tag still targets the latter.
 The approval is trusted because it is reviewed repository content, not because
-an uploaded file claims success. A minimal schema is:
+an uploaded file claims success. Use approval schema `swankit-release-approval/2` for the platform candidate.
+The original Linux candidate retains schema `swankit-release-approval/1`.
 
 ```json
 {
-  "schema": "swankit-release-approval/1",
+  "schema": "swankit-release-approval/2",
   "accepted": true,
   "independent_review": true,
-  "tag": "v0.1.0",
+  "tag": "vX.Y.Z",
   "source_commit": "FULL_QUALIFIED_COMMIT",
   "lock_sha256": "LOCK_SHA256",
   "manifest_sha256": "MANIFEST_SHA256",
@@ -95,9 +102,9 @@ It never executes a program supplied by the candidate artifact.
 Only the publication job has release-write permission. It creates an annotated
 tag at the qualified source commit, creates a draft, uploads and re-downloads
 the exact approved files, then finalizes the release. The complete transport
-packet ZIP preserves the offline tree; CLI archive and wheel are also attached
-separately. A final read-only job downloads that packet and repeats clean
-installation smoke checks.
+packet ZIP preserves the offline tree. Platform CLI archives and the Linux wheel
+are also attached separately. A final read-only job checks the digest of each
+attachment and repeats the Linux installation smoke checks.
 
 Tag, draft and asset creation are not atomic. A rerun accepts an exact matching
 tag/release and checks existing asset bytes; conflicting targets, bodies,
@@ -107,5 +114,5 @@ Investigate a failed run before rerunning it. No rebuild occurs in publication.
 
 Workflow implementation, pushes, candidate uploads and publication are separate
 operations. A review of the implementation does not itself authorize a hosted
-run, upload, tag or release. Other operating systems, registry publication and
-repository visibility changes remain outside this first packet.
+run, upload, tag or release. Use a new approved tag for the expanded binary packet. Registry publication
+and repository visibility are managed separately.

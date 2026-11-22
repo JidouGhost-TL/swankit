@@ -2,9 +2,10 @@
 use crate::malformed;
 use formatkit_core::Result;
 use serde::{Deserialize, Serialize};
+#[cfg(unix)]
+use std::{fs::File, io::Read};
 use std::{
-    fs::File,
-    io::{self, Read},
+    io,
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -162,6 +163,7 @@ pub trait Rng: Send {
     fn fill(&mut self, buf: &mut [u8]) -> io::Result<()>;
 }
 pub struct OsRng {
+    #[cfg(unix)]
     source: File,
 }
 impl OsRng {
@@ -172,7 +174,13 @@ impl OsRng {
                 source: File::open("/dev/urandom")?,
             })
         }
-        #[cfg(not(unix))]
+        #[cfg(windows)]
+        {
+            let mut rng = Self {};
+            rng.fill(&mut [0])?;
+            Ok(rng)
+        }
+        #[cfg(not(any(unix, windows)))]
         {
             Err(io::Error::new(
                 io::ErrorKind::Unsupported,
@@ -182,8 +190,39 @@ impl OsRng {
     }
 }
 impl Rng for OsRng {
+    #[cfg(unix)]
     fn fill(&mut self, buf: &mut [u8]) -> io::Result<()> {
         self.source.read_exact(buf)
+    }
+
+    #[cfg(windows)]
+    fn fill(&mut self, buf: &mut [u8]) -> io::Result<()> {
+        use windows_sys::Win32::Security::Cryptography::{
+            BCryptGenRandom, BCRYPT_USE_SYSTEM_PREFERRED_RNG,
+        };
+        for chunk in buf.chunks_mut(u32::MAX as usize) {
+            // The system provider requires a null handle and writes only to this slice.
+            let status = unsafe {
+                BCryptGenRandom(
+                    std::ptr::null_mut(),
+                    chunk.as_mut_ptr(),
+                    chunk.len() as u32,
+                    BCRYPT_USE_SYSTEM_PREFERRED_RNG,
+                )
+            };
+            if status != 0 {
+                return Err(io::Error::other(format!("system RNG failed ({status:#x})")));
+            }
+        }
+        Ok(())
+    }
+
+    #[cfg(not(any(unix, windows)))]
+    fn fill(&mut self, _: &mut [u8]) -> io::Result<()> {
+        Err(io::Error::new(
+            io::ErrorKind::Unsupported,
+            "OS entropy source unavailable on this platform",
+        ))
     }
 }
 /// SplitMix64, for repeatable synthetic sessions, independent of fill chunking.

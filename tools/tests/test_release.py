@@ -102,6 +102,65 @@ class ApprovalTests(unittest.TestCase):
     def test_valid_synthetic_approval(self):
         self.assertEqual(self.validate()["source_commit"], self.commit)
 
+    def native_artifacts(self):
+        platform = RELEASE.PLATFORM
+        native = self.root / "native"
+        native.mkdir()
+        notices = platform.notices_from(self.packet, self.packet / "third-party-licenses")
+        for target, (_, _, _, system, machines) in platform.TARGETS.items():
+            directory = native / target
+            directory.mkdir()
+            archive, prefix, binary = platform.archive_spec("0.1.0", target)
+            if system == "Windows":
+                raw = b"MZ" + bytes(58) + (64).to_bytes(4, "little") + b"PE\0\0\x64\x86"
+            else:
+                cpu = 0x0100000C if target == "aarch64-apple-darwin" else 0x01000007
+                raw = b"\xcf\xfa\xed\xfe" + cpu.to_bytes(4, "little")
+            platform.write_archive(directory / archive, prefix, binary, {**notices, binary: raw})
+            receipt = {
+                "schema": "swankit-native-cli/1", "status": "PASS", "target": target, "version": "0.1.0",
+                "source_commit": self.commit, "lock_sha256": self.lock, "archive": archive,
+                "archive_sha256": RELEASE.digest((directory / archive).read_bytes()),
+                "executable_sha256": RELEASE.digest(raw), "checks": sorted(platform.CHECKS),
+                "tested_platform": {"system": system, "machine": machines[0], "os_version": "synthetic"},
+            }
+            (directory / "receipt.json").write_text(json.dumps(receipt))
+        self.manifest["packet_smoke"] = {
+            "status": "PASS", "cli_sha256": RELEASE.digest(b"cli"),
+            "wheel_sha256": RELEASE.digest(self.wheel_bytes),
+            "checks": sorted(platform.CHECKS | {"installed-wheel-core"}),
+            "platform": {"system": "Linux", "machine": "x86_64", "release": "synthetic", "libc": ["glibc", "2.36"]},
+        }
+        (self.packet.parent / "candidate-manifest.json").write_text(json.dumps(self.manifest))
+        return native
+
+    def test_platform_candidate_requires_all_native_archives_and_updated_approval(self):
+        RELEASE.assemble(self.packet.parent, self.native_artifacts(), self.commit, 4)
+        self.raw = (self.packet.parent / "candidate-manifest.json").read_bytes()
+        self.receipt["manifest_sha256"] = RELEASE.digest(self.raw)
+        with self.assertRaisesRegex(ValueError, "approval for candidate schema"):
+            self.validate()
+        self.receipt["schema"] = "swankit-release-approval/2"
+        manifest = self.validate()
+        self.assertEqual(manifest["native_cli"].keys(), RELEASE.PLATFORM.TARGETS.keys())
+        names = RELEASE.release_asset_names(self.packet, manifest)
+        self.assertTrue(all(row["archive"] in names for row in manifest["native_cli"].values()))
+        del manifest["native_cli"]["x86_64-pc-windows-msvc"]
+        with self.assertRaisesRegex(ValueError, "incomplete native CLI matrix"):
+            RELEASE.validate_packet(self.packet, manifest)
+
+    def test_platform_assembly_rejects_different_commit_and_archive_bytes(self):
+        native = self.native_artifacts()
+        path = native / "x86_64-pc-windows-msvc" / "receipt.json"
+        original = json.loads(path.read_text())
+        path.write_text(json.dumps(dict(original, source_commit="e" * 40)))
+        with self.assertRaisesRegex(ValueError, "source or smoke receipt mismatch"):
+            RELEASE.assemble(self.packet.parent, native, self.commit, 4)
+        path.write_text(json.dumps(original))
+        (path.parent / original["archive"]).write_bytes(b"different archive")
+        with self.assertRaisesRegex(ValueError, "native archive digest mismatch"):
+            RELEASE.assemble(self.packet.parent, native, self.commit, 4)
+
     def test_refuse_changed_or_unreviewed_claims(self):
         changes = [("accepted", False), ("independent_review", False), ("manifest_sha256", "d" * 64),
                    ("source_commit", "d" * 40), ("lock_sha256", "d" * 64), ("artifact_id", 9),
