@@ -1,0 +1,33 @@
+{
+  "schema": "swankit-release-approval/2",
+  "accepted": true,
+  "independent_review": true,
+  "tag": "v0.1.1",
+  "source_commit": "e31288eaf73f5f14eb796e2828e6339369045ed2",
+  "lock_sha256": "1aa9e74b02288636249722a29f1161b534bba1669866355a4323d2737b5d402c",
+  "manifest_sha256": "b9e463b34c3ae5bff43a710d2fde0f71184a8e3c021b9550e16060c81f91600c",
+  "run_id": 44980333242,
+  "artifact_id": 14737668013,
+  "artifact_digest": "sha256:f15d5fa31e9c14ff9fc9eb2149b43023dea9fe70ef1fc626c7d13349caca2ee4",
+  "corpus": {
+    "scope": "workspace-all-features-release-corpus",
+    "cargo_args": [
+      "--workspace",
+      "--all-features",
+      "--locked",
+      "--release",
+      "--test",
+      "corpus"
+    ],
+    "exit_code": 0,
+    "required": true,
+    "write": false,
+    "tests_passed": 40,
+    "groups_passed": 16,
+    "tests_failed": 0,
+    "tests_ignored": 0,
+    "tests_filtered": 0,
+    "source_commit": "e31288eaf73f5f14eb796e2828e6339369045ed2",
+    "wheel_sha256": "fd77cca0276a7f2ed720da3818ae975150c151bc2d2309b2857bc8c2ad844058"
+  }
+}
