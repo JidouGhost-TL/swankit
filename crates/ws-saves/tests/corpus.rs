@@ -88,6 +88,30 @@ impl Digest for SaveDigest {
                     .map_err(|e| formatkit_core::Error::Malformed(e.to_string()))?,
             );
         }
+        if let Some(pointers) = args.get("checksum_flags").and_then(Value::as_array) {
+            let mut edited = bytes.to_vec();
+            if let Some(offset) = args.get("flip_checksum_byte").and_then(Value::as_u64) {
+                let index = usize::try_from(offset).map_err(|_| {
+                    formatkit_core::Error::Malformed("checksum offset overflow".into())
+                })?;
+                let byte = edited.get_mut(index).ok_or_else(|| {
+                    formatkit_core::Error::Malformed("checksum offset outside save".into())
+                })?;
+                *byte ^= 1;
+            }
+            let flags = format.verify_with_context(&edited, name, &context)?;
+            let mut selected = serde_json::Map::new();
+            for pointer in pointers {
+                let pointer = pointer.as_str().ok_or_else(|| {
+                    formatkit_core::Error::Malformed("expected checksum flag name".into())
+                })?;
+                let flag = flags.get(pointer).and_then(Value::as_bool).ok_or_else(|| {
+                    formatkit_core::Error::Malformed(format!("missing checksum flag {pointer}"))
+                })?;
+                selected.insert(pointer.into(), json!(flag));
+            }
+            return Ok(json!({"sha256":hash_bytes(bytes),"checksum_flags":selected}));
+        }
         let decoded = format.decode_with_context(bytes, name, &context)?;
         let mut result = json!({"decoded":decoded,"sha256":hash_bytes(bytes)});
         if let Some(offset) = args.get("corrupt_offset").and_then(Value::as_u64) {
@@ -147,6 +171,13 @@ fn corpus_saves() {
         !formatkit_corpus_test::required_mode() || count > 0,
         "no save specs selected"
     );
+    let checksum_cases = root.join("ws-saves-checksum-conformance/spec.json");
+    if checksum_cases.is_file() {
+        let namespace = "ws-saves-checksum-conformance";
+        let checked = run_dir(namespace, &SaveDigest::load(&root, namespace));
+        assert!(checked > 0, "empty save checksum conformance selection");
+        eprintln!("ws-saves checksum conformance: {checked} checksum and mutation cases passed");
+    }
     if count > 0 {
         for (id, [natural, repair, play]) in by_title {
             eprintln!(
