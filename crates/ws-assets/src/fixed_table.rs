@@ -4,6 +4,7 @@ use formatkit_core::{bytes_at, classify_padding, PaddingKind, Result};
 use formatkit_layout::tables::{FixedStrideOffsetTable, TableSizeMode};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::ops::Range;
 
 pub const SCHEMA: &str = "swankit-fixed-stride-table/1";
 
@@ -52,6 +53,8 @@ pub struct Resolution {
     pub rom: RomIdentity,
     pub entries: Vec<Entry>,
     pub padding: Vec<Padding>,
+    #[serde(skip)]
+    table_span: Range<usize>,
 }
 
 pub fn resolve(rom: &[u8], definition: &Definition) -> Result<Resolution> {
@@ -67,6 +70,7 @@ pub fn resolve(rom: &[u8], definition: &Definition) -> Result<Resolution> {
         .checked_mul(definition.entry_stride)
         .ok_or_else(|| malformed("fixed-stride table byte length overflow"))?;
     let table = bytes_at(rom, definition.table_offset, length)?;
+    let table_span = definition.table_offset..definition.table_offset + table.len();
     let data = bytes_at(rom, definition.data_offset, definition.data_length)?;
     let descriptor = FixedStrideOffsetTable {
         entry_count: definition.entry_count,
@@ -115,11 +119,23 @@ pub fn resolve(rom: &[u8], definition: &Definition) -> Result<Resolution> {
                     }
                 }
             };
-            for entry in ordered_nonempty(&entries) {
-                inspect_gap(end, entry.offset);
-                end = end.max(entry.offset + entry.length);
+            let data_end = definition.data_offset + data.len();
+            let mut occupied: Vec<_> = entries
+                .iter()
+                .filter(|entry| entry.length != 0)
+                .map(|entry| entry.offset..entry.offset + entry.length)
+                .collect();
+            let covered_table =
+                table_span.start.max(definition.data_offset)..table_span.end.min(data_end);
+            if !covered_table.is_empty() {
+                occupied.push(covered_table);
             }
-            inspect_gap(end, definition.data_offset + data.len());
+            occupied.sort_unstable_by_key(|span| span.start);
+            for span in occupied {
+                inspect_gap(end, span.start);
+                end = end.max(span.end);
+            }
+            inspect_gap(end, data_end);
             pads
         });
     Ok(Resolution {
@@ -127,6 +143,7 @@ pub fn resolve(rom: &[u8], definition: &Definition) -> Result<Resolution> {
         rom: definition.rom.clone(),
         entries,
         padding,
+        table_span,
     })
 }
 
@@ -159,6 +176,15 @@ impl Resolution {
             return Err(malformed(
                 "overlapping table ranges require an explicit asset map",
             ));
+        }
+        if let Some(entry) = entries.iter().find(|entry| {
+            entry.offset < self.table_span.end
+                && self.table_span.start < entry.offset + entry.length
+        }) {
+            return Err(malformed(format!(
+                "{}: mapped range overlaps source table metadata",
+                entry.id
+            )));
         }
         let assets: Vec<_> = entries
             .into_iter()

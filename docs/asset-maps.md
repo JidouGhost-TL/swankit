@@ -164,6 +164,7 @@ map header or a marker byte) without changing the asset's own range.
 
 Replacement requires a ROM of at least 64 KiB (65,536 bytes). Smaller mapped
 buffers can verify and extract, but cannot be replaced as cartridge images.
+Asset replacements and relocated references must stay outside the ROM footer.
 Replacement recomputes the sum of all bytes except the final two, modulo
 65,536, and writes that little-endian checksum into those two bytes. This does not validate every
 footer field or require the original checksum to be correct.

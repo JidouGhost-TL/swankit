@@ -97,8 +97,9 @@ successive offsets. The optional sentinel is relative to the data window and
 defaults to its length. Sequence offsets must be nondecreasing.
 
 The receipt includes absolute file offsets and retains zero-length rows. A Raw
-map can be emitted for disjoint nonempty ranges. With `padding_min_bytes` set,
-gaps of at least that size are reported if they are all zero, a repeated byte,
-or a repeated little-endian 32-bit word. These gaps are inspection candidates.
+map can be emitted for disjoint nonempty ranges outside the source table. With
+`padding_min_bytes` set, gaps outside the source table are reported if they meet
+the minimum length and contain all zeros, a repeated byte, or a repeated
+little-endian 32-bit word. These gaps are inspection candidates.
 The generated map leaves free-space declarations empty. Use the banked
 definition above for CPU segment and mapper coordinates.

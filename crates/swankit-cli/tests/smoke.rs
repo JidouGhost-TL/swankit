@@ -1045,6 +1045,149 @@ fn fixed_stride_table_resolves_ranges_and_reports_uniform_gaps() {
 }
 
 #[test]
+fn fixed_stride_table_protects_its_metadata() {
+    let fixture = Fixture::new();
+    let mut rom = vec![0; 65536];
+    let mut definition = json!({
+        "schema": "swankit-fixed-stride-table/1",
+        "rom": {"size": rom.len(), "sha256": ws_assets::sha256_hex(&rom)},
+        "table_offset": 32, "entry_count": 1, "entry_stride": 8,
+        "offset_field": 0, "offset_unit": 1, "data_offset": 24, "data_length": 24,
+        "size": {"kind": "explicit-u32", "field_offset": 4, "unit": 1},
+        "padding_min_bytes": 4
+    });
+    let input = fixture.put("zero.ws", &rom);
+    let spec = fixture.json("padding.json", definition.clone());
+    let receipt = fixture.path("padding-receipt.json");
+    let result = value(&[
+        "assets",
+        "resolve-table",
+        &input,
+        &spec,
+        "--output",
+        &receipt,
+        "--json",
+    ]);
+    let gaps = result["padding"].as_array().unwrap();
+    assert_eq!(gaps.len(), 2);
+    assert_eq!(
+        (gaps[0]["offset"].as_u64(), gaps[0]["length"].as_u64()),
+        (Some(24), Some(8))
+    );
+    assert_eq!(
+        (gaps[1]["offset"].as_u64(), gaps[1]["length"].as_u64()),
+        (Some(40), Some(8))
+    );
+
+    definition["data_offset"] = json!(36);
+    definition["data_length"] = json!(12);
+    let spec = fixture.json("clipped.json", definition.clone());
+    let receipt = fixture.path("clipped-receipt.json");
+    let result = value(&[
+        "assets",
+        "resolve-table",
+        &input,
+        &spec,
+        "--output",
+        &receipt,
+        "--json",
+    ]);
+    assert_eq!(
+        result["padding"],
+        json!([{"offset":40,"length":8,"kind":"all-zero","fill":0}])
+    );
+
+    rom[36..40].copy_from_slice(&4u32.to_le_bytes());
+    definition["rom"]["sha256"] = json!(ws_assets::sha256_hex(&rom));
+    let input = fixture.put("overlap.ws", &rom);
+    let spec = fixture.json("overlap.json", definition);
+    let receipt = fixture.path("overlap-receipt.json");
+    let result = value(&[
+        "assets",
+        "resolve-table",
+        &input,
+        &spec,
+        "--output",
+        &receipt,
+        "--json",
+    ]);
+    assert_eq!(result["entries"][0]["offset"], 36);
+    let map = fixture.path("overlap-map.json");
+    let refused_receipt = fixture.path("refused-receipt.json");
+    let attempt = command(&[
+        "assets",
+        "resolve-table",
+        &input,
+        &spec,
+        "--output",
+        &refused_receipt,
+        "--map-out",
+        &map,
+        "--force",
+    ]);
+    assert!(!attempt.status.success());
+    assert!(String::from_utf8_lossy(&attempt.stderr).contains("overlaps source table metadata"));
+    assert!(!std::path::Path::new(&map).exists());
+    assert!(!std::path::Path::new(&refused_receipt).exists());
+}
+
+#[test]
+fn fixed_stride_footer_is_extractable_and_protected_from_replacement() {
+    let fixture = Fixture::new();
+    let mut rom = vec![0; 65536];
+    rom[4..8].copy_from_slice(&4u32.to_le_bytes());
+    let input = fixture.put("input.ws", &rom);
+    let spec = fixture.json(
+        "table.json",
+        json!({
+            "schema": "swankit-fixed-stride-table/1",
+            "rom": {"size": rom.len(), "sha256": ws_assets::sha256_hex(&rom)},
+            "table_offset": 0, "entry_count": 1, "entry_stride": 8,
+            "offset_field": 0, "offset_unit": 1, "data_offset": 65532, "data_length": 4,
+            "size": {"kind": "explicit-u32", "field_offset": 4, "unit": 1}
+        }),
+    );
+    let receipt = fixture.path("receipt.json");
+    let map = fixture.path("map.json");
+    value(&[
+        "assets",
+        "resolve-table",
+        &input,
+        &spec,
+        "--output",
+        &receipt,
+        "--map-out",
+        &map,
+        "--json",
+    ]);
+    let out = fixture.path("out");
+    let extraction = value(&["assets", "extract", &input, &map, &out, "--json"]);
+    assert_eq!(extraction["failures"], 0);
+    assert_eq!(
+        fs::read(std::path::Path::new(&out).join("entry.0000.bin")).unwrap(),
+        [0; 4]
+    );
+    let payload = fixture.put("replacement.bin", b"ABCD");
+    let patched = fixture.path("patched.ws");
+    let attempt = command(&[
+        "assets",
+        "replace",
+        &input,
+        &map,
+        "--id",
+        "entry.0000",
+        "--from",
+        &payload,
+        "-o",
+        &patched,
+        "--force",
+    ]);
+    assert!(!attempt.status.success());
+    assert!(String::from_utf8_lossy(&attempt.stderr).contains("overlaps the ROM footer"));
+    assert!(!std::path::Path::new(&patched).exists());
+}
+
+#[test]
 fn lzs2_asset_map_is_extractable_and_refuses_replacement() {
     let fixture = Fixture::new();
     let mut rom = vec![0; 65536];

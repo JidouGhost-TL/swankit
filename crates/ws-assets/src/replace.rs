@@ -212,6 +212,7 @@ pub fn replace_with(
         }
     }
     let mut out = rom.to_vec();
+    let footer_start = rom.len().saturating_sub(ws_rom::FOOTER_SIZE);
     let mut new_map = map.clone();
     let mut actions = Vec::new();
     for (tiles, index, slot, cells) in &allocated {
@@ -224,6 +225,11 @@ pub fn replace_with(
     for (id, payload) in &decoded {
         let asset = map.asset(id)?;
         let old = decode_asset(map, charmaps, rom, id)?;
+        if old.offset + old.length > footer_start {
+            return Err(malformed(format!(
+                "{id}: asset range overlaps the ROM footer"
+            )));
+        }
         if *payload == old.decoded {
             actions.push(format!("{id}: unchanged"));
             continue;
@@ -276,8 +282,12 @@ pub fn replace_with(
         let mut chosen = None;
         'ranges: for (ri, free) in new_map.free_space.iter().enumerate() {
             let (start, len) = (free.offset.usize()?, free.length.usize()?);
+            let end = start
+                .checked_add(len)
+                .filter(|&end| end <= footer_start)
+                .ok_or_else(|| malformed("free range is outside the cartridge data area"))?;
             let mut at = start;
-            while at + stored.len() <= start + len {
+            while at <= end && stored.len() <= end - at {
                 let crosses = bank(at) != bank(at + stored.len() - 1);
                 let fits = (!crosses || crosses_before)
                     && refs
@@ -313,6 +323,12 @@ pub fn replace_with(
             if end > out.len() {
                 return Err(malformed(format!(
                     "{id}: reference at {:#x} beyond ROM",
+                    r.at
+                )));
+            }
+            if end > footer_start {
+                return Err(malformed(format!(
+                    "{id}: reference at {:#x} overlaps the ROM footer",
                     r.at
                 )));
             }
