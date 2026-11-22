@@ -43,11 +43,15 @@ pub struct WireLog {
 impl WireLog {
     pub fn open(directory: impl AsRef<Path>) -> io::Result<Self> {
         fs::create_dir_all(directory.as_ref())?;
-        let file = File::options()
+        let mut options = File::options();
+        // Windows cannot lock a handle that was opened for append access alone.
+        #[cfg(windows)]
+        options.read(true);
+        let file = options
             .append(true)
             .create(true)
             .open(directory.as_ref().join("wire.jsonl"))?;
-        file.try_lock().map_err(io::Error::other)?;
+        file.try_lock()?;
         let records = fs::read_dir(directory.as_ref())?
             .filter_map(Result::ok)
             .filter(|e| e.file_name().to_string_lossy().ends_with(".request.bin"))

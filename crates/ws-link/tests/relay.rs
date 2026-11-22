@@ -264,6 +264,8 @@ fn tcp_retries_initial_failure_and_reconnects_after_eof() {
         let start = Instant::now();
         loop {
             if let Ok((p, _)) = listener.accept() {
+                // Darwin can inherit the listener's nonblocking mode.
+                p.set_nonblocking(false).unwrap();
                 p.set_read_timeout(Some(Duration::from_secs(3))).unwrap();
                 return p;
             }

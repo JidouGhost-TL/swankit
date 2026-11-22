@@ -62,10 +62,15 @@ def smoke_server(executable, work):
         if (len(parts) != 3 or parts[0] != "WonderGate"
                 or not parts[1].startswith("HTTP:") or not parts[2].startswith("BPL:")):
             raise ValueError("WonderGate server failed to report both listeners")
-        for field in parts[1:]:
-            host, port = field.split(":", 1)[1].rsplit(":", 1)
-            with socket.create_connection((host, int(port)), timeout=5):
-                pass
+        http_host, http_port = parts[1].removeprefix("HTTP:").rsplit(":", 1)
+        bpl_host, bpl_port = parts[2].removeprefix("BPL:").rsplit(":", 1)
+        with socket.create_connection((bpl_host, int(bpl_port)), timeout=5):
+            pass
+        with socket.create_connection((http_host, int(http_port)), timeout=5) as stream:
+            stream.sendall(b"GET / HTTP/1.1\r\nHost: synthetic.test\r\nConnection: close\r\n\r\n")
+            with stream.makefile("rb") as response:
+                assert response.readline().startswith(b"HTTP/1.1 ")
+                response.read(65536)
     finally:
         if server.poll() is None:
             server.terminate()
@@ -156,7 +161,15 @@ def cli_smoke(executable, work):
     run(executable, "assets", "search", image, "--json")
     checks += ["asset-verify", "asset-extract", "asset-replace", "returned-map-reuse", "wrong-identity-refusal", "search"]
     smoke_server(executable, work)
-    checks.append("wondergate-listeners")
+    wire = work / "wire" / "wire.jsonl"
+    original_wire = wire.read_bytes()
+    assert len(original_wire.splitlines()) == 1
+    smoke_server(executable, work)
+    expanded_wire = wire.read_bytes()
+    assert expanded_wire.startswith(original_wire) and len(expanded_wire.splitlines()) == 2
+    for record in expanded_wire.splitlines():
+        assert json.loads(record)["protocol"] == "HTTP"
+    checks += ["wondergate-listeners", "wondergate-wire-reopen"]
     if os.name == "nt":
         link = subprocess.run([str(executable), "link", "stdio", "exec:unused"],
                               capture_output=True, text=True)

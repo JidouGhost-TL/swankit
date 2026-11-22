@@ -23,7 +23,7 @@ CHECKS = {
     "directory-output-refusal", "save-decode", "save-edit", "save-constraint-refusal",
     "save-explicit-override", "save-repair", "asset-hard-link-refusal", "asset-force-replace",
     "asset-verify", "asset-extract", "asset-replace", "returned-map-reuse",
-    "wrong-identity-refusal", "search", "wondergate-listeners",
+    "wrong-identity-refusal", "search", "wondergate-listeners", "wondergate-wire-reopen",
 }
 NOTICES = ("LICENSE-MIT", "LICENSE-APACHE", "NOTICE")
 

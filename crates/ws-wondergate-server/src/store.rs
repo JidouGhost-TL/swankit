@@ -271,7 +271,7 @@ impl JournalStore {
             .append(true)
             .create(true)
             .open(path)?;
-        file.try_lock().map_err(io::Error::other)?;
+        file.try_lock()?;
         if file.metadata()?.len() > MAX_JOURNAL_BYTES {
             return Err(invalid("journal byte capacity reached"));
         }
