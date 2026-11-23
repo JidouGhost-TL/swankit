@@ -18,6 +18,10 @@ PATCH_NOTICES = {
     "LICENSE-APACHE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
     "LICENSE-MIT": "06048a247dcb30b7118914e5fab9cc8e5d45f603b3c746fafc57f8fa62614662",
 }
+PATCH_WORKSPACE_NOTICES = {
+    **PATCH_NOTICES,
+    "NOTICE": "4fb3ac4cf8f901abf4065fab736992f17a61aff6e63107b8e7209e8f3588a0fe",
+}
 PATCH_ARCHIVES = {
     "0.1.1": {
         "patch_checksum": "3f52f0aa583a4aa23467a59c9a90e95a4c6b01a86308acf5cabbaf35e539fb3b",
@@ -29,7 +33,13 @@ PATCH_ARCHIVES = {
         "patch_checksum": "bf645547df1217294d86c6f1095770efd4fa0daaa8e6a8d45c8025b05232edd7",
         "core_checksum": "bd99a028d234f1d7ee95e0c708eb011491661a1e628885151398b15c36876f20",
         "commit": "3ee29c9c8ab6e7c769bcadd14e7ebed753af79f2",
-        "notices": {**PATCH_NOTICES, "NOTICE": "4fb3ac4cf8f901abf4065fab736992f17a61aff6e63107b8e7209e8f3588a0fe"},
+        "notices": PATCH_WORKSPACE_NOTICES,
+    },
+    "0.1.5": {
+        "patch_checksum": "0592ec0d559310be4f995540e6243fcd239b4dbb7eb82320694c8e87729c203e",
+        "core_checksum": "7055db52dbe422e2e6955fc3cf1e0bc93dbe811f61aba4e3bbc0448b1328d3a0",
+        "commit": "c3efbebe5eb635d17bb891853f96d727dcb939e3",
+        "notices": PATCH_WORKSPACE_NOTICES,
     },
 }
 

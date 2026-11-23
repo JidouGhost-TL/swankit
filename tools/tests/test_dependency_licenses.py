@@ -77,7 +77,7 @@ class LicenseCollectionTests(unittest.TestCase):
         inventory_path = self.output / "DEPENDENCIES.json"
         inventory = json.loads(inventory_path.read_bytes())
         package = inventory["packages"][0]
-        version = "0.1.4"
+        version = "0.1.5"
         pin = dict(LICENSES.PATCH_ARCHIVES[version], notices={"NOTICE": LICENSES.sha(self.notice)})
         with patch.dict(LICENSES.PATCH_ARCHIVES, {version: pin}):
             package.update(name="formatkit-patch", version=version, registry_checksum=pin["patch_checksum"],
@@ -85,10 +85,12 @@ class LicenseCollectionTests(unittest.TestCase):
             package["licenses"][0]["source_path"] = "NOTICE"
             inventory_path.write_text(json.dumps(inventory))
             LICENSES.verify_bundle(self.output)
-            package["notice_source"] = LICENSES.patch_notice_source("0.1.1")
-            inventory_path.write_text(json.dumps(inventory))
-            with self.assertRaisesRegex(ValueError, "Formatkit patch notice provenance"):
-                LICENSES.verify_bundle(self.output)
+            for previous in ("0.1.1", "0.1.4"):
+                package["notice_source"] = LICENSES.patch_notice_source(previous)
+                inventory_path.write_text(json.dumps(inventory))
+                with self.subTest(previous=previous), self.assertRaisesRegex(
+                        ValueError, "Formatkit patch notice provenance"):
+                    LICENSES.verify_bundle(self.output)
 
     def test_missing_modified_and_escaping_bundle_refuse(self):
         self.collect()

@@ -319,16 +319,19 @@ class ApprovalTests(unittest.TestCase):
         del changed[0]["checksum"]
         with self.assertRaises(ValueError):
             RELEASE.registry(lock(changed), metadata)
-        previous = [{**entry, "version": RELEASE.PREVIOUS_FORMATKIT_VERSION} for entry in entries]
-        with self.assertRaisesRegex(ValueError, "registry dependency version"):
-            RELEASE.registry(lock(previous), {"packages": previous})
+        for version in sorted(RELEASE.PREVIOUS_FORMATKIT_VERSIONS):
+            previous = [{**entry, "version": version} for entry in entries]
+            with self.subTest(version=version), self.assertRaisesRegex(ValueError, "registry dependency version"):
+                RELEASE.registry(lock(previous), {"packages": previous})
 
     def test_registry_must_match_version_and_checksum_of_notices(self):
         dependencies = self.manifest["registry"]
-        for entry in dependencies.values():
-            entry["version"] = RELEASE.PREVIOUS_FORMATKIT_VERSION
-        with self.assertRaisesRegex(ValueError, "registry evidence differs from lock-bound dependency notices"):
-            RELEASE.validate_packet(self.packet, self.manifest)
+        for version in sorted(RELEASE.PREVIOUS_FORMATKIT_VERSIONS):
+            for entry in dependencies.values():
+                entry["version"] = version
+            with self.subTest(version=version), self.assertRaisesRegex(
+                    ValueError, "registry evidence differs from lock-bound dependency notices"):
+                RELEASE.validate_packet(self.packet, self.manifest)
         dependencies["formatkit-core"]["version"] = RELEASE.FORMATKIT_VERSION
         with self.assertRaisesRegex(ValueError, "invalid registry evidence"):
             RELEASE.validate_packet(self.packet, self.manifest)
