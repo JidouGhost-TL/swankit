@@ -161,6 +161,20 @@ impl Engine {
         kw: HashMap<String, Value>,
     ) -> Result<Value> {
         match name {
+            "freya_softfs_file" => {
+                let Value::Bytes(image) = arg(&a, 0)? else {
+                    return Err(bad("expected cartridge SRAM bytes"));
+                };
+                let image = image.borrow();
+                let name = arg(&a, 1)?.text();
+                let file = crate::freya::read_file(&image, name.as_bytes())?;
+                Ok(Value::list(vec![
+                    Value::Int(file.directory_offset as i128),
+                    Value::Int(file.offset as i128),
+                    Value::Int(file.blocks.into()),
+                    Value::bytes(file.bytes.to_vec()),
+                ]))
+            }
             "definition_checksum" => {
                 let rule = self
                     .checksums

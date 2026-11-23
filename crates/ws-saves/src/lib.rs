@@ -2,6 +2,7 @@
 #![forbid(unsafe_code)]
 mod cp932;
 mod engine;
+mod freya;
 mod jis0208;
 mod native;
 #[path = "generated/records.rs"]
