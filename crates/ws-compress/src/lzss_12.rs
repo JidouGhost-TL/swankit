@@ -1,7 +1,19 @@
 //! LSB flag bytes and little-endian length4/distance12 backward tokens.
 //! The carrier supplies decoded size; no implicit initialized ring is assumed.
-use crate::{copy_match, grow, input_size, DecodeOutcome, MAX_DECODED};
-use formatkit_core::{Reader, Result};
+use crate::{input_size, map_flag_lzss_err, DecodeOutcome, MAX_DECODED};
+use formatkit_codec::find_longest_match;
+use formatkit_codec::flag_lzss::{
+    decode_flag_lzss, FlagBitOrder, FlagLzssConfig, FlagLzssMatch, FlagPolarity, FlagWidth,
+    OvershootPolicy,
+};
+use formatkit_core::{u16_at, Result};
+
+const CONFIG: FlagLzssConfig = FlagLzssConfig {
+    flag_width: FlagWidth::U8,
+    bit_order: FlagBitOrder::LsbFirst,
+    polarity: FlagPolarity::LiteralIsOne,
+    overshoot: OvershootPolicy::Reject,
+};
 
 pub fn decode(src: &[u8], decoded_size: usize, max_output: usize) -> Result<DecodeOutcome> {
     decode_with_history(src, &[], decoded_size, max_output)
@@ -12,32 +24,27 @@ pub fn decode_with_history(
     decoded_size: usize,
     max_output: usize,
 ) -> Result<DecodeOutcome> {
-    grow(&[], decoded_size, max_output.min(MAX_DECODED))?;
-    let mut r = Reader::new(src);
-    let mut out = Vec::with_capacity(decoded_size);
-    while out.len() < decoded_size {
-        let flags = r.u8()?;
-        for bit in 0..8 {
-            if out.len() == decoded_size {
-                break;
-            }
-            if flags & (1 << bit) != 0 {
-                out.push(r.u8()?);
-            } else {
-                let token = usize::from(r.u16_le()?);
-                copy_match(
-                    &mut out,
-                    history,
-                    (token & 4095) + 1,
-                    (token >> 12) + 3,
-                    decoded_size,
-                )?;
-            }
-        }
-    }
+    let outcome = decode_flag_lzss(
+        src,
+        history,
+        decoded_size,
+        max_output.min(MAX_DECODED),
+        CONFIG,
+        |src, pos| {
+            let token = usize::from(u16_at(src, pos)?);
+            Ok((
+                FlagLzssMatch {
+                    distance: (token & 4095) + 1,
+                    length: (token >> 12) + 3,
+                },
+                2,
+            ))
+        },
+    )
+    .map_err(map_flag_lzss_err)?;
     Ok(DecodeOutcome {
-        bytes: out,
-        consumed: r.pos(),
+        bytes: outcome.output,
+        consumed: outcome.bytes_consumed,
     })
 }
 
@@ -53,23 +60,10 @@ pub fn encode(src: &[u8]) -> Result<Vec<u8>> {
             if at == src.len() {
                 break;
             }
-            let mut best = (0, 0);
-            for distance in 1..=at.min(4096) {
-                let mut count = 0;
-                while count < 18
-                    && at + count < src.len()
-                    && src[at + count] == src[at + count - distance]
-                {
-                    count += 1;
-                }
-                if count > best.1 {
-                    best = (distance, count);
-                }
-            }
-            if best.1 >= 3 {
-                let token = (((best.1 - 3) << 12) | (best.0 - 1)) as u16;
+            if let Some((distance, count)) = find_longest_match(src, at, 1, 4096, 3, 18) {
+                let token = (((count - 3) << 12) | (distance - 1)) as u16;
                 out.extend_from_slice(&token.to_le_bytes());
-                at += best.1;
+                at += count;
             } else {
                 flags |= 1 << bit;
                 out.push(src[at]);

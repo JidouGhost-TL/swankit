@@ -223,21 +223,21 @@ fn render_indexed_atlas(
         let tx = cell % layout.columns as usize * cw as usize + cx * 8 * layout.scale as usize;
         let ty = cell / layout.columns as usize * ch as usize + cy * 8 * layout.scale as usize;
         let rendered = render_tile(&indices, palette)?;
-        for y in 0..8 {
-            for x in 0..8 {
-                let src = (y * 8 + x) * 4;
-                for sy in 0..layout.scale as usize {
-                    for sx in 0..layout.scale as usize {
-                        let dst = ((ty + y * layout.scale as usize + sy) * width as usize
-                            + tx
-                            + x * layout.scale as usize
-                            + sx)
-                            * 4;
-                        out.rgba[dst..dst + 4].copy_from_slice(&rendered.rgba[src..src + 4]);
-                    }
-                }
-            }
-        }
+        formatkit_pixel::blit_rgba(
+            &mut out.rgba,
+            width,
+            height,
+            tx as u32,
+            ty as u32,
+            &rendered.rgba,
+            8,
+            8,
+            false,
+            false,
+            layout.scale,
+            false,
+        )
+        .map_err(|_| invalid("atlas blit", tile))?;
     }
     Ok(out)
 }

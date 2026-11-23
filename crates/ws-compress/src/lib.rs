@@ -71,3 +71,22 @@ fn copy_match(
         },
     })
 }
+
+/// Preserve `Error::InvalidField` for out-of-range back-reference distances
+/// when delegating to `formatkit_codec::flag_lzss::decode_flag_lzss`.
+fn map_flag_lzss_err(err: Error) -> Error {
+    if let Error::Malformed(ref msg) = err {
+        if let Some(rest) = msg.strip_prefix("flag_lzss match distance ") {
+            let value = rest
+                .split_whitespace()
+                .next()
+                .and_then(|s| s.parse::<u64>().ok())
+                .unwrap_or(0);
+            return Error::InvalidField {
+                what: "back-reference distance beyond available history",
+                value,
+            };
+        }
+    }
+    err
+}

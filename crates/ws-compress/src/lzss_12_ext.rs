@@ -2,8 +2,19 @@
 //! Zero flag bits are literals; one bits carry a little-endian token with a
 //! 12-bit distance minus one and a four-bit length code. Nonzero length codes
 //! add two; zero codes read another byte and add eighteen.
-use crate::{copy_match, grow, DecodeOutcome, MAX_DECODED};
-use formatkit_core::{Reader, Result};
+use crate::{map_flag_lzss_err, DecodeOutcome, MAX_DECODED};
+use formatkit_codec::flag_lzss::{
+    decode_flag_lzss, FlagBitOrder, FlagLzssConfig, FlagLzssMatch, FlagPolarity, FlagWidth,
+    OvershootPolicy,
+};
+use formatkit_core::{u16_at, u8_at, Result};
+
+const CONFIG: FlagLzssConfig = FlagLzssConfig {
+    flag_width: FlagWidth::U8,
+    bit_order: FlagBitOrder::LsbFirst,
+    polarity: FlagPolarity::LiteralIsZero,
+    overshoot: OvershootPolicy::ClampToDecodedSize,
+};
 
 /// Decode an explicitly sized stream without assuming initial history.
 ///
@@ -27,34 +38,34 @@ pub fn decode_with_history(
     decoded_size: usize,
     max_output: usize,
 ) -> Result<DecodeOutcome> {
-    grow(&[], decoded_size, max_output.min(MAX_DECODED))?;
     let history = &history[history.len().saturating_sub(4096)..];
-    let mut reader = Reader::new(src);
-    let mut out = Vec::with_capacity(decoded_size);
-    while out.len() < decoded_size {
-        let flags = reader.u8()?;
-        for bit in 0..8 {
-            if out.len() == decoded_size {
-                break;
-            }
-            if flags & (1 << bit) == 0 {
-                out.push(reader.u8()?);
+    let outcome = decode_flag_lzss(
+        src,
+        history,
+        decoded_size,
+        max_output.min(MAX_DECODED),
+        CONFIG,
+        |src, pos| {
+            let token = usize::from(u16_at(src, pos)?);
+            let code = token >> 12;
+            let (length, consumed) = if code == 0 {
+                (usize::from(u8_at(src, pos + 2)?) + 18, 3)
             } else {
-                let token = usize::from(reader.u16_le()?);
-                let code = token >> 12;
-                let count = if code == 0 {
-                    usize::from(reader.u8()?) + 18
-                } else {
-                    code + 2
-                };
-                let count = count.min(decoded_size - out.len());
-                copy_match(&mut out, history, (token & 4095) + 1, count, decoded_size)?;
-            }
-        }
-    }
+                (code + 2, 2)
+            };
+            Ok((
+                FlagLzssMatch {
+                    distance: (token & 4095) + 1,
+                    length,
+                },
+                consumed,
+            ))
+        },
+    )
+    .map_err(map_flag_lzss_err)?;
     Ok(DecodeOutcome {
-        bytes: out,
-        consumed: reader.pos(),
+        bytes: outcome.output,
+        consumed: outcome.bytes_consumed,
     })
 }
 

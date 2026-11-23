@@ -1,4 +1,5 @@
 //! Explicit arithmetic variants from independently documented save grammars.
+use formatkit_core::checksum::{FoldChecksum, FoldOp, FoldUnit};
 use formatkit_core::{Endian, Error, Result};
 use formatkit_layout::{U16Field, U8Field};
 
@@ -35,39 +36,28 @@ impl Rule {
         if !(1..=64).contains(&self.bits) {
             return Err(Error::Malformed("checksum width".into()));
         }
-        let mask = u64::MAX >> (64 - self.bits);
-        let width = match self.unit {
-            Unit::Byte => 1,
-            Unit::Word(_) => 2,
-        };
-        if !bytes.len().is_multiple_of(width) {
+        if matches!(self.unit, Unit::Word(_)) && !bytes.len().is_multiple_of(2) {
             return Err(Error::Malformed("odd word checksum extent".into()));
         }
-        let rotate = |v: u64, n: u32| {
-            let n = n % self.bits;
-            if n == 0 {
-                v & mask
-            } else {
-                ((v << n) | (v >> (self.bits - n))) & mask
-            }
-        };
-        let mut value = self.seed & mask;
-        for offset in (0..bytes.len()).step_by(width) {
-            let x = match self.unit {
-                Unit::Byte => u64::from(U8Field::new(offset).read(bytes)?),
-                Unit::Word(e) => u64::from(U16Field::new(offset, e).read(bytes)?),
-            };
-            value = match self.fold {
-                Fold::Sum => value.wrapping_add(x),
-                Fold::Xor => value ^ x,
-                Fold::RotateThenSum(n) => rotate(value, n).wrapping_add(x),
-                Fold::SumThenRotate(n) => rotate(value.wrapping_add(x) & mask, n),
-                Fold::WeightedOffset => {
-                    value.wrapping_add(x.wrapping_mul(self.offset_base.wrapping_add(offset as u64)))
-                }
-            } & mask;
+        FoldChecksum {
+            unit: match self.unit {
+                Unit::Byte => FoldUnit::Byte,
+                Unit::Word(endian) => FoldUnit::U16(endian),
+            },
+            op: match self.fold {
+                Fold::Sum => FoldOp::Sum,
+                Fold::Xor => FoldOp::Xor,
+                Fold::RotateThenSum(n) => FoldOp::RotateLeftThenSum(n),
+                Fold::SumThenRotate(n) => FoldOp::SumThenRotateLeft(n),
+                Fold::WeightedOffset => FoldOp::WeightedByteOffset {
+                    base: self.offset_base,
+                },
+            },
+            bits: self.bits as u8,
+            seed: self.seed,
+            xor_out: self.xor_out,
         }
-        Ok((value ^ self.xor_out) & mask)
+        .compute(bytes)
     }
 }
 

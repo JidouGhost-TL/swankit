@@ -137,11 +137,21 @@ pub(crate) fn font_sheet(
     for g in 0..def.count {
         let glyph = def.glyph(&data, g, &palette, MAX_IMAGE_BYTES)?.image;
         let (ox, oy) = (g % columns * gw, g / columns * gh);
-        for y in 0..gh {
-            let src = y * gw * 4;
-            let dst = ((oy + y) * w + ox) * 4;
-            rgba[dst..dst + gw * 4].copy_from_slice(&glyph.rgba[src..src + gw * 4]);
-        }
+        formatkit_pixel::blit_rgba(
+            &mut rgba,
+            w as u32,
+            h as u32,
+            ox as u32,
+            oy as u32,
+            &glyph.rgba,
+            gw as u32,
+            gh as u32,
+            false,
+            false,
+            1,
+            false,
+        )
+        .map_err(|e| malformed(e.to_string()))?;
     }
     Image::try_new(w as u32, h as u32, rgba)
 }

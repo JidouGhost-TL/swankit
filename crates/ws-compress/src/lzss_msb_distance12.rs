@@ -1,7 +1,18 @@
 //! MSB flag bytes and little-endian distance12/length4 backward tokens.
 //! The enclosing definition supplies the output size and any known history.
-use crate::{copy_match, grow, DecodeOutcome, MAX_DECODED};
-use formatkit_core::{Reader, Result};
+use crate::{map_flag_lzss_err, DecodeOutcome, MAX_DECODED};
+use formatkit_codec::flag_lzss::{
+    decode_flag_lzss, FlagBitOrder, FlagLzssConfig, FlagLzssMatch, FlagPolarity, FlagWidth,
+    OvershootPolicy,
+};
+use formatkit_core::{u16_at, Result};
+
+const CONFIG: FlagLzssConfig = FlagLzssConfig {
+    flag_width: FlagWidth::U8,
+    bit_order: FlagBitOrder::MsbFirst,
+    polarity: FlagPolarity::LiteralIsZero,
+    overshoot: OvershootPolicy::ClampToDecodedSize,
+};
 
 pub fn decode(src: &[u8], decoded_size: usize, max_output: usize) -> Result<DecodeOutcome> {
     decode_with_history(src, &[], decoded_size, max_output)
@@ -13,29 +24,27 @@ pub fn decode_with_history(
     decoded_size: usize,
     max_output: usize,
 ) -> Result<DecodeOutcome> {
-    grow(&[], decoded_size, max_output.min(MAX_DECODED))?;
-    let mut reader = Reader::new(src);
-    let mut out = Vec::with_capacity(decoded_size);
-    while out.len() < decoded_size {
-        let flags = reader.u8()?;
-        for bit in (0..8).rev() {
-            let remaining = decoded_size - out.len();
-            if remaining == 0 {
-                break;
-            }
-            if flags & (1 << bit) == 0 {
-                out.push(reader.u8()?);
-            } else {
-                let token = usize::from(reader.u16_le()?);
-                let distance = (token >> 4) + 1;
-                let count = ((token & 0xf) + 3).min(remaining);
-                copy_match(&mut out, history, distance, count, decoded_size)?;
-            }
-        }
-    }
+    let outcome = decode_flag_lzss(
+        src,
+        history,
+        decoded_size,
+        max_output.min(MAX_DECODED),
+        CONFIG,
+        |src, pos| {
+            let token = usize::from(u16_at(src, pos)?);
+            Ok((
+                FlagLzssMatch {
+                    distance: (token >> 4) + 1,
+                    length: (token & 0xf) + 3,
+                },
+                2,
+            ))
+        },
+    )
+    .map_err(map_flag_lzss_err)?;
     Ok(DecodeOutcome {
-        bytes: out,
-        consumed: reader.pos(),
+        bytes: outcome.output,
+        consumed: outcome.bytes_consumed,
     })
 }
 
