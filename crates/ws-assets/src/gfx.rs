@@ -6,6 +6,7 @@ use crate::malformed;
 use crate::map::{parse_rgb, Asset, AssetMap, Kind, Layer, SpriteLayer, Window};
 use crate::text::Charmaps;
 use formatkit_core::{Image, Result};
+use formatkit_pixel::{grayscale_palette, nearest_palette_index, PaletteDistanceMetric};
 use std::collections::BTreeMap;
 use ws_gfx::{
     decode_tile, encode_tile, transparent, ColorPalettes, MapEntry, Sprite, TileFormat, HEIGHT,
@@ -38,9 +39,11 @@ pub(crate) fn tile_format(asset: &Asset) -> Result<TileFormat> {
 
 fn grayscale(colors: usize) -> [Rgba; 16] {
     let mut out = [[0, 0, 0, 255]; 16];
-    for (i, c) in out.iter_mut().enumerate().take(colors) {
-        let g = (255 - i * 255 / (colors - 1)) as u8;
-        *c = [g, g, g, 255];
+    for (dst, color) in out
+        .iter_mut()
+        .zip(grayscale_palette(colors).into_iter().rev())
+    {
+        *dst = color;
     }
     out
 }
@@ -591,16 +594,11 @@ pub(crate) fn nearest(palette: &[Rgba], colors: usize, c: Rgba, original: u8) ->
     if palette[usize::from(original)][..3] == c[..3] {
         return (original, true);
     }
-    let mut best = (0u8, u32::MAX);
-    for (i, p) in palette.iter().enumerate().take(colors) {
-        let d = (0..3)
-            .map(|k| (i32::from(p[k]) - i32::from(c[k])).unsigned_abs().pow(2))
-            .sum::<u32>();
-        if d < best.1 {
-            best = (i as u8, d);
-        }
-    }
-    (best.0, best.1 == 0)
+    let slice = &palette[..colors.min(palette.len())];
+    let Some(idx) = nearest_palette_index(c, slice, PaletteDistanceMetric::Rgb) else {
+        return (0, false);
+    };
+    (idx as u8, slice[idx][..3] == c[..3])
 }
 
 /// New decoded payloads (by tile asset id) and the count of approximated pixels.

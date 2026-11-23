@@ -427,12 +427,9 @@ pub fn grayscale(colors: usize) -> Result<Vec<[u8; 4]>> {
     if !matches!(colors, 2 | 4 | 16) {
         return Err(bad("grayscale palette requires 2, 4 or 16 colors"));
     }
-    Ok((0..colors)
-        .map(|i| {
-            let v = (255 - i * 255 / (colors - 1)) as u8;
-            [v, v, v, 255]
-        })
-        .collect())
+    let mut palette = formatkit_pixel::grayscale_palette(colors);
+    palette.reverse();
+    Ok(palette)
 }
 
 pub fn font_atlas(

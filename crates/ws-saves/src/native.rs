@@ -772,20 +772,9 @@ impl Engine {
                 Ok(Value::Bound("hash".into(), Box::new(Value::bytes(bytes))))
             }
             "__import__" => Ok(Value::Native(arg(&a, 0)?.text())),
-            "zlib.crc32" => {
-                let mut crc = !0u32;
-                for b in arg(&a, 0)?.raw()? {
-                    crc ^= u32::from(b);
-                    for _ in 0..8 {
-                        crc = if crc & 1 != 0 {
-                            (crc >> 1) ^ 0xedb88320
-                        } else {
-                            crc >> 1
-                        };
-                    }
-                }
-                Ok(Value::Int((!crc) as i128))
-            }
+            "zlib.crc32" => Ok(Value::Int(formatkit_core::checksum::crc32_iso_hdlc(
+                &arg(&a, 0)?.raw()?,
+            ) as i128)),
             other => Err(bad(format!("unsupported save primitive {other}"))),
         }
     }
