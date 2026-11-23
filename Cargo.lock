@@ -106,18 +106,18 @@ dependencies = [
 
 [[package]]
 name = "formatkit-catalog"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51a7f4ab45fcda62b4692dfddabf98b0905c006a1b9c98e16a307552fbd8809a"
+checksum = "29b50a9d5b996776a35938ad8935589f1ba9fed324ebc77deb64d3f020c6dfc0"
 dependencies = [
  "formatkit-core",
 ]
 
 [[package]]
 name = "formatkit-codec"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a83b2fc3633ef153afd798640ef8d5031635b4880d2294c5353791bce1a31f9"
+checksum = "723403b71910b03088cf7b828ab964ba658d6171196358e7c07d7fc77a4f4013"
 dependencies = [
  "formatkit-core",
  "formatkit-pixel",
@@ -127,9 +127,9 @@ dependencies = [
 
 [[package]]
 name = "formatkit-core"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de226b9092cd428c24eeb33b9f740e035ea543b61abc89e45b9467f48adf417e"
+checksum = "19ea266dfcb2e8a433b3aa61f84789bb5e4f0b67458c84a965ea8ed65afec316"
 dependencies = [
  "sha2",
  "thiserror",
@@ -138,15 +138,15 @@ dependencies = [
 
 [[package]]
 name = "formatkit-corpus"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58e533b4154f75b1a6a442faa1ae67510213fff6bf8b8563a385ec23b4840a7d"
+checksum = "b9dc4badd9e43f4123b6fa20fb43393f890bc0dcefe87b70212c3ce2fc29acdf"
 
 [[package]]
 name = "formatkit-corpus-test"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "300f4f2e904f43f8ec5dbcce1609e88ded1c58520fce9051a0825025e916dbd3"
+checksum = "0bda382eb476d187a49ae4a2f030559019d25b27ae8b5f00f58dfe93f58a0b61"
 dependencies = [
  "formatkit-core",
  "formatkit-corpus",
@@ -158,36 +158,36 @@ dependencies = [
 
 [[package]]
 name = "formatkit-layout"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74d51acf88d6e5ecbd8672c0c86f7096f94dac63f65289c4d998899f721b6061"
+checksum = "9f8c5d3850044b6b53d310f69496c4f24d2356866ca08d7f4dfcc4dbe56013b8"
 dependencies = [
  "formatkit-core",
 ]
 
 [[package]]
 name = "formatkit-patch"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7038da352cc710d4d678ff51c9933e0e9183b260a2f6edcf586000bc7cdd6bcc"
+checksum = "d7ede620a41c8a6d787bdd48a7c0d17dbbcecabb4d747d7a9394905667c2bc8c"
 dependencies = [
  "formatkit-core",
 ]
 
 [[package]]
 name = "formatkit-pixel"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25bd782cf0bcb95ac27a986598dbb3d5445c836f023aee886dbbd71ba3413c71"
+checksum = "72ce6305d325e93fb474dd05602459972cf771f339aed1ccdf30293b6b14e458"
 dependencies = [
  "formatkit-core",
 ]
 
 [[package]]
 name = "formatkit-runtime"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b806301257cfe7f93d063a3bef6d343e08c62e72410eba10dc9dc049f7204241"
+checksum = "25987e4cb523e6db02a57add7e8e8605c515505071b87cf2f3c91ea406c57ef6"
 dependencies = [
  "formatkit-catalog",
  "formatkit-core",
