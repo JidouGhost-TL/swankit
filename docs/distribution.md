@@ -6,11 +6,11 @@ the entire resolved Cargo package inventory. This conservative inventory also
 includes build, development and target-specific packages; it does not claim
 that every listed package is linked into each binary. The wheel carries the
 same evidence under its distribution license directory. Generation occurs
-before the wheel is built and installed for testing. The notice inventory
-records the source commit and archive for the Formatkit 0.1.1 patch crate's
-workspace license files. Packaging refuses missing,
-changed or mismatched notice files; these texts do not replace the project
-licenses or change upstream license terms.
+before the wheel is built and installed for testing. When a
+`formatkit-patch` archive omits its workspace notices, the inventory records
+the matching `formatkit-core` archive and upstream source commit that supply
+those notices. Packaging refuses missing, changed or mismatched notice files.
+The project and upstream license terms still apply.
 
 Download the offline packet or individual files from [GitHub Releases](https://github.com/JidouGhost-TL/swankit/releases).
 [Version 0.1.1](https://github.com/JidouGhost-TL/swankit/releases/tag/v0.1.1) provides CLI archives for
@@ -20,12 +20,15 @@ records which platforms executed each archive.
 
 The packet includes the CLI and wheel, README.md, OFFLINE.md, the linked user
 and crate guides, JSON schemas and license notices. Use OFFLINE.md for the
-exact archive and wheel filenames. The wheel contains the Python package and
-legal notices. The main `swankit` executable is included. The `wg-adapter` and
+exact archive and wheel filenames. The Linux CLI archive also includes the
+guides and examples. The Windows and macOS CLI archives include the executable
+and license notices. The wheel contains the Python package and legal notices.
+The main `swankit` executable is included. The `wg-adapter` and
 `wg-decode` executables are available as auxiliary source-build tools. See
 [release maintenance](release.md) for the current workflow requirements.
 The `link` relay uses Unix endpoints. Direct serial-device endpoints require Linux.
-The Windows CLI includes the separate `wg-server` network service.
+On Windows, run `swankit.exe wg-server` to start the
+[WonderGate network service](cli.md#wondergate-server).
 
 The Linux CLI and wheel require glibc 2.34 or newer according to their ELF
 versioned-symbol requirements. The packet's BUILD-SOURCE.json audits the

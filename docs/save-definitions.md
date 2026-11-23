@@ -42,20 +42,21 @@ contain no game data and need no companion images or lookup tables. Their
 geometry or definitions for an existing game.
 
 Install the supplied Python wheel as described in the
-[distribution guide](distribution.md). From the extracted CLI distribution
-directory, run:
+[distribution guide](distribution.md). Run the example from the extracted
+Linux CLI directory.
 
 ```sh
 python3 examples/saves/run.py --cli ./swankit --out save-example-output
 ```
 
-For a source build, pass `--cli target/debug/swankit` instead. The output
-directory must be new. The script creates both save images, decodes them using
-the actual CLI and installed Python package, edits field zero to 7, repairs
-damaged checksums, and compares every output byte against independent expected
-images. `RESULT.json` lists exact byte differences; `COMMANDS.json` records CLI
-arguments, exits and Python calls, with CLI stdout/stderr beside it. Missing
-definition files, malformed programs and unexpected bytes cause failure.
+For a source build, run the example from the checkout root with
+`--cli target/debug/swankit`. The output directory must be new. The script
+creates both save images, decodes them using the CLI and installed Python
+package, edits field zero to 7, repairs damaged checksums, and compares every
+output byte against independent expected images. `RESULT.json` lists exact
+byte differences. `COMMANDS.json` records CLI arguments, exits and Python
+calls, with CLI stdout/stderr beside it. Missing definition files, malformed
+programs and unexpected bytes cause failure.
 
 Once the script has created the inputs, individual CLI operations are:
 
