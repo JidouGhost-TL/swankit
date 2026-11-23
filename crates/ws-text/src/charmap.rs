@@ -981,6 +981,8 @@ fn build_shared_charmap(
     {
         return Ok(None);
     }
+    // The local operand parser supports up to 256 bytes and expands an empty
+    // {args} placeholder. Delegate only controls with literal displays.
     let simple_controls = definition.controls.iter().all(|c| {
         (c.mask & 0xff) == 0xff
             && c.argument_lengths.is_empty()
@@ -989,7 +991,8 @@ fn build_shared_charmap(
             && c.argument_separator.is_empty()
             && !c.display.contains("{lo:02x}")
             && !c.display.contains("{lo:d}")
-            && (c.argument_bytes == 0 || c.display.contains("{args}"))
+            && c.argument_bytes == 0
+            && !c.display.contains("{args}")
     });
     if !simple_controls {
         return Ok(None);
@@ -1000,11 +1003,11 @@ fn build_shared_charmap(
         .iter()
         .flat_map(|e| std::iter::once(e.text.as_str()).chain(e.aliases.iter().map(String::as_str)))
         .collect();
-    if definition.controls.iter().any(|c| {
-        c.argument_bytes == 0
-            && !c.display.is_empty()
-            && entry_spellings.contains(c.display.as_str())
-    }) {
+    if definition
+        .controls
+        .iter()
+        .any(|c| !c.display.is_empty() && entry_spellings.contains(c.display.as_str()))
+    {
         return Ok(None);
     }
     let shared_entries = entries

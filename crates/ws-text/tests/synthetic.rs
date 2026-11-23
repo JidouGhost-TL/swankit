@@ -103,6 +103,28 @@ fn controls_can_display_operands_without_a_literal_prefix() {
 }
 
 #[test]
+fn operand_templates_round_trip_at_the_supported_lengths() {
+    for length in [0, 1, 16, 17, 256] {
+        let m = map(json!({
+            "controls": [{"code": 240, "argument_bytes": length, "display": "<{args}>"}]
+        }));
+        let mut source = vec![240];
+        source.resize(length + 1, 0xab);
+        let expected = format!("<{}>", "ab".repeat(length));
+        let decoded = m.decode(&source, TextLimits::default()).unwrap();
+        assert_eq!(decoded.text, expected, "operand length {length}");
+        assert_eq!(decoded.consumed, source.len(), "operand length {length}");
+        assert_eq!(m.encode(&expected, source.len()).unwrap(), source);
+        assert_eq!(
+            m.encode_tokens(&decoded.tokens, TextLimits::default())
+                .unwrap(),
+            source
+        );
+        assert!(m.encode(&expected, source.len() - 1).is_err());
+    }
+}
+
+#[test]
 fn expanded_control_spellings_have_a_retention_budget() {
     let controls: Vec<_> = (0x8000..0xa100)
         .step_by(256)
