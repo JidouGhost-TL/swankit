@@ -85,15 +85,30 @@ def read_json(path):
     return json.loads(path.read_bytes())
 
 
-def registry(lock, metadata):
-    """Refuse local/git substitution of the pinned dependency family."""
-    packages = {p["name"]: p for p in tomllib.loads(lock.decode())["package"]
-                if p["name"].startswith("formatkit-")}
+def formatkit_registry_entries(packages, checksum_key):
+    entries = {}
+    for item in packages:
+        name = item["name"]
+        if name.startswith("formatkit-"):
+            require(name not in entries, "duplicate Formatkit registry package: " + name)
+            entries[name] = {"version": item["version"], "source": item.get("source"),
+                             "checksum": item.get(checksum_key)}
+    return entries
+
+
+def locked_registry(lock):
+    packages = formatkit_registry_entries(tomllib.loads(lock.decode())["package"], "checksum")
     require(FORMATKIT <= packages.keys(), "missing pinned registry dependency")
     for name, item in packages.items():
         require(item.get("source") == "registry+https://github.com/rust-lang/crates.io-index"
-                and SHA.fullmatch(item.get("checksum", "")), "non-registry dependency: " + name)
+                and SHA.fullmatch(item["checksum"] or ""), "non-registry dependency: " + name)
         require(item["version"] == FORMATKIT_VERSION, "unexpected registry dependency version: " + name)
+    return packages
+
+
+def registry(lock, metadata):
+    """Refuse local/git substitution of the pinned dependency family."""
+    packages = locked_registry(lock)
     found = {p["name"] for p in metadata["packages"] if p["name"].startswith("formatkit-")}
     require(found == packages.keys(), "resolved dependency inventory differs")
     for item in metadata["packages"]:
@@ -101,8 +116,7 @@ def registry(lock, metadata):
             require(item.get("source") == packages[item["name"]]["source"]
                     and item["version"] == packages[item["name"]]["version"],
                     "resolved non-registry dependency")
-    return {name: {key: item[key] for key in ("version", "source", "checksum")}
-            for name, item in sorted(packages.items())}
+    return packages
 
 
 def text_privacy(raw):
@@ -176,7 +190,7 @@ def validate_packet(packet, manifest):
             "dirty or different build source")
     require(source["source_files_sha256"]["Cargo.lock"] == manifest["lock_sha256"], "lock binding")
     dependency_bundle = packet / "third-party-licenses"
-    DEPENDENCY_LICENSES.verify_bundle(dependency_bundle, manifest["lock_sha256"])
+    notice_inventory = DEPENDENCY_LICENSES.verify_bundle(dependency_bundle, manifest["lock_sha256"])
     require(source.get("dependency_licenses", {}).get("inventory_sha256") ==
             digest((dependency_bundle / "DEPENDENCIES.json").read_bytes()), "dependency inventory binding")
     wheels = [name for name in files if name.endswith(".whl")]
@@ -214,6 +228,8 @@ def validate_packet(packet, manifest):
     for item in dependencies.values():
         require(item.get("source") == "registry+https://github.com/rust-lang/crates.io-index"
                 and SHA.fullmatch(item.get("checksum", "")), "invalid registry evidence")
+    require(dependencies == formatkit_registry_entries(notice_inventory["packages"], "registry_checksum"),
+            "registry evidence differs from lock-bound dependency notices")
     guides = {name: checksum for name, checksum in files.items()
               if name not in platform_names | {wheels[0], archives[0], "SHA256SUMS"}}
     prefix = "swankit-" + manifest["version"] + "-linux-x86_64/"
@@ -504,11 +520,12 @@ def main():
         require(args.run_id > 0, "run id")
         require(read_json(args.smoke).get("status") == "PASS", "packet smoke not passed")
         dependencies = read_json(args.registry)
-        require(FORMATKIT <= dependencies.keys(), "registry evidence missing")
+        lock = (args.source / "Cargo.lock").read_bytes()
+        require(dependencies == locked_registry(lock), "registry evidence differs from source Cargo.lock")
         result = {"schema": "swankit-candidate/1", "source_commit": subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=args.source, text=True).strip(),
             "version": tomllib.loads((args.source / "Cargo.toml").read_text())["workspace"]["package"]["version"],
-            "lock_sha256": digest((args.source / "Cargo.lock").read_bytes()), "run_id": args.run_id,
+            "lock_sha256": digest(lock), "run_id": args.run_id,
             "files": packet_files(args.packet), "checks": {"ci": "PASS", "packet_smoke": "PASS"},
             "registry": dependencies, "packet_smoke_sha256": digest(args.smoke.read_bytes()),
             "build_environment": read_json(args.environment), "packet_smoke": read_json(args.smoke)}

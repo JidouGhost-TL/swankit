@@ -75,6 +75,26 @@ class ApprovalTests(unittest.TestCase):
                      "declared_license": "MIT", "source": "workspace", "registry_checksum": None,
                      "licenses": [{"source_path": "LICENSE", "bundle_path": "synthetic-0.1.0/LICENSE",
                                   "bytes": len(license_text), "sha256": RELEASE.digest(license_text)}]}]}
+        registry_version = RELEASE.FORMATKIT_VERSION
+        registry_source = "registry+https://github.com/rust-lang/crates.io-index"
+        checksum = "a" * 64
+        notices = {"synthetic-0.1.0/LICENSE": license_text}
+        notice_tool = RELEASE.DEPENDENCY_LICENSES
+        pin = {**notice_tool.PATCH_ARCHIVES[registry_version], "patch_checksum": checksum,
+               "notices": {"LICENSE": RELEASE.digest(license_text)}}
+        patch_archives = patch.dict(notice_tool.PATCH_ARCHIVES, {registry_version: pin})
+        patch_archives.start()
+        self.addCleanup(patch_archives.stop)
+        for name in sorted(RELEASE.FORMATKIT):
+            path = f"{name}-{registry_version}/LICENSE"
+            notices[path] = license_text
+            package = {"name": name, "version": registry_version, "declared_license": "MIT",
+                       "source": registry_source, "registry_checksum": checksum,
+                       "licenses": [{"source_path": "LICENSE", "bundle_path": path,
+                                     "bytes": len(license_text), "sha256": RELEASE.digest(license_text)}]}
+            if name == "formatkit-patch":
+                package["notice_source"] = notice_tool.patch_notice_source(registry_version)
+            inventory["packages"].append(package)
         inventory_raw = json.dumps(inventory).encode()
         wheel = io.BytesIO()
         with zipfile.ZipFile(wheel, "w") as out:
@@ -82,7 +102,8 @@ class ApprovalTests(unittest.TestCase):
             out.writestr("swankit/__init__.py", b"# synthetic")
             out.writestr("swankit-0.1.0.dist-info/RECORD", "")
             out.writestr("swankit-0.1.0.dist-info/licenses/release-licenses/DEPENDENCIES.json", inventory_raw)
-            out.writestr("swankit-0.1.0.dist-info/licenses/release-licenses/synthetic-0.1.0/LICENSE", license_text)
+            for name, raw in notices.items():
+                out.writestr("swankit-0.1.0.dist-info/licenses/release-licenses/" + name, raw)
         self.wheel_bytes = wheel.getvalue()
         archive = io.BytesIO()
         with tarfile.open(fileobj=archive, mode="w:gz") as out:
@@ -93,7 +114,7 @@ class ApprovalTests(unittest.TestCase):
                   "swankit-0.1.0-cp311-abi3-linux_x86_64.whl": self.wheel_bytes,
                   "LICENSE-MIT": b"license", "LICENSE-APACHE": b"license", "NOTICE": b"notice",
                   "third-party-licenses/DEPENDENCIES.json": inventory_raw,
-                  "third-party-licenses/synthetic-0.1.0/LICENSE": license_text,
+                  **{"third-party-licenses/" + name: raw for name, raw in notices.items()},
                   "BUILD-SOURCE.json": json.dumps({"source_commit": self.commit, "source_status": [],
                        "source_files_sha256": {"Cargo.lock": self.lock},
                        "wheel_sha256": RELEASE.digest(self.wheel_bytes),
@@ -302,22 +323,29 @@ class ApprovalTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "registry dependency version"):
             RELEASE.registry(lock(previous), {"packages": previous})
 
-    def test_previous_full_packet_verifies_and_mixed_registry_versions_refuse(self):
+    def test_registry_must_match_version_and_checksum_of_notices(self):
         dependencies = self.manifest["registry"]
         for entry in dependencies.values():
             entry["version"] = RELEASE.PREVIOUS_FORMATKIT_VERSION
-        RELEASE.validate_packet(self.packet, self.manifest)
+        with self.assertRaisesRegex(ValueError, "registry evidence differs from lock-bound dependency notices"):
+            RELEASE.validate_packet(self.packet, self.manifest)
         dependencies["formatkit-core"]["version"] = RELEASE.FORMATKIT_VERSION
         with self.assertRaisesRegex(ValueError, "invalid registry evidence"):
             RELEASE.validate_packet(self.packet, self.manifest)
+        for entry in dependencies.values():
+            entry["version"] = RELEASE.FORMATKIT_VERSION
+        dependencies["formatkit-core"]["checksum"] = "d" * 64
+        with self.assertRaisesRegex(ValueError, "registry evidence differs from lock-bound dependency notices"):
+            RELEASE.validate_packet(self.packet, self.manifest)
 
-    def test_previous_release_packet_keeps_its_historical_registry_pins(self):
+    def test_legacy_registry_cannot_describe_a_current_packet(self):
         old = self.manifest["registry"].pop("formatkit-patch")
         with self.assertRaisesRegex(ValueError, "invalid registry evidence"):
             RELEASE.validate_packet(self.packet, self.manifest)
         for entry in self.manifest["registry"].values():
             entry["version"] = "0.1.0"
-        RELEASE.validate_packet(self.packet, self.manifest)
+        with self.assertRaisesRegex(ValueError, "registry evidence differs from lock-bound dependency notices"):
+            RELEASE.validate_packet(self.packet, self.manifest)
         self.manifest["registry"]["formatkit-patch"] = old
         with self.assertRaisesRegex(ValueError, "invalid registry evidence"):
             RELEASE.validate_packet(self.packet, self.manifest)
