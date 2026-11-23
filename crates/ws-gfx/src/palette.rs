@@ -63,13 +63,7 @@ impl ColorPalettes {
         let mut palettes = [[[0; 4]; 16]; 16];
         for palette in &mut palettes {
             for color in palette {
-                let word = reader.u16_le()?;
-                *color = [
-                    ((word >> 8) & 15) as u8 * 17,
-                    ((word >> 4) & 15) as u8 * 17,
-                    (word & 15) as u8 * 17,
-                    255,
-                ];
+                *color = formatkit_pixel::rgb444_to_rgba(reader.u16_le()?);
             }
         }
         if reader.remaining() != 0 {

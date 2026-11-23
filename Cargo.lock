@@ -107,7 +107,7 @@ dependencies = [
 [[package]]
 name = "formatkit-catalog"
 version = "0.1.2"
-source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=5f2b8e217766b558c68560989b6f80029290bc3c#5f2b8e217766b558c68560989b6f80029290bc3c"
+source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3#27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3"
 dependencies = [
  "formatkit-core",
 ]
@@ -115,7 +115,7 @@ dependencies = [
 [[package]]
 name = "formatkit-codec"
 version = "0.1.2"
-source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=5f2b8e217766b558c68560989b6f80029290bc3c#5f2b8e217766b558c68560989b6f80029290bc3c"
+source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3#27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3"
 dependencies = [
  "formatkit-core",
  "lzma-rs",
@@ -125,7 +125,7 @@ dependencies = [
 [[package]]
 name = "formatkit-core"
 version = "0.1.2"
-source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=5f2b8e217766b558c68560989b6f80029290bc3c#5f2b8e217766b558c68560989b6f80029290bc3c"
+source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3#27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3"
 dependencies = [
  "sha2",
  "thiserror",
@@ -135,12 +135,12 @@ dependencies = [
 [[package]]
 name = "formatkit-corpus"
 version = "0.1.2"
-source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=5f2b8e217766b558c68560989b6f80029290bc3c#5f2b8e217766b558c68560989b6f80029290bc3c"
+source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3#27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3"
 
 [[package]]
 name = "formatkit-corpus-test"
 version = "0.1.2"
-source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=5f2b8e217766b558c68560989b6f80029290bc3c#5f2b8e217766b558c68560989b6f80029290bc3c"
+source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3#27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3"
 dependencies = [
  "formatkit-core",
  "formatkit-corpus",
@@ -153,7 +153,7 @@ dependencies = [
 [[package]]
 name = "formatkit-layout"
 version = "0.1.2"
-source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=5f2b8e217766b558c68560989b6f80029290bc3c#5f2b8e217766b558c68560989b6f80029290bc3c"
+source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3#27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3"
 dependencies = [
  "formatkit-core",
 ]
@@ -161,7 +161,7 @@ dependencies = [
 [[package]]
 name = "formatkit-patch"
 version = "0.1.2"
-source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=5f2b8e217766b558c68560989b6f80029290bc3c#5f2b8e217766b558c68560989b6f80029290bc3c"
+source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3#27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3"
 dependencies = [
  "formatkit-core",
 ]
@@ -169,7 +169,7 @@ dependencies = [
 [[package]]
 name = "formatkit-pixel"
 version = "0.1.2"
-source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=5f2b8e217766b558c68560989b6f80029290bc3c#5f2b8e217766b558c68560989b6f80029290bc3c"
+source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3#27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3"
 dependencies = [
  "formatkit-core",
 ]
@@ -177,7 +177,7 @@ dependencies = [
 [[package]]
 name = "formatkit-runtime"
 version = "0.1.2"
-source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=5f2b8e217766b558c68560989b6f80029290bc3c#5f2b8e217766b558c68560989b6f80029290bc3c"
+source = "git+https://github.com/JidouGhost-TL/formatkit.git?rev=27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3#27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3"
 dependencies = [
  "formatkit-catalog",
  "formatkit-core",

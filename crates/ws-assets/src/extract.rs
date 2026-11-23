@@ -146,28 +146,6 @@ pub(crate) fn font_sheet(
     Image::try_new(w as u32, h as u32, rgba)
 }
 
-/// Minimal RIFF/WAVE container for 16-bit mono PCM.
-fn wav(rate: u32, samples: &[i16]) -> Vec<u8> {
-    let data_len = (samples.len() * 2) as u32;
-    let mut out = Vec::with_capacity(44 + samples.len() * 2);
-    out.extend_from_slice(b"RIFF");
-    out.extend_from_slice(&(36 + data_len).to_le_bytes());
-    out.extend_from_slice(b"WAVEfmt ");
-    out.extend_from_slice(&16u32.to_le_bytes());
-    out.extend_from_slice(&1u16.to_le_bytes());
-    out.extend_from_slice(&1u16.to_le_bytes());
-    out.extend_from_slice(&rate.to_le_bytes());
-    out.extend_from_slice(&(rate * 2).to_le_bytes());
-    out.extend_from_slice(&2u16.to_le_bytes());
-    out.extend_from_slice(&16u16.to_le_bytes());
-    out.extend_from_slice(b"data");
-    out.extend_from_slice(&data_len.to_le_bytes());
-    for s in samples {
-        out.extend_from_slice(&s.to_le_bytes());
-    }
-    out
-}
-
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
@@ -302,7 +280,7 @@ pub(crate) fn extract_one(
             let pcm = ws_sound::render::unsigned_pcm(&stored.decoded, rate, stored.decoded.len())?;
             add(
                 format!("{id}.wav"),
-                ExtractedFile::Bytes(wav(rate, pcm.samples())),
+                ExtractedFile::Bytes(pcm.to_wav_bytes()?),
                 files,
             );
         }

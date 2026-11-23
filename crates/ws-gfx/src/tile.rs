@@ -42,17 +42,20 @@ pub fn decode_tile(data: &[u8], offset: usize, format: TileFormat) -> Result<[u8
     reader.skip(offset)?;
     let bytes = reader.bytes(format.bytes_per_tile())?;
     let mut indices = [0; 64];
-    if format == TileFormat::Bpp4Packed {
-        formatkit_pixel::unpack_4bpp_into(bytes, NibbleOrder::HighFirst, &mut indices)
-            .map_err(|_| invalid("packed tile bytes", bytes.len()))?;
-    } else {
-        let planes = if format == TileFormat::Bpp2 { 2 } else { 4 };
-        for y in 0..8 {
-            for x in 0..8 {
-                indices[y * 8 + x] = (0..planes).fold(0, |v, p| {
-                    v | (((bytes[y * planes + p] >> (7 - x)) & 1) << p)
-                });
-            }
+    match format {
+        TileFormat::Bpp4Packed => {
+            formatkit_pixel::unpack_4bpp_into(bytes, NibbleOrder::HighFirst, &mut indices)
+                .map_err(|_| invalid("packed tile bytes", bytes.len()))?;
+        }
+        TileFormat::Bpp2 | TileFormat::Bpp4Planar => {
+            let planes = if format == TileFormat::Bpp2 { 2 } else { 4 };
+            formatkit_pixel::unpack_planar_tile_8x8_into(
+                bytes,
+                planes,
+                BitOrder::MsbFirst,
+                &mut indices,
+            )
+            .map_err(|_| invalid("planar tile bytes", bytes.len()))?;
         }
     }
     Ok(indices)
@@ -62,23 +65,26 @@ pub fn decode_tile(data: &[u8], offset: usize, format: TileFormat) -> Result<[u8
 /// [`decode_tile`] (index bits above the format's depth are dropped).
 pub fn encode_tile(indices: &[u8; 64], format: TileFormat) -> Vec<u8> {
     let mut out = vec![0u8; format.bytes_per_tile()];
-    if format == TileFormat::Bpp4Packed {
-        formatkit_pixel::pack_4bpp_into(
-            indices,
-            NibbleOrder::HighFirst,
-            IndexPolicy::Mask,
-            &mut out,
-        )
-        .expect("a packed tile has 64 pixels and 32 bytes");
-        return out;
-    }
-    let planes = if format == TileFormat::Bpp2 { 2 } else { 4 };
-    for y in 0..8 {
-        for x in 0..8 {
-            let v = indices[y * 8 + x];
-            for p in 0..planes {
-                out[y * planes + p] |= ((v >> p) & 1) << (7 - x);
-            }
+    match format {
+        TileFormat::Bpp4Packed => {
+            formatkit_pixel::pack_4bpp_into(
+                indices,
+                NibbleOrder::HighFirst,
+                IndexPolicy::Mask,
+                &mut out,
+            )
+            .expect("a packed tile has 64 pixels and 32 bytes");
+        }
+        TileFormat::Bpp2 | TileFormat::Bpp4Planar => {
+            let planes = if format == TileFormat::Bpp2 { 2 } else { 4 };
+            formatkit_pixel::pack_planar_tile_8x8_into(
+                indices,
+                planes,
+                BitOrder::MsbFirst,
+                IndexPolicy::Mask,
+                &mut out,
+            )
+            .expect("a planar tile has 64 pixels and 16 or 32 bytes");
         }
     }
     out

@@ -10,12 +10,12 @@ license = "MIT OR Apache-2.0"
 publish = false
 
 [workspace.dependencies]
-formatkit-core = { git = "https://github.com/JidouGhost-TL/formatkit.git", rev = "5f2b8e217766b558c68560989b6f80029290bc3c" }
-formatkit-layout = { git = "https://github.com/JidouGhost-TL/formatkit.git", rev = "5f2b8e217766b558c68560989b6f80029290bc3c" }
-formatkit-catalog = { git = "https://github.com/JidouGhost-TL/formatkit.git", rev = "5f2b8e217766b558c68560989b6f80029290bc3c" }
-formatkit-runtime = { git = "https://github.com/JidouGhost-TL/formatkit.git", rev = "5f2b8e217766b558c68560989b6f80029290bc3c" }
-formatkit-pixel = { git = "https://github.com/JidouGhost-TL/formatkit.git", rev = "5f2b8e217766b558c68560989b6f80029290bc3c" }
-formatkit-codec = { git = "https://github.com/JidouGhost-TL/formatkit.git", rev = "5f2b8e217766b558c68560989b6f80029290bc3c" }
-formatkit-corpus = { git = "https://github.com/JidouGhost-TL/formatkit.git", rev = "5f2b8e217766b558c68560989b6f80029290bc3c" }
-formatkit-corpus-test = { git = "https://github.com/JidouGhost-TL/formatkit.git", rev = "5f2b8e217766b558c68560989b6f80029290bc3c" }
-formatkit-patch = { git = "https://github.com/JidouGhost-TL/formatkit.git", rev = "5f2b8e217766b558c68560989b6f80029290bc3c" }
+formatkit-core = { git = "https://github.com/JidouGhost-TL/formatkit.git", rev = "27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3" }
+formatkit-layout = { git = "https://github.com/JidouGhost-TL/formatkit.git", rev = "27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3" }
+formatkit-catalog = { git = "https://github.com/JidouGhost-TL/formatkit.git", rev = "27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3" }
+formatkit-runtime = { git = "https://github.com/JidouGhost-TL/formatkit.git", rev = "27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3" }
+formatkit-pixel = { git = "https://github.com/JidouGhost-TL/formatkit.git", rev = "27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3" }
+formatkit-codec = { git = "https://github.com/JidouGhost-TL/formatkit.git", rev = "27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3" }
+formatkit-corpus = { git = "https://github.com/JidouGhost-TL/formatkit.git", rev = "27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3" }
+formatkit-corpus-test = { git = "https://github.com/JidouGhost-TL/formatkit.git", rev = "27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3" }
+formatkit-patch = { git = "https://github.com/JidouGhost-TL/formatkit.git", rev = "27d19bf9e6b511c1ee6c968d6dc8b6bc4c97eef3" }
