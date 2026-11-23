@@ -6,4 +6,5 @@ ARG PYTHON_ROOT=/opt
 RUN python3 -m venv ${PYTHON_ROOT}/python
 ENV PATH="${PYTHON_ROOT}/python/bin:${PATH}" CARGO_BUILD_JOBS=1
 RUN python -m pip install --no-cache-dir maturin==1.9.6 pytest==8.4.2 Pillow==11.3.0
+RUN rustup component add rustfmt clippy
 WORKDIR /workspace/swankit
