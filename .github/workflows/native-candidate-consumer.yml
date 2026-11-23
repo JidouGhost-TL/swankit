@@ -1,0 +1,89 @@
+name: Independently consume the exact Swankit candidate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+
+jobs:
+  native-consumer:
+    if: github.repository == 'JidouGhost-TL/swankit' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    env:
+      CONSUMER_SHA256: '59dfb98f201b0ca9d14fcd98bb490959d12fba1e293c74646e646abb7f8ad150'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2025
+            target: windows-x86_64
+            runner_arch: X64
+          - runner: macos-15
+            target: macos-arm64
+            runner_arch: ARM64
+          - runner: macos-15-intel
+            target: macos-x86_64
+            runner_arch: X64
+    steps:
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: '3.13'
+          token: ''
+      - name: Obtain the pinned consumer source anonymously
+        shell: pwsh
+        run: |
+          @'
+          import hashlib
+          import http.client
+          import os
+          from pathlib import Path
+          import re
+
+          sha = os.environ["GITHUB_SHA"]
+          if not re.fullmatch(r"[0-9a-f]{40}", sha):
+              raise SystemExit("Unexpected harness commit identity")
+          route = f"/JidouGhost-TL/swankit/{sha}/tools/exact-candidate-consumer.py"
+          conn = http.client.HTTPSConnection("raw.githubusercontent.com", timeout=30)
+          try:
+              conn.request("GET", route, headers={"User-Agent": "swankit-pinned-consumer"})
+              with conn.getresponse() as reply:
+                  data = reply.read(32769) if reply.status == 200 else b""
+          except OSError:
+              raise SystemExit("Harness source acquisition failed") from None
+          finally:
+              conn.close()
+          if len(data) > 32768 or hashlib.sha256(data).hexdigest() != os.environ["CONSUMER_SHA256"]:
+              raise SystemExit("Unexpected harness source digest")
+          with (Path(os.environ["RUNNER_TEMP"]) / "exact-candidate-consumer.py").open("xb") as saved:
+              saved.write(data)
+          '@ | python -B -
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Fetch the already verified candidate transport
+        shell: pwsh
+        env:
+          SWANKIT_CANDIDATE_TOKEN: ${{ github.token }}
+        run: |
+          $packet = Join-Path $env:RUNNER_TEMP 'swankit-candidate-14794928412.zip'
+          $consumer = Join-Path $env:RUNNER_TEMP 'exact-candidate-consumer.py'
+          if ((Get-FileHash -Algorithm SHA256 $consumer).Hash.ToLowerInvariant() -cne $env:CONSUMER_SHA256) {
+            throw 'Unexpected consumer digest'
+          }
+          python -B $consumer fetch --packet $packet
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Run the pinned binary in an isolated consumer environment
+        shell: pwsh
+        env:
+          TARGET: ${{ matrix.target }}
+          EXPECTED_RUNNER_ARCH: ${{ matrix.runner_arch }}
+        run: |
+          if ($env:RUNNER_ARCH -cne $env:EXPECTED_RUNNER_ARCH) { throw 'Unexpected runner architecture' }
+          $packet = Join-Path $env:RUNNER_TEMP 'swankit-candidate-14794928412.zip'
+          $work = Join-Path $env:RUNNER_TEMP 'swankit independent consumer'
+          $consumer = Join-Path $env:RUNNER_TEMP 'exact-candidate-consumer.py'
+          if ((Get-FileHash -Algorithm SHA256 $consumer).Hash.ToLowerInvariant() -cne $env:CONSUMER_SHA256) {
+            throw 'Unexpected consumer digest'
+          }
+          python -B $consumer replay --packet $packet --target $env:TARGET --work $work
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
