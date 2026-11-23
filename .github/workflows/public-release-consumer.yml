@@ -1,0 +1,106 @@
+name: Rehearse published Swankit v0.1.1
+on:
+  workflow_dispatch:
+permissions: {}
+
+jobs:
+  native-consumer:
+    if: github.repository == 'JidouGhost-TL/swankit' && github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: linux-x86_64
+            arch: X64
+            checks: 22
+            archive: '716380f15b3cc5fda91bac00008f9d945bc5b2983d8750cf39d1c955028d69e4'
+            executable: '984c63cce579493429f4f390c01851c6f75bae3516a143be82a2d4a64c107d01'
+          - runner: windows-2025
+            target: windows-x86_64
+            arch: X64
+            checks: 23
+            archive: '9e2de2afeae5c08c225d36c63d0ba7e34dae9af0d6b3a3f4617bb7792a3957f7'
+            executable: '58591a07ba4eb420827e0bb6f808d064bc84d1c67da18f86334c0e8591583063'
+          - runner: macos-15
+            target: macos-arm64
+            arch: ARM64
+            checks: 22
+            archive: 'f995de5bd75c2fe6fa237d7c575e40def124b83fe18534477602cb5d7d3ec7d9'
+            executable: '526d270bd08480c1626e542b1b30cc77a335a27421b3360dcdcd69a4b1c6eac0'
+          - runner: macos-15-intel
+            target: macos-x86_64
+            arch: X64
+            checks: 22
+            archive: '303b16766c22b8237981d6b23f48cee68fcab9a7b403feef99023cc36a9d7aa3'
+            executable: 'b921591820a8fa541bd42a0333112080df78e07134b4eb54136353eec2758da6'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 8
+    env:
+      TARGET: ${{ matrix.target }}
+      EXPECTED_ARCH: ${{ matrix.arch }}
+      PYTHONUTF8: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+      CONSUMER_SHA: '974a791743de7dc9c7ba907b22e3bef4f4b6b34accd194574f85df847e3685bb'
+    steps:
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: '3.13'
+          token: ''
+      - name: Download and run the pinned consumer
+        shell: pwsh
+        run: |
+          if ($env:RUNNER_ARCH -cne $env:EXPECTED_ARCH) { throw 'Wrong hosted runner architecture' }
+          @'
+          import hashlib
+          import os
+          from pathlib import Path
+          import re
+          from urllib.request import HTTPRedirectHandler, ProxyHandler, build_opener
+
+          class NoRedirect(HTTPRedirectHandler):
+              def redirect_request(self, *args, **kwargs):
+                  raise ValueError("unexpected redirect for the pinned consumer source")
+
+          commit = os.environ["GITHUB_SHA"]
+          if not re.fullmatch(r"[0-9a-f]{40}", commit):
+              raise ValueError("invalid source commit")
+          url = f"https://raw.githubusercontent.com/JidouGhost-TL/swankit/{commit}/tools/public-release-consumer.py"
+          with build_opener(ProxyHandler({}), NoRedirect()).open(url, timeout=30) as reply:
+              if reply.geturl() != url:
+                  raise ValueError("unexpected consumer source URL")
+              script = reply.read(128 * 1024 + 1)
+          if len(script) > 128 * 1024 or hashlib.sha256(script).hexdigest() != os.environ["CONSUMER_SHA"]:
+              raise ValueError("consumer source digest differs")
+          path = Path(os.environ["RUNNER_TEMP"]) / "public-release-consumer.py"
+          with path.open("xb") as program:
+              program.write(script)
+          '@ | python -B -
+          if ($LASTEXITCODE -ne 0) { throw 'Pinned consumer acquisition failed' }
+          $script = Join-Path $env:RUNNER_TEMP 'public-release-consumer.py'
+          $work = Join-Path $env:RUNNER_TEMP 'public-swankit'
+          python -B $script replay --target $env:TARGET --work $work
+          if ($LASTEXITCODE -ne 0) { throw 'Native consumer replay failed' }
+      - name: Verify native runtime receipt and outputs
+        shell: pwsh
+        env:
+          EXPECTED_ARCHIVE: ${{ matrix.archive }}
+          EXPECTED_EXECUTABLE: ${{ matrix.executable }}
+          EXPECTED_CHECKS: ${{ matrix.checks }}
+        run: |
+          $script = Join-Path $env:RUNNER_TEMP 'public-release-consumer.py'
+          if ((Get-FileHash -Algorithm SHA256 $script).Hash.ToLowerInvariant() -ne $env:CONSUMER_SHA) {
+            throw 'Consumer changed before receipt verification'
+          }
+          $work = Join-Path $env:RUNNER_TEMP 'public-swankit'
+          $result = python -B $script verify --target $env:TARGET --work $work
+          if ($LASTEXITCODE -ne 0) { throw 'Native consumer receipt verification failed' }
+          $proof = $result | ConvertFrom-Json
+          if ($proof.status -cne 'native-execution-pass' -or $proof.acquisition -cne 'anonymous-https' -or
+              $proof.target -cne $env:TARGET -or $proof.version -cne '0.1.1' -or
+              $env:RUNNER_ARCH -cne $env:EXPECTED_ARCH -or $proof.host.pointer_bits -ne 64 -or
+              $proof.archive_sha256 -cne $env:EXPECTED_ARCHIVE -or $proof.executable_sha256 -cne $env:EXPECTED_EXECUTABLE -or
+              @($proof.checks).Count -ne [int]$env:EXPECTED_CHECKS) {
+            throw 'Receipt does not prove this public native execution'
+          }
+          Write-Output $result
