@@ -41,6 +41,12 @@ PATCH_ARCHIVES = {
         "commit": "c3efbebe5eb635d17bb891853f96d727dcb939e3",
         "notices": PATCH_WORKSPACE_NOTICES,
     },
+    "0.1.6": {
+        "patch_checksum": "6cb6d63c589faf5ef6994604b66b014710b27447cdeaa4adc590bc39f8fb7690",
+        "core_checksum": "0999861f8467a60449ef01d9e845675116b7d50df193b82d5798457cd5720f1c",
+        "commit": "5f300193a672a34985f1078ade327aa127a4281c",
+        "notices": PATCH_WORKSPACE_NOTICES,
+    },
 }
 
 
