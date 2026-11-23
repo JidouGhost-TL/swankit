@@ -176,7 +176,7 @@ fn format_set_field_enforces_constraints_unless_explicitly_skipped() {
 fn gather_beat_supply_points_enforce_the_documented_maximum() {
     let format = ws_saves::formats()
         .unwrap()
-        .into_iter()
+        .iter()
         .find(|format| format.definition()["id"] == "SD_Gundam_G_Generation_-_Gather_Beat_Japan")
         .unwrap();
     let mut bytes = vec![0; 32768];
