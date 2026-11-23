@@ -1,5 +1,9 @@
 use crate::{limit, malformed, TextLimits};
+use formatkit_core::text::{
+    decode_cp932, decode_jis_x_0201, encode_cp932, encode_jis_x_0201, is_shift_jis_lead,
+};
 use formatkit_core::{bytes_at, Reader, Result};
+use formatkit_layout::{parse_hex_bytes, Charmap, CharmapControl, CharmapEntry, CharmapLimits};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use unicode_normalization::UnicodeNormalization;
@@ -196,6 +200,7 @@ struct ControlSpelling {
 #[derive(Debug, Clone)]
 pub struct CharacterMap {
     definition: CharacterMapDefinition,
+    shared: Option<Charmap>,
     entries: Vec<Entry>,
     by_first: BTreeMap<u8, Vec<usize>>,
     by_text_first: BTreeMap<char, Vec<usize>>,
@@ -235,20 +240,7 @@ pub struct DecodedText {
 }
 
 pub fn hex_bytes(text: &str) -> Result<Vec<u8>> {
-    if text.is_empty() || text.len() > 32 || !text.len().is_multiple_of(2) || !text.is_ascii() {
-        return Err(malformed("code must contain 1..16 hexadecimal bytes"));
-    }
-    text.as_bytes()
-        .chunks_exact(2)
-        .map(|p| {
-            let digit = |c: u8| {
-                char::from(c)
-                    .to_digit(16)
-                    .ok_or_else(|| malformed("invalid hex code"))
-            };
-            Ok((digit(p[0])? * 16 + digit(p[1])?) as u8)
-        })
-        .collect()
+    parse_hex_bytes(text)
 }
 
 impl CharacterMap {
@@ -453,8 +445,10 @@ impl CharacterMap {
                 }
             }
         }
+        let shared = build_shared_charmap(&definition, &entries)?;
         Ok(Self {
             definition,
+            shared,
             entries,
             by_first,
             by_text_first,
@@ -467,8 +461,33 @@ impl CharacterMap {
     }
 
     pub fn decode(&self, bytes: &[u8], limits: TextLimits) -> Result<DecodedText> {
-        limit("text input bytes", bytes.len(), limits.input_bytes)?;
         let d = &self.definition;
+        if let Some(shared) = &self.shared {
+            let decoded = shared.decode_with_limits(bytes, charmap_limits(limits))?;
+            let text = resolve_dash(&decoded.text, &d.normalization);
+            let normalized = normalize(&text, &d.normalization);
+            limit(
+                "normalized text bytes",
+                normalized.len(),
+                limits.output_bytes,
+            )?;
+            return Ok(DecodedText {
+                text,
+                normalized,
+                consumed: decoded.consumed,
+                terminated: decoded.terminated,
+                final_page: decoded.final_page,
+                tokens: decoded
+                    .tokens
+                    .into_iter()
+                    .map(|t| TextToken {
+                        bytes: t.bytes,
+                        text: t.text,
+                    })
+                    .collect(),
+            });
+        }
+        limit("text input bytes", bytes.len(), limits.input_bytes)?;
         let mut reader = Reader::new(bytes);
         let mut page = d.initial_page;
         let mut tokens = Vec::new();
@@ -514,13 +533,12 @@ impl CharacterMap {
                     }
                     e.text.clone()
                 } else if d.encoding != TextEncoding::Table {
-                    let width = if d.encoding == TextEncoding::ShiftJis
-                        && ((0x81..=0x9f).contains(&code) || (0xe0..=0xfc).contains(&code))
-                    {
-                        2
-                    } else {
-                        1
-                    };
+                    let width =
+                        if d.encoding == TextEncoding::ShiftJis && is_shift_jis_lead(code as u8) {
+                            2
+                        } else {
+                            1
+                        };
                     if width == 2 {
                         reader.skip(1)?;
                     }
@@ -765,6 +783,29 @@ impl CharacterMap {
     /// when the definition has one. Validation catches context/alias changes.
     pub fn encode(&self, text: &str, maximum_bytes: usize) -> Result<Vec<u8>> {
         limit("text to encode", text.len(), 262144)?;
+        if let Some(shared) = &self.shared {
+            let bytes = shared.encode_with_limits(
+                text,
+                CharmapLimits {
+                    max_input_bytes: 262144,
+                    max_output_bytes: maximum_bytes,
+                    ..CharmapLimits::default()
+                },
+            )?;
+            let got = self.decode(
+                &bytes,
+                TextLimits {
+                    input_bytes: maximum_bytes,
+                    ..TextLimits::default()
+                },
+            )?;
+            if got.text != text || got.consumed != bytes.len() {
+                return Err(malformed(
+                    "canonical encoding changes text or contains trailing data",
+                ));
+            }
+            return Ok(bytes);
+        }
         let d = &self.definition;
         let mut bytes = Vec::new();
         let mut page = d.initial_page;
@@ -921,48 +962,92 @@ fn parse_control(
     Ok(Some((text.len() - rest.len() + suffix.len(), encoded)))
 }
 
+fn charmap_limits(limits: TextLimits) -> CharmapLimits {
+    CharmapLimits {
+        max_input_bytes: limits.input_bytes,
+        max_output_bytes: limits.output_bytes,
+        max_tokens: limits.tokens,
+        ..CharmapLimits::default()
+    }
+}
+
+fn build_shared_charmap(
+    definition: &CharacterMapDefinition,
+    entries: &[Entry],
+) -> Result<Option<Charmap>> {
+    if definition.encoding != TextEncoding::Table
+        || definition.unit != CodeUnit::Byte
+        || definition.glyph_mask.is_some()
+    {
+        return Ok(None);
+    }
+    let simple_controls = definition.controls.iter().all(|c| {
+        (c.mask & 0xff) == 0xff
+            && c.argument_lengths.is_empty()
+            && c.display_overrides.is_empty()
+            && c.argument_unit == CodeUnit::Byte
+            && c.argument_separator.is_empty()
+            && !c.display.contains("{lo:02x}")
+            && !c.display.contains("{lo:d}")
+            && (c.argument_bytes == 0 || c.display.contains("{args}"))
+    });
+    if !simple_controls {
+        return Ok(None);
+    }
+    // Preserve ws-text's entry-over-control tie-breaking if a literal control
+    // display collides with an entry spelling.
+    let entry_spellings: BTreeSet<&str> = entries
+        .iter()
+        .flat_map(|e| std::iter::once(e.text.as_str()).chain(e.aliases.iter().map(String::as_str)))
+        .collect();
+    if definition.controls.iter().any(|c| {
+        c.argument_bytes == 0
+            && !c.display.is_empty()
+            && entry_spellings.contains(c.display.as_str())
+    }) {
+        return Ok(None);
+    }
+    let shared_entries = entries
+        .iter()
+        .map(|e| CharmapEntry {
+            bytes: e.bytes.clone(),
+            text: e.text.clone(),
+            page: e.page,
+            aliases: e.aliases.clone(),
+        })
+        .collect();
+    let shared_controls = definition
+        .controls
+        .iter()
+        .map(|c| CharmapControl {
+            bytes: vec![c.code as u8],
+            text: c.display.clone(),
+            arg_bytes: c.argument_bytes,
+            ends: c.ends,
+            set_page: c.set_page,
+        })
+        .collect();
+    Ok(Some(Charmap::with_initial_page(
+        definition.initial_page,
+        shared_entries,
+        shared_controls,
+        CharmapLimits::default(),
+    )?))
+}
+
 pub fn decode_standard(encoding: TextEncoding, bytes: &[u8]) -> Result<String> {
     limit("standard text input", bytes.len(), 65536)?;
     match encoding {
-        TextEncoding::ShiftJis => encoding_rs::SHIFT_JIS
-            .decode_without_bom_handling_and_without_replacement(bytes)
-            .map(|s| s.into_owned())
-            .ok_or_else(|| malformed("invalid Shift_JIS sequence")),
-        TextEncoding::JisX0201 => bytes
-            .iter()
-            .map(|&b| match b {
-                0x5c => Ok('¥'),
-                0x7e => Ok('‾'),
-                0..=0x7f => Ok(char::from(b)),
-                0xa1..=0xdf => char::from_u32(0xff61 + u32::from(b - 0xa1))
-                    .ok_or_else(|| malformed("invalid kana")),
-                _ => Err(malformed("undefined JIS X 0201 byte")),
-            })
-            .collect(),
+        TextEncoding::ShiftJis => decode_cp932(bytes),
+        TextEncoding::JisX0201 => decode_jis_x_0201(bytes),
         TextEncoding::Table => Err(malformed("table encoding requires a map")),
     }
 }
 pub fn encode_standard(encoding: TextEncoding, text: &str) -> Result<Vec<u8>> {
     limit("standard text output", text.len(), 262144)?;
     match encoding {
-        TextEncoding::ShiftJis => {
-            let (bytes, _, errors) = encoding_rs::SHIFT_JIS.encode(text);
-            if errors {
-                Err(malformed("unencodable Shift_JIS character"))
-            } else {
-                Ok(bytes.into_owned())
-            }
-        }
-        TextEncoding::JisX0201 => text
-            .chars()
-            .map(|c| match c {
-                '¥' => Ok(0x5c),
-                '‾' => Ok(0x7e),
-                '\u{0}'..='\u{7f}' if c != '\\' && c != '~' => Ok(c as u8),
-                '\u{ff61}'..='\u{ff9f}' => Ok(0xa1 + (c as u32 - 0xff61) as u8),
-                _ => Err(malformed("unencodable JIS X 0201 character")),
-            })
-            .collect(),
+        TextEncoding::ShiftJis => encode_cp932(text),
+        TextEncoding::JisX0201 => encode_jis_x_0201(text),
         TextEncoding::Table => Err(malformed("table encoding requires a map")),
     }
 }

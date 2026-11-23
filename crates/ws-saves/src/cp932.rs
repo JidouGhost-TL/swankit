@@ -19,11 +19,9 @@ pub(crate) fn decode(bytes: &[u8], errors: &str) -> Result<String> {
             index += 1;
             continue;
         }
-        if index + 1 < bytes.len() {
-            let (decoded, error) =
-                encoding_rs::SHIFT_JIS.decode_without_bom_handling(&bytes[index..index + 2]);
-            if !error {
-                text.push_str(&decoded);
+        if let Some(&trail) = bytes.get(index + 1) {
+            if let Some(ch) = formatkit_core::text::decode_cp932_pair(lead, trail) {
+                text.push(ch);
                 index += 2;
                 continue;
             }

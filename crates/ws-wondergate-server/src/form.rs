@@ -269,54 +269,10 @@ pub fn shift_jis(bytes: &[u8], replacement: bool) -> Result<String> {
     if bytes.len() > 512 {
         return Err(malformed("oversized Shift-JIS field"));
     }
-    let mut reader = Reader::new(bytes);
-    let mut text = String::new();
-    while reader.remaining() != 0 {
-        let lead = reader.u8()?;
-        if lead < 0x80 {
-            text.push(char::from(lead));
-            continue;
-        }
-        if (0xa1..=0xdf).contains(&lead) {
-            // This interval fits Unicode's half-width katakana block.
-            text.push(
-                char::from_u32(0xff61 + u32::from(lead - 0xa1))
-                    .ok_or_else(|| malformed("invalid half-width character"))?,
-            );
-            continue;
-        }
-        if ((0x81..=0x9f).contains(&lead) || (0xe0..=0xea).contains(&lead))
-            && lead != 0x87
-            && reader.remaining() != 0
-        {
-            let trail = bytes[reader.pos()];
-            let pair = [lead, trail];
-            if let Some(decoded) =
-                encoding_rs::SHIFT_JIS.decode_without_bom_handling_and_without_replacement(&pair)
-            {
-                reader.skip(1)?;
-                // JIS X 0208 mappings differ from Windows-31J at six points.
-                let standard = match u16::from_be_bytes(pair) {
-                    0x8160 => Some('\u{301c}'),
-                    0x8161 => Some('\u{2016}'),
-                    0x817c => Some('\u{2212}'),
-                    0x8191 => Some('\u{00a2}'),
-                    0x8192 => Some('\u{00a3}'),
-                    0x81ca => Some('\u{00ac}'),
-                    _ => None,
-                };
-                if let Some(character) = standard {
-                    text.push(character);
-                } else {
-                    text.push_str(&decoded);
-                }
-                continue;
-            }
-        }
-        if !replacement {
-            return Err(malformed("invalid Shift-JIS field"));
-        }
-        text.push('\u{fffd}');
+    if replacement {
+        Ok(formatkit_core::text::decode_shift_jis_jis0208_lossy(bytes))
+    } else {
+        formatkit_core::text::decode_shift_jis_jis0208(bytes)
+            .map_err(|_| malformed("invalid Shift-JIS field"))
     }
-    Ok(text)
 }
