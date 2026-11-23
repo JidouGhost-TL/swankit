@@ -11,21 +11,33 @@ import tomllib
 
 MARKERS = ("LICENSE", "LICENCE", "NOTICE", "COPYING", "COPYRIGHT", "UNLICENSE")
 
-# The published patch crate omits the workspace licenses. The core crate from
-# the same release commit contains the exact upstream root license files.
-PATCH_PACKAGE = ("formatkit-patch", "0.1.1")
-PATCH_CHECKSUM = "3f52f0aa583a4aa23467a59c9a90e95a4c6b01a86308acf5cabbaf35e539fb3b"
-PATCH_NOTICE_SOURCE = {
-    "repository": "https://github.com/JidouGhost-TL/formatkit",
-    "commit": "0b4d49adcbd28eebcc4ab48c4c5e4a1dd7ce213b",
-    "crate": "formatkit-core",
-    "version": "0.1.1",
-    "checksum": "44b87354d0873192aa4a6dd5d0376cbaa377efef7874c5fe3efe93618c41490d",
-}
+# These published patch versions omit the workspace notices. Their paired
+# core archives contain the upstream root notices at the same release commit.
+PATCH_PACKAGE = "formatkit-patch"
 PATCH_NOTICES = {
     "LICENSE-APACHE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
     "LICENSE-MIT": "06048a247dcb30b7118914e5fab9cc8e5d45f603b3c746fafc57f8fa62614662",
 }
+PATCH_ARCHIVES = {
+    "0.1.1": {
+        "patch_checksum": "3f52f0aa583a4aa23467a59c9a90e95a4c6b01a86308acf5cabbaf35e539fb3b",
+        "core_checksum": "44b87354d0873192aa4a6dd5d0376cbaa377efef7874c5fe3efe93618c41490d",
+        "commit": "0b4d49adcbd28eebcc4ab48c4c5e4a1dd7ce213b",
+        "notices": PATCH_NOTICES,
+    },
+    "0.1.4": {
+        "patch_checksum": "bf645547df1217294d86c6f1095770efd4fa0daaa8e6a8d45c8025b05232edd7",
+        "core_checksum": "bd99a028d234f1d7ee95e0c708eb011491661a1e628885151398b15c36876f20",
+        "commit": "3ee29c9c8ab6e7c769bcadd14e7ebed753af79f2",
+        "notices": {**PATCH_NOTICES, "NOTICE": "4fb3ac4cf8f901abf4065fab736992f17a61aff6e63107b8e7209e8f3588a0fe"},
+    },
+}
+
+
+def patch_notice_source(version):
+    pin = PATCH_ARCHIVES[version]
+    return {"repository": "https://github.com/JidouGhost-TL/formatkit", "commit": pin["commit"],
+            "crate": "formatkit-core", "version": version, "checksum": pin["core_checksum"]}
 
 
 def sha(raw):
@@ -65,11 +77,12 @@ def verify_bundle(root, lock_sha256=None):
             if len(raw) != item["bytes"] or sha(raw) != item["sha256"]:
                 raise ValueError("dependency notice bytes changed")
             expected.add(name)
-        if key == PATCH_PACKAGE:
+        if key[0] == PATCH_PACKAGE and key[1] in PATCH_ARCHIVES:
+            pin = PATCH_ARCHIVES[key[1]]
             notices = {x["source_path"]: x["sha256"] for x in package["licenses"]}
-            if (package.get("notice_source") != PATCH_NOTICE_SOURCE
-                    or package.get("registry_checksum") != PATCH_CHECKSUM
-                    or notices != PATCH_NOTICES or len(package["licenses"]) != len(PATCH_NOTICES)):
+            if (package.get("notice_source") != patch_notice_source(key[1])
+                    or package.get("registry_checksum") != pin["patch_checksum"]
+                    or notices != pin["notices"] or len(package["licenses"]) != len(pin["notices"])):
                 raise ValueError("Formatkit patch notice provenance differs")
     actual = set()
     for path in root.rglob("*"):
@@ -102,11 +115,12 @@ def registry_archive(cargo_home, name, version, checksum):
     return members
 
 
-def patch_notices(cargo_home, patch_archive, patch_checksum):
-    evidence = PATCH_NOTICE_SOURCE
+def patch_notices(cargo_home, patch_archive, patch_checksum, version):
+    pin = PATCH_ARCHIVES[version]
+    evidence = patch_notice_source(version)
     core_archive = registry_archive(cargo_home, evidence["crate"], evidence["version"], evidence["checksum"])
-    pairs = ((patch_archive, PATCH_PACKAGE[0]), (core_archive, evidence["crate"]))
-    if patch_checksum != PATCH_CHECKSUM:
+    pairs = ((patch_archive, PATCH_PACKAGE), (core_archive, evidence["crate"]))
+    if patch_checksum != pin["patch_checksum"]:
         raise ValueError("Formatkit patch archive identity differs")
     for members, name in pairs:
         manifest = tomllib.loads(members["Cargo.toml"].decode())["package"]
@@ -116,8 +130,8 @@ def patch_notices(cargo_home, patch_archive, patch_checksum):
                 or manifest.get("license") != "MIT OR Apache-2.0"
                 or source["sha1"] != evidence["commit"] or source.get("dirty")):
             raise ValueError("Formatkit shared notice source does not match release commit")
-    files = {name: core_archive[name] for name in PATCH_NOTICES}
-    if {name: sha(raw) for name, raw in files.items()} != PATCH_NOTICES:
+    files = {name: core_archive[name] for name in pin["notices"]}
+    if {name: sha(raw) for name, raw in files.items()} != pin["notices"]:
         raise ValueError("Formatkit notice bytes do not match published source")
     return files
 
@@ -159,11 +173,11 @@ def collect(metadata, lock_raw, cargo_home, output):
         record = {"name": name, "version": version, "declared_license": package.get("license"),
                   "source": source or "workspace", "registry_checksum": checksum, "licenses": []}
         files = {}
-        if (name, version) == PATCH_PACKAGE:
+        if name == PATCH_PACKAGE and version in PATCH_ARCHIVES:
             if archive_members is None or selected:
                 raise ValueError("unexpected Formatkit patch license input")
-            files = patch_notices(cargo_home, archive_members, checksum)
-            record["notice_source"] = PATCH_NOTICE_SOURCE
+            files = patch_notices(cargo_home, archive_members, checksum, version)
+            record["notice_source"] = patch_notice_source(version)
         else:
             for rel in selected:
                 path = root / rel

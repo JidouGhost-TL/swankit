@@ -7,6 +7,7 @@ from pathlib import Path
 import tarfile
 import tempfile
 import unittest
+from unittest.mock import patch
 
 SPEC = importlib.util.spec_from_file_location("dependency_licenses", Path(__file__).resolve().parents[1] / "collect-dependency-licenses.py")
 LICENSES = importlib.util.module_from_spec(SPEC)
@@ -70,6 +71,24 @@ class LicenseCollectionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "archive checksum"):
             self.collect()
         self.assertFalse(self.output.exists())
+
+    def test_patch_notice_bundle_requires_the_matching_release_source(self):
+        self.collect()
+        inventory_path = self.output / "DEPENDENCIES.json"
+        inventory = json.loads(inventory_path.read_bytes())
+        package = inventory["packages"][0]
+        version = "0.1.4"
+        pin = dict(LICENSES.PATCH_ARCHIVES[version], notices={"NOTICE": LICENSES.sha(self.notice)})
+        with patch.dict(LICENSES.PATCH_ARCHIVES, {version: pin}):
+            package.update(name="formatkit-patch", version=version, registry_checksum=pin["patch_checksum"],
+                           notice_source=LICENSES.patch_notice_source(version))
+            package["licenses"][0]["source_path"] = "NOTICE"
+            inventory_path.write_text(json.dumps(inventory))
+            LICENSES.verify_bundle(self.output)
+            package["notice_source"] = LICENSES.patch_notice_source("0.1.1")
+            inventory_path.write_text(json.dumps(inventory))
+            with self.assertRaisesRegex(ValueError, "Formatkit patch notice provenance"):
+                LICENSES.verify_bundle(self.output)
 
     def test_missing_modified_and_escaping_bundle_refuse(self):
         self.collect()

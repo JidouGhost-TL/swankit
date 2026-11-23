@@ -298,6 +298,18 @@ class ApprovalTests(unittest.TestCase):
         del changed[0]["checksum"]
         with self.assertRaises(ValueError):
             RELEASE.registry(lock(changed), metadata)
+        previous = [{**entry, "version": RELEASE.PREVIOUS_FORMATKIT_VERSION} for entry in entries]
+        with self.assertRaisesRegex(ValueError, "registry dependency version"):
+            RELEASE.registry(lock(previous), {"packages": previous})
+
+    def test_previous_full_packet_verifies_and_mixed_registry_versions_refuse(self):
+        dependencies = self.manifest["registry"]
+        for entry in dependencies.values():
+            entry["version"] = RELEASE.PREVIOUS_FORMATKIT_VERSION
+        RELEASE.validate_packet(self.packet, self.manifest)
+        dependencies["formatkit-core"]["version"] = RELEASE.FORMATKIT_VERSION
+        with self.assertRaisesRegex(ValueError, "invalid registry evidence"):
+            RELEASE.validate_packet(self.packet, self.manifest)
 
     def test_previous_release_packet_keeps_its_historical_registry_pins(self):
         old = self.manifest["registry"].pop("formatkit-patch")
