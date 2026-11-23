@@ -1,5 +1,5 @@
 use crate::{Media, SaveImage};
-use formatkit_core::{Endian, Error, Result};
+use formatkit_core::{bcd_to_u8, Endian, Error, Result};
 use formatkit_layout::{BytesField, U16Field, U8Field};
 
 /// BCD owner birthday; invalid/unset values remain visible in the raw bytes.
@@ -25,10 +25,6 @@ pub struct OwnerProfile {
     pub startup_counter: u16,
     pub color_configuration: Option<u8>,
     pub name_color: Option<u8>,
-}
-
-fn bcd(value: u8) -> Option<u8> {
-    ((value >> 4) < 10 && (value & 15) < 10).then_some((value >> 4) * 10 + (value & 15))
 }
 
 impl OwnerProfile {
@@ -60,9 +56,9 @@ impl OwnerProfile {
         let birthday_raw: [u8; 4] = *BytesField::<4>::new(0x70).read(bytes)?;
         let birthday = (|| {
             let [hi, lo, month, day] = birthday_raw;
-            let year = u16::from(bcd(hi)?) * 100 + u16::from(bcd(lo)?);
-            let month = bcd(month)?;
-            let day = bcd(day)?;
+            let year = u16::from(bcd_to_u8(hi)?) * 100 + u16::from(bcd_to_u8(lo)?);
+            let month = bcd_to_u8(month)?;
+            let day = bcd_to_u8(day)?;
             let leap =
                 year.is_multiple_of(4) && (!year.is_multiple_of(100) || year.is_multiple_of(400));
             let days = match month {
