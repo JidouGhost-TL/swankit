@@ -2,6 +2,7 @@
 pub mod byte;
 pub mod cell;
 pub mod sdk;
+pub mod sdk_driver;
 
 use formatkit_core::{bytes_at, Error, Result};
 use ws_rom::{BankState, RomGeometry};

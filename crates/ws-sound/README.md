@@ -15,7 +15,9 @@ private crate inherits the workspace publication policy.
 | `drivers::byte` | Distinct A/B/C headers and command lengths, two-group varlens, direct mode, PCM SE commands and mask-zero C PCM descriptors |
 | `drivers::cell` | Four-byte directory groups, 13-byte song records, PCM descriptors and four-byte track cells |
 | `drivers::sdk` | Standard six-byte track and eight-byte voice records, two-byte cells and linked pitch lookup |
+| `drivers::sdk_driver` | Tick-level standard SDK driver model: driver state as data-segment bytes, reset/play/voice-stop/first-track entries and per-tick ordered sound-port and wave-RAM writes |
 | `render::render` | Ordered frame events to 24 kHz signed stereo PCM |
+| `render::render_cycles` | Ordered CPU-cycle events to 24 kHz PCM, each applied at its own cycle, with an explicit counter-reload rule |
 | `drivers::sdk::render_sequence` | A bounded single-track preview of notes, rests, volume, wave selection, A7 waits and reserved cells |
 | `render::unsigned_pcm` | Unsigned 8-bit samples to signed PCM at an explicitly supplied source rate |
 
@@ -71,6 +73,27 @@ adds unsigned channel values, shifts by five and wraps additions with Hyper
 Voice to 16 bits. `render_coupled` uses the Java listening preview's floating
 phase and one-pole DC filter (coefficient 0.0005). Its occasional floating phase
 edge differs from integer phase; the filter is not a hardware circuit model.
+
+`drivers::sdk_driver::SdkDriver` steps the standard tick (C035/C036/C042
+bodies), cell fetch (C016/C019), volume slide, channel-off helper, play
+cascade, reset and voice stop from the owner's reconstruction. Its state is a
+64 KiB data-segment image, so unchecked loop slots and other overlapping
+fields behave as stored bytes do. Every linked RAM and table location is a
+caller-supplied `SdkLink`; the crate does not locate drivers. Writes are
+recorded with the tick count, in program order; a word OUT records the low then
+the high port. Port readback follows WSdev Sound: 91h bit 7 reports the caller's
+headphone state and the other ports return their last write. Not modelled:
+sweep changes to the channel 3 divider as seen by the driver's 84h read (the
+model reads the last written value), voice notes (sample start and the IRQ
+pump; reaching one returns `Unsupported`) and sound DMA. The
+`sdk_oracle_diff` example replays a captured entry schedule through the model
+and diffs its writes and RAM against a captured register stream per tick.
+
+`render_cycles` applies each event at its own CPU cycle and samples the mix at
+the end of every 128-cycle frame. WSdev Sound gives the sample period but not
+what a divisor change does to a running counter: `CounterReload::Remainder`
+keeps elapsed cycles against the new period, `NextPeriod` lets the current
+period finish. Neither is a hardware claim; see the hardware notes.
 
 The renderer does not execute driver code, resolve full call/loop/envelope
 state, emulate sound DMA or an IRQ sample pump, implement the speaker path or

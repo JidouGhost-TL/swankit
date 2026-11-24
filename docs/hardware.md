@@ -180,6 +180,30 @@ DC filter in `render_coupled` are retained solely as listening-preview conventio
 they do not specify hardware timing or analog filtering. Default rendering uses
 integer phase. The crate README documents further rendering limits.
 
+### Driver model readback and render timing assumptions
+
+The SDK driver model reads ports 90h, 91h and 84h/85h. It returns the last
+written value, except that 91h bit 7 is the read-only headphone flag (WSdev
+Sound). The model does not apply sweep steps to its 84h readback; the driver
+compares that word with 0096h, so songs that sweep channel 3 low enough can
+diverge (none of the development songs used sweep). `render_cycles` applies
+writes at their CPU cycle; the default frame renderer applies them at the start
+of the 128-cycle frame. The counter-reload choice on a divisor change is an
+explicit option, because the documentation does not state it.
+
+Reference-emulator recordings were compared against original generated
+single-channel fixtures (job-local, not in this repository). The recorder's
+48 kHz file is a band-limited 2x upsampling of a 24 kHz stream with a one-pole
+DC blocker (about 0.9979 per 48 kHz sample); its even samples reproduce the
+24 kHz mix to 0.014 LSB. Channel disable silences the channel and re-enable
+resumes its index, as documented. The noise bit sequence after a reset matches
+the WSdev algorithm with one step per sample period. Behaviour the
+documentation does not cover, and which is not adopted here: the recorder's
+first index or LFSR step comes within about one output sample of the enable
+write rather than one period later, and long periods (777 and 1000 cycles)
+step up to about 150 cycles off any fixed grid, while a 100-cycle period stays
+on its grid. These remain emulator observations, not hardware rules.
+
 ## Save media and internal EEPROM
 
 [WSdev EEPROM](https://ws.nesdev.org/wiki/EEPROM) documents cartridge capacities
