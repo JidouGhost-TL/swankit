@@ -19,6 +19,7 @@ mod png;
 mod png_read;
 #[cfg(feature = "saves")]
 mod save;
+mod sound;
 mod wg_server;
 use args::Args;
 use serde_json::{json, Value};
@@ -37,6 +38,7 @@ const HELP: &str = "swankit: WonderSwan format tools
   extract font ROM --def JSON_OR_ID --font NAME --output PNG [--columns N]
   extract sound FILE --def JSON [--output JSON] [--json]
   extract codec FILE --def JSON --output FILE [--json]
+  sound sdk-render --rom ROM --link LINK.json --song N --ticks N --out-json JSON [--out-wav WAV] [--out-events FILE] [--reload-mode next-period|immediate] [--tracks N] [--initial-phase N] [--force] [--json]
   save decode DEF_OR_AUTO SAVE [--context JSON] [--json]
   save set DEF_OR_AUTO SAVE --field INDEX --value JSON --output SAVE [--all-copies] [--skip-validation] [--no-repair] [--context JSON]
   save fix DEF_OR_AUTO SAVE --output SAVE [--context JSON]
@@ -153,6 +155,7 @@ fn command_help(words: &[String]) -> Result<bool> {
             assets::HELP.to_owned()
         }
         ["link"] => link::HELP.to_owned(),
+        ["sound"] | ["sound", "sdk-render"] => sound::HELP.to_owned(),
         ["wg-adapter"] => wg::ADAPTER_HELP.to_owned(),
         ["wg-decode"] => wg::DECODE_HELP.to_owned(),
         ["info" | "detect" | "tiles" | "extract" | "patch" | "wg-server" | "interop"]
@@ -553,6 +556,7 @@ fn run(words: Vec<String>) -> Result<()> {
                 Err("save commands require the saves feature".into())
             }
         }
+        "sound" => sound::run(a, json_mode),
         _ => Err("unknown command; see swankit --help".into()),
     }
 }

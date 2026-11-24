@@ -265,6 +265,17 @@ and a positive `sample_rate`; samples become signed 16-bit values using
 `(n - 128) * 256`. The rate is supplied by the caller, not detected from bytes.
 These operations export JSON; Python's `Pcm.s16le()` supplies raw PCM bytes.
 
+### SDK sound driver simulation and rendering
+
+```sh
+swankit sound sdk-render --rom cartridge.ws --link link.json --song 1 --ticks 4800 \
+  --out-json meta.json --out-wav song.wav --out-events events.tsv --reload-mode next-period
+```
+
+`sound sdk-render` drives the tick-level standard SDK two-byte-cell sound model (`ws_sound::drivers::sdk_driver::SdkDriver`) using caller-supplied linked addresses from `--link` (`segment_file_offset`, `link`, optional `headphones`, `tracks_per_song`, `cycles_per_tick`, `song_count`, `songs`). It resets the driver, starts the selected song's tracks, and steps `--ticks` ticks (bounded at 100,000 ticks; WAV rendering also enforces `ws_sound::render::MAX_FRAMES`).
+
+Outputs are computed in memory before writing so any invalid ROM, missing link field, out-of-range song index, unsupported effect (such as voice notes), or pre-existing destination without `--force` exits non-zero with zero partial outputs. `--out-json` writes a `swankit-sdk-sound/1` summary; optional `--out-events` writes per-write register events (`.json` array or tab-separated `tick\tcycle\tkind\ttarget\tvalue`); optional `--out-wav` renders 24 kHz stereo PCM via `ws_sound::render::render_cycles` with `--reload-mode next-period` (default) or `immediate`. Optional `--tracks N` overrides the track count per song (1..=8), and `--initial-phase N` (0..=255) sets the initial vibrato phase counter.
+
 ## IPS patches
 
 ```sh
