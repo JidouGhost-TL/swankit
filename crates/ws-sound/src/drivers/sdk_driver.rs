@@ -859,3 +859,35 @@ impl<'a> SdkDriver<'a> {
         Ok(())
     }
 }
+
+/// Outcome of replaying a captured schedule through the model. Stream
+/// equality is meaningful only for a run that completed every captured tick
+/// without a model error; [`OracleVerdict::passed`] requires all of it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OracleVerdict {
+    pub oracle_ticks: u32,
+    pub model_ticks: u32,
+    pub model_error: Option<String>,
+    pub ports_equal: bool,
+    pub waves_equal: bool,
+    pub ram_equal: bool,
+}
+
+impl OracleVerdict {
+    /// The model ran to the end of the capture without an error.
+    pub fn complete(&self) -> bool {
+        self.model_error.is_none() && self.model_ticks == self.oracle_ticks
+    }
+    pub fn port_exact(&self) -> bool {
+        self.complete() && self.ports_equal
+    }
+    pub fn wave_exact(&self) -> bool {
+        self.complete() && self.waves_equal
+    }
+    pub fn ram_exact(&self) -> bool {
+        self.complete() && self.ram_equal
+    }
+    pub fn passed(&self) -> bool {
+        self.port_exact() && self.wave_exact() && self.ram_exact()
+    }
+}

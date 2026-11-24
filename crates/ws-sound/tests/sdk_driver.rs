@@ -1,6 +1,8 @@
 //! Synthetic records for the tick-level SDK driver model. Expected writes are
 //! derived by hand from the cell grammar and the WSdev Sound register rules.
-use ws_sound::drivers::sdk_driver::{MuteTail, SdkDriver, SdkGlobals, SdkLink, Target, Write};
+use ws_sound::drivers::sdk_driver::{
+    MuteTail, OracleVerdict, SdkDriver, SdkGlobals, SdkLink, Target, Write,
+};
 
 const PITCH: u16 = 0x0100;
 const WAVES: u16 = 0x0200;
@@ -272,4 +274,72 @@ fn start_rejects_out_of_range_counts() {
     let mut model = SdkDriver::new(link(), &data, true).unwrap();
     assert!(model.start(0, 0).is_err());
     assert!(model.start(0, 9).is_err());
+}
+
+/// Replays `ticks` ticks and compares the writes with `oracle`, the way the
+/// oracle diff does: a model error stops the replay.
+fn replay(data: &[u8], ticks: u32, oracle: &[Write]) -> OracleVerdict {
+    let mut model = started(data);
+    let mut error = None;
+    for _ in 0..ticks {
+        if let Err(e) = model.tick() {
+            error = Some(e.to_string());
+            break;
+        }
+    }
+    let compared: Vec<Write> = oracle
+        .iter()
+        .copied()
+        .filter(|w| w.tick < model.ticks)
+        .collect();
+    OracleVerdict {
+        oracle_ticks: ticks,
+        model_ticks: model.ticks,
+        model_error: error,
+        ports_equal: compared
+            == model
+                .writes
+                .iter()
+                .copied()
+                .filter(|w| w.tick < model.ticks)
+                .collect::<Vec<_>>(),
+        waves_equal: true,
+        ram_equal: true,
+    }
+}
+
+#[test]
+fn complete_replay_passes() {
+    let data = segment(0, &[0x00, 0x00, 0x0f, 0x00, 0x10, 0x03, 0xff, 0xff], 0x0400);
+    let mut reference = started(&data);
+    for _ in 0..4 {
+        reference.tick().unwrap();
+    }
+    let verdict = replay(&data, 4, &reference.writes);
+    assert!(verdict.complete() && verdict.passed());
+}
+
+#[test]
+fn truncated_replay_fails_even_when_its_prefix_matches() {
+    // Channel index 1 in voice mode: the first note is an unmodelled voice
+    // note, so the model stops at tick 0. The empty prefix "matches" an empty
+    // oracle prefix, which must not count as a pass.
+    let data = segment(1, &[0x00, 0x02, 0x0f, 0x01, 0x10, 0x04, 0xff, 0x00], 0x0400);
+    let verdict = replay(&data, 100, &[]);
+    assert!(verdict.ports_equal);
+    assert!(verdict.model_error.is_some());
+    assert_eq!(verdict.model_ticks, 0);
+    assert!(!verdict.complete());
+    assert!(!verdict.port_exact() && !verdict.wave_exact() && !verdict.ram_exact());
+    assert!(!verdict.passed());
+    // A run that stops early without an error is also incomplete.
+    let short = OracleVerdict {
+        oracle_ticks: 10,
+        model_ticks: 9,
+        model_error: None,
+        ports_equal: true,
+        waves_equal: true,
+        ram_equal: true,
+    };
+    assert!(!short.passed());
 }

@@ -14,7 +14,7 @@
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
-use ws_sound::drivers::sdk_driver::{field, SdkDriver, SdkLink, Target};
+use ws_sound::drivers::sdk_driver::{field, OracleVerdict, SdkDriver, SdkLink, Target};
 
 #[derive(Deserialize)]
 struct Config {
@@ -430,22 +430,33 @@ fn main() {
             )
         });
 
+    let verdict = OracleVerdict {
+        oracle_ticks: tick_seqs.len() as u32,
+        model_ticks: last_tick,
+        model_error: model_error.clone(),
+        ports_equal: first_port_divergence.is_none() && o_ports.len() == m_ports.len(),
+        waves_equal: wave_first.is_none(),
+        ram_equal: ram_mismatch.is_none(),
+    };
     let summary = serde_json::json!({
         "oracle": dir,
         "ticks": last_tick,
+        "oracle_ticks": verdict.oracle_ticks,
+        "model_complete": verdict.complete(),
+        "pass": verdict.passed(),
         "from_tick": config.from_tick,
         "port_writes_oracle": o_ports.len(),
         "port_writes_model": m_ports.len(),
         "port_writes_matched_prefix": matched,
-        "port_exact": first_port_divergence.is_none() && o_ports.len() == m_ports.len(),
+        "port_exact": verdict.port_exact(),
         "first_port_divergence": first_port_divergence,
         "wave_words_oracle": o_waves.len(),
         "wave_words_model": m_waves.len(),
         "wave_values_16bit": wide_waves,
-        "wave_exact": wave_first.is_none(),
+        "wave_exact": verdict.wave_exact(),
         "first_wave_divergence": wave_first,
         "ram_ticks_compared": ram_ticks_compared,
-        "ram_exact": ram_mismatch.is_none(),
+        "ram_exact": verdict.ram_exact(),
         "first_ram_divergence": ram_mismatch,
         "foreign_writes": foreign.len(),
         "foreign_examples": foreign.iter().take(8).collect::<Vec<_>>(),
@@ -457,10 +468,7 @@ fn main() {
     // the matching oracle write ("oracle", exact streams only).
     if let (Some(spec), Some(path)) = (args.get(5), args.get(6)) {
         let (mode, renderer) = spec.split_once(':').unwrap_or((spec.as_str(), "frame"));
-        let exact = first_port_divergence.is_none()
-            && o_ports.len() == m_ports.len()
-            && wave_first.is_none()
-            && config.from_tick == 0;
+        let exact = verdict.passed() && config.from_tick == 0;
         let mut cycles = write_cycles.clone();
         if mode == "oracle" {
             assert!(exact, "oracle timing needs an exact full-length stream");
@@ -555,4 +563,7 @@ fn main() {
         std::fs::write(format!("{out}.model.tsv"), model_tsv).expect("write model writes");
     }
     println!("{text}");
+    if !verdict.passed() {
+        std::process::exit(1);
+    }
 }
