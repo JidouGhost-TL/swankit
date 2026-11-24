@@ -94,6 +94,7 @@ fn sdk_link() -> SdkLink {
         sweep_table: SWEEP,
         track_table: TRACKS,
         voice_state: 0x55f,
+        voice_table: None,
         mute_tail: MuteTail::SavedPointer,
     }
 }
@@ -431,4 +432,97 @@ fn sound_sdk_refuses_bad_inputs_with_zero_partial_outputs() {
     assert!(!r.status.success());
     assert!(!PathBuf::from(&j5).exists());
     assert_eq!(fs::read(&w5).unwrap(), b"keep");
+}
+
+#[test]
+fn sound_sdk_voice_note_renders_wav_with_voice_table() {
+    const VOICE_TABLE: u16 = 0x0800;
+    let fixture = Fixture::new();
+    // Build a 64 KiB ROM so RomGeometry accepts it and bank 0xff maps to 0x0000..0xffff.
+    let mut rom = vec![0u8; 0x10000];
+    let seg = synthetic_segment(1, &[0x00, 0x00, 0x0f, 0x01, 0x01, 0x00, 0xff, 0xff], 0x0400);
+    rom[..seg.len()].copy_from_slice(&seg);
+    // Voice descriptor #0 at VOICE_TABLE: ptr=0x2000, bank=0x00ff, len=32, next=0xffff.
+    rom[usize::from(VOICE_TABLE)..usize::from(VOICE_TABLE) + 8]
+        .copy_from_slice(&[0x00, 0x20, 0xff, 0x00, 0x20, 0x00, 0xff, 0xff]);
+    // Non-constant unsigned PCM bytes at file offset 0x2000.
+    for i in 0..32usize {
+        rom[0x2000 + i] = if i % 2 == 0 { 0xf0 } else { 0x10 };
+    }
+    let rom_path = fixture.put("voice64k.rom", &rom);
+    let mut link = sdk_link();
+    link.voice_table = Some(VOICE_TABLE);
+    let link_path = fixture.json(
+        "voice-link.json",
+        json!({
+            "segment_file_offset": 0,
+            "tracks_per_song": 1,
+            "song_count": 1,
+            "link": link,
+        }),
+    );
+    let out_json = fixture.path("voice-meta.json");
+    let out_wav = fixture.path("voice.wav");
+    let r = command(&[
+        "sound",
+        "sdk-render",
+        "--rom",
+        &rom_path,
+        "--link",
+        &link_path,
+        "--song",
+        "0",
+        "--ticks",
+        "2",
+        "--out-json",
+        &out_json,
+        "--out-wav",
+        &out_wav,
+    ]);
+    assert!(
+        r.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&r.stderr)
+    );
+    let meta: Value = serde_json::from_slice(&fs::read(&out_json).unwrap()).unwrap();
+    assert_eq!(meta["voice_triggers"], 1);
+    assert!(fs::read(&out_wav).unwrap().len() > 44);
+
+    // Reject missing both --link and --auto-link, or specifying both.
+    let bad = command(&[
+        "sound",
+        "sdk-render",
+        "--rom",
+        &rom_path,
+        "--song",
+        "0",
+        "--ticks",
+        "2",
+        "--out-json",
+        &fixture.path("bad.json"),
+    ]);
+    assert!(!bad.status.success());
+
+    // sdk-discover and --auto-link reject non-SDK ROM cleanly (and --auto-link takes no value).
+    let bad_disc = command(&["sound", "sdk-discover", "--rom", &rom_path]);
+    assert!(!bad_disc.status.success());
+    let bad_auto = command(&[
+        "sound",
+        "sdk-render",
+        "--rom",
+        &rom_path,
+        "--auto-link",
+        "--song",
+        "0",
+        "--ticks",
+        "2",
+        "--out-json",
+        &fixture.path("bad-auto.json"),
+    ]);
+    assert!(!bad_auto.status.success());
+    assert!(
+        !String::from_utf8_lossy(&bad_auto.stderr).contains("missing value for --auto-link"),
+        "stderr: {}",
+        String::from_utf8_lossy(&bad_auto.stderr)
+    );
 }

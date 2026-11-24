@@ -31,6 +31,7 @@ impl Args {
                     | "--all-copies"
                     | "--skip-validation"
                     | "--no-repair"
+                    | "--auto-link"
             ) {
                 if !out.flags.insert(word.clone()) {
                     return Err(format!("duplicate option: {word}").into());

@@ -43,6 +43,7 @@ fn link() -> SdkLink {
         sweep_table: SWEEP,
         track_table: TRACKS,
         voice_state: 0x55f,
+        voice_table: None,
         mute_tail: MuteTail::SavedPointer,
     }
 }
@@ -342,4 +343,62 @@ fn truncated_replay_fails_even_when_its_prefix_matches() {
         ram_equal: true,
     };
     assert!(!short.passed());
+}
+
+#[test]
+fn voice_note_loads_descriptor_and_enables_voice_mode() {
+    const VOICE_TABLE: u16 = 0x0800;
+    let mut data = segment(1, &[0x00, 0x02, 0x0f, 0x01, 0x01, 0x00, 0xff, 0xff], 0x0400);
+    // Descriptor #2 at VOICE_TABLE + 16: ptr=0x1234, bank=0x00ef, len=0x0400, next=0xffff.
+    let at = usize::from(VOICE_TABLE + 2 * 8);
+    data[at..at + 8].copy_from_slice(&[0x34, 0x12, 0xef, 0x00, 0x00, 0x04, 0xff, 0xff]);
+    let mut lnk = link();
+    lnk.voice_table = Some(VOICE_TABLE);
+    let mut model = SdkDriver::new(lnk, &data, true).unwrap();
+    model.reset(0).unwrap();
+    model.writes.clear();
+    model.start(0, 1).unwrap();
+    model.tick().unwrap();
+    let tick0 = ports(&model.writes, 0);
+    // start_voice writes 89h=00, 90h|=22 (40|22=62), 94h=0f; merge_control writes 90h=62.
+    assert!(tick0.contains(&(0x89, 0x00)));
+    assert!(tick0.contains(&(0x90, 0x62)));
+    assert!(tick0.contains(&(0x94, 0x0f)));
+    assert_eq!(model.ram[usize::from(lnk.globals.voice_active)], 1);
+    assert_eq!(u16::from_le_bytes([model.ram[0x55f], model.ram[0x560]]), 2);
+    assert_eq!(
+        u16::from_le_bytes([model.ram[0x561], model.ram[0x562]]),
+        0x1234
+    );
+    assert_eq!(
+        u16::from_le_bytes([model.ram[0x563], model.ram[0x564]]),
+        0x0400
+    );
+    assert_eq!(
+        u16::from_le_bytes([model.ram[0x565], model.ram[0x566]]),
+        0xffff
+    );
+    assert_eq!(model.ram[0x567], 0xef);
+    assert_eq!(model.voice_triggers.len(), 1);
+    assert_eq!(model.voice_triggers[0].sample_id, 2);
+    assert_eq!(model.voice_triggers[0].hblank_reload, 1);
+}
+
+#[test]
+fn sweep_readback_triggers_channel_three_mute_below_96h() {
+    // Channel 2 (index 2), pitch word 0x0760 -> divisor 0x00a0 (>= 0x0096).
+    // Sweep operand 0x01: sweep_ticks = 0 (every 1*8192 cycles), sweep_table[0] = -16 (0xf0).
+    let mut data = segment(2, &[0x00, 0x00, 0x0f, 0x01, 0x00, 0x04, 0xff, 0x00], 0x0760);
+    data[usize::from(SWEEP)] = 0xf0; // -16 signed
+    let mut model = started(&data);
+    // Tick 0: sets divisor 0x00a0, 8Dh=0, 8Ch=0xf0, enables ch3 (90h=0x44). Not muted yet.
+    model.tick().unwrap();
+    assert_eq!(model.ram[0x4a8 + 0x10..0x4a8 + 0x12], [0xa0, 0x00]);
+    // Advance 8192 cycles -> one sweep step: 0x00a0 - 16 = 0x0090 (< 0x0096).
+    model.advance_hardware(8192);
+    model.tick().unwrap();
+    let tick1 = ports(&model.writes, 1);
+    assert!(tick1.contains(&(0x84, 0x00)));
+    assert!(tick1.contains(&(0x85, 0x00)));
+    assert_eq!(model.ram[0x4a8 + 0x10..0x4a8 + 0x12], [0x00, 0x00]);
 }

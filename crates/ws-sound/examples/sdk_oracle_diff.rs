@@ -34,6 +34,19 @@ struct Config {
     from_tick: u32,
     #[serde(default)]
     wave_ram_lo: Option<u16>,
+    /// When true, sound-port writes from game code outside the SDK driver are
+    /// applied to `model.ports` in sequence order (without recording them as
+    /// driver writes) so readback matches hardware state.
+    #[serde(default)]
+    apply_foreign_ports: bool,
+    /// Optional inclusive RAM ranges mutated by game-side ISRs (e.g. HBlank
+    /// voice-sample pointer/length) excluded from driver-RAM equality checks.
+    #[serde(default)]
+    ignore_ram_ranges: Vec<[u16; 2]>,
+    /// When true, drop a single trailing tick entry if the capture stopped
+    /// mid-tick before any port writes for that tick were logged.
+    #[serde(default)]
+    trim_incomplete_last_tick: bool,
 }
 
 #[derive(Deserialize, Clone, Copy)]
@@ -42,6 +55,8 @@ enum Call {
     Reset,
     StopVoice,
     ClearVoice,
+    StartVoice,
+    NextVoice,
     Start { count: u16 },
     Deferred,
     FirstTrack { first: u8, shadow: Shadow },
@@ -76,6 +91,12 @@ enum Ev {
         entry: usize,
         ax: u16,
         cx: u16,
+    },
+    ForeignPort {
+        seq: u64,
+        cycle: u64,
+        port: u8,
+        value: u8,
     },
 }
 
@@ -182,7 +203,7 @@ fn main() {
         });
     }
     let seq_of = |e: &Ev| match e {
-        Ev::Tick { seq, .. } | Ev::Call { seq, .. } => *seq,
+        Ev::Tick { seq, .. } | Ev::Call { seq, .. } | Ev::ForeignPort { seq, .. } => *seq,
     };
     events.sort_by_key(seq_of);
     let tick_seqs: Vec<u64> = events
@@ -213,6 +234,14 @@ fn main() {
                 "frame {} port {port:02x}={value:02x} site {site:06x}",
                 r[1]
             ));
+            if config.apply_foreign_ports && (0x80..=0x94).contains(&port) {
+                events.push(Ev::ForeignPort {
+                    seq,
+                    cycle: r[2].parse().unwrap(),
+                    port,
+                    value: value as u8,
+                });
+            }
             continue;
         };
         oracle.push(W {
@@ -258,6 +287,25 @@ fn main() {
         .collect();
     let wide_waves = rows(dir, "wram.tsv").iter().any(|r| r[4].len() > 2);
 
+    // Re-sort events if foreign port writes were added.
+    if config.apply_foreign_ports {
+        events.sort_by_key(seq_of);
+    }
+    let mut tick_count = tick_seqs.len() as u32;
+    if config.trim_incomplete_last_tick {
+        if let Some(Ev::Tick { seq: last_seq, .. }) = events.last() {
+            let max_port_seq = rows(dir, "ports.tsv")
+                .iter()
+                .map(|r| r[0].parse::<u64>().unwrap())
+                .max()
+                .unwrap_or(0);
+            if *last_seq > max_port_seq {
+                events.pop();
+                tick_count = tick_count.saturating_sub(1);
+            }
+        }
+    }
+
     // Model replay.
     let mut model = SdkDriver::new(config.link, data, config.headphones).expect("model");
     let mut ram_mismatch: Option<String> = None;
@@ -266,15 +314,28 @@ fn main() {
     let mut ram_ticks_compared = 0u64;
     let mut snapshots: Vec<Vec<u8>> = Vec::new();
     let mut write_cycles: Vec<u64> = Vec::new();
+    let mut prev_cycle: Option<u64> = None;
     for event in &events {
         let before = model.writes.len();
         let event_cycle = match event {
-            Ev::Tick { cycle, .. } | Ev::Call { cycle, .. } => *cycle,
+            Ev::Tick { cycle, .. } | Ev::Call { cycle, .. } | Ev::ForeignPort { cycle, .. } => {
+                *cycle
+            }
         };
+        if let Some(prev) = prev_cycle {
+            if event_cycle > prev {
+                let delta = (event_cycle - prev).min(u64::from(u32::MAX)) as u32;
+                model.advance_hardware(delta);
+            }
+        }
+        prev_cycle = Some(event_cycle);
         let result = match event {
+            Ev::ForeignPort { port, value, .. } => model.ports.write(*port, *value),
             Ev::Call { entry, ax, cx, .. } => match calls.get(entry) {
                 Some(Call::Reset) => model.reset(0),
                 Some(Call::StopVoice) => model.stop_voice(),
+                Some(Call::StartVoice) => model.start_voice(*ax, *cx as u8),
+                Some(Call::NextVoice) => model.next_voice(),
                 Some(Call::Start { count }) => model.start(*ax, *count),
                 Some(Call::Deferred) => {
                     model.set_deferred((cx >> 8) as u8, *cx as u8);
@@ -307,6 +368,13 @@ fn main() {
                         let at = lo + i;
                         if at > usize::from(config.ram_hi) {
                             break;
+                        }
+                        if config
+                            .ignore_ram_ranges
+                            .iter()
+                            .any(|r| usize::from(r[0]) <= at && at <= usize::from(r[1]))
+                        {
+                            continue;
                         }
                         if model.ram[at] != b {
                             ram_mismatch = Some(format!(
@@ -431,7 +499,7 @@ fn main() {
         });
 
     let verdict = OracleVerdict {
-        oracle_ticks: tick_seqs.len() as u32,
+        oracle_ticks: tick_count,
         model_ticks: last_tick,
         model_error: model_error.clone(),
         ports_equal: first_port_divergence.is_none() && o_ports.len() == m_ports.len(),
@@ -520,7 +588,9 @@ fn main() {
         let last_cycle = events
             .iter()
             .map(|e| match e {
-                Ev::Tick { cycle, .. } | Ev::Call { cycle, .. } => *cycle,
+                Ev::Tick { cycle, .. } | Ev::Call { cycle, .. } | Ev::ForeignPort { cycle, .. } => {
+                    *cycle
+                }
             })
             .max()
             .unwrap_or(0);

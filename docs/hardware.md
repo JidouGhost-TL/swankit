@@ -184,12 +184,15 @@ integer phase. The crate README documents further rendering limits.
 
 The SDK driver model reads ports 90h, 91h and 84h/85h. It returns the last
 written value, except that 91h bit 7 is the read-only headphone flag (WSdev
-Sound). The model does not apply sweep steps to its 84h readback; the driver
-compares that word with 0096h, so songs that sweep channel 3 low enough can
-diverge (none of the development songs used sweep). `render_cycles` applies
-writes at their CPU cycle; the default frame renderer applies them at the start
-of the 128-cycle frame. The counter-reload choice on a divisor change is an
-explicit option, because the documentation does not state it.
+Sound) and ports 84h/85h advance under Channel 3 hardware sweep when
+`advance_hardware` is stepped (375 Hz = 8192 CPU cycles per tick; writing 8Dh
+resets the sweep tick counter). Banked voice notes (Channel 2 PCM) load the
+four-word descriptor from `voice_table`, enable voice mode (90h |= 22h, 94h =
+0Fh), and step their HBlank countdown at `max(1, reload) * 256` CPU cycles per
+sample (WSdev Timers). `render_cycles` applies writes at their CPU cycle; the
+default frame renderer applies them at the start of the 128-cycle frame. The
+counter-reload choice on a divisor change is an explicit option, because the
+documentation does not state it.
 
 Reference-emulator recordings were compared against original generated
 single-channel fixtures (job-local, not in this repository). The recorder's

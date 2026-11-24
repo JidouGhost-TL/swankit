@@ -84,8 +84,12 @@ pub struct SdkLink {
     pub vibrato_table: u16,
     pub sweep_table: u16,
     pub track_table: u16,
-    /// Four voice-state words (sample id, pointer, length, next id).
+    /// Four voice-state words (sample id, pointer, length, next id) followed by
+    /// the banked voice-sample bank byte at `+8`.
     pub voice_state: u16,
+    /// Optional 8-byte-per-entry voice descriptor table offset in the driver segment.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub voice_table: Option<u16>,
     pub mute_tail: MuteTail,
 }
 
@@ -106,10 +110,17 @@ pub struct Write {
 }
 
 /// Sound port latch with the readback behaviour the driver depends on.
+///
+/// Tracks hardware Channel 3 sweep stepping (WSdev Sound: when SND_CTRL bits
+/// 2 and 6 are set, every `(sweep_ticks + 1) * 8192` CPU cycles the signed
+/// sweep amount in port 8Ch is added modulo 2048 to the channel 3 divisor in
+/// ports 84h..85h; writing port 8Dh resets the internal tick counter).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PortLatch {
     ports: [u8; 0x15],
     pub headphones: bool,
+    sweep_cycles: u32,
+    sweep_ticks: u8,
 }
 
 impl PortLatch {
@@ -117,6 +128,8 @@ impl PortLatch {
         Self {
             ports: [0; 0x15],
             headphones,
+            sweep_cycles: 0,
+            sweep_ticks: 0,
         }
     }
     fn index(port: u8) -> Result<usize> {
@@ -137,9 +150,45 @@ impl PortLatch {
         })
     }
     pub fn write(&mut self, port: u8, value: u8) -> Result<()> {
-        self.ports[Self::index(port)?] = value;
+        let idx = Self::index(port)?;
+        self.ports[idx] = value;
+        if port == 0x8d {
+            self.sweep_ticks = 0;
+        }
         Ok(())
     }
+    /// Advance the hardware Channel 3 sweep counter by `cycles` CPU cycles
+    /// (WSdev Sound: 375 Hz sweep clock = 1 tick per 8192 cycles at 3.072 MHz).
+    pub fn advance_sweep(&mut self, cycles: u32) {
+        if self.ports[0x10] & 0x44 != 0x44 {
+            return;
+        }
+        self.sweep_cycles = self.sweep_cycles.saturating_add(cycles);
+        while self.sweep_cycles >= 8192 {
+            self.sweep_cycles -= 8192;
+            self.sweep_ticks = self.sweep_ticks.wrapping_add(1);
+            if self.sweep_ticks > (self.ports[0x0d] & 0x1f) {
+                self.sweep_ticks = 0;
+                let div = u16::from(self.ports[4]) | (u16::from(self.ports[5]) << 8);
+                let delta = i32::from(self.ports[0x0c] as i8);
+                let next = ((i32::from(div) + delta) & 0x7ff) as u16;
+                self.ports[4] = next as u8;
+                self.ports[5] = (next >> 8) as u8;
+            }
+        }
+    }
+}
+
+/// Metadata recorded when the driver triggers a banked voice note (Channel 2 PCM).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VoiceTrigger {
+    pub tick: u32,
+    pub sample_id: u16,
+    pub hblank_reload: u8,
+    pub pointer: u16,
+    pub bank: u8,
+    pub length: u16,
+    pub next: u16,
 }
 
 /// The model. `ram` is the driver's data segment; `data` its table segment.
@@ -150,8 +199,11 @@ pub struct SdkDriver<'a> {
     pub ram: Vec<u8>,
     pub ports: PortLatch,
     pub writes: Vec<Write>,
+    pub voice_triggers: Vec<VoiceTrigger>,
     pub ticks: u32,
     si: u16,
+    voice_reload: u8,
+    voice_cycles: u32,
 }
 
 pub const MAX_WRITES: usize = 4_000_000;
@@ -168,9 +220,54 @@ impl<'a> SdkDriver<'a> {
             ram: vec![0; 0x10000],
             ports: PortLatch::new(headphones),
             writes: Vec::new(),
+            voice_triggers: Vec::new(),
             ticks: 0,
             si: 0,
+            voice_reload: 0,
+            voice_cycles: 0,
         })
+    }
+
+    /// Advance hardware state (Channel 3 sweep readback and HBlank-pumped
+    /// Channel 2 voice countdown) by `cycles` CPU cycles.
+    ///
+    /// WSdev Timers: the HBlank timer counts down once per scanline (256 CPU
+    /// cycles) and fires when its counter reaches 0, reloading `hblank_reload`.
+    pub fn advance_hardware(&mut self, cycles: u32) {
+        self.ports.advance_sweep(cycles);
+        if self.g(|g| g.voice_active) == 0 || self.voice_reload == 0 {
+            return;
+        }
+        let period = u32::from(self.voice_reload) * 256;
+        self.voice_cycles = self.voice_cycles.saturating_add(cycles);
+        while self.voice_cycles >= period && self.g(|g| g.voice_active) != 0 {
+            self.voice_cycles -= period;
+            let ptr = self
+                .rw(self.link.voice_state.wrapping_add(2))
+                .wrapping_add(1);
+            self.ww(self.link.voice_state.wrapping_add(2), ptr);
+            let len = self
+                .rw(self.link.voice_state.wrapping_add(4))
+                .wrapping_sub(1);
+            self.ww(self.link.voice_state.wrapping_add(4), len);
+            if len == 0 {
+                if self.rw(self.link.voice_state.wrapping_add(6)) != 0xffff {
+                    let _ = self.next_voice();
+                } else {
+                    self.set_g(|g| g.voice_active, 0);
+                    for word in 0..4 {
+                        self.ww(self.link.voice_state.wrapping_add(word * 2), 0);
+                    }
+                    self.voice_reload = 0;
+                    self.voice_cycles = 0;
+                    let _ = self.ports.write(0x94, 0);
+                    let _ = self.ports.write(0x89, 0);
+                    if let Ok(ctrl) = self.ports.read(0x90) {
+                        let _ = self.ports.write(0x90, ctrl & 0xdd);
+                    }
+                }
+            }
+        }
     }
 
     fn rb(&self, at: u16) -> u8 {
@@ -260,7 +357,7 @@ impl<'a> SdkDriver<'a> {
         }
         self.out8(0x91, 6)?;
         self.out8(0x8e, 0x18)?;
-        self.out8(0x8f, 3)?;
+        self.out8(0x8f, (self.link.wave_ram >> 6) as u8)?;
         for slot in 0..8u16 {
             let base = self.link.slots.wrapping_add(slot * self.link.slot_stride);
             self.ww(base, 0xffff);
@@ -274,6 +371,8 @@ impl<'a> SdkDriver<'a> {
     /// starting a voice note, also used by some play wrappers.
     pub fn clear_voice(&mut self) {
         self.set_g(|g| g.voice_active, 0);
+        self.voice_reload = 0;
+        self.voice_cycles = 0;
         for word in 0..4 {
             self.ww(self.link.voice_state.wrapping_add(word * 2), 0);
         }
@@ -284,6 +383,8 @@ impl<'a> SdkDriver<'a> {
     /// writes (A2h, A4h, B2h) are outside the sound register range.
     pub fn stop_voice(&mut self) -> Result<()> {
         self.set_g(|g| g.voice_active, 0);
+        self.voice_reload = 0;
+        self.voice_cycles = 0;
         for word in 0..4 {
             self.ww(self.link.voice_state.wrapping_add(word * 2), 0);
         }
@@ -291,6 +392,67 @@ impl<'a> SdkDriver<'a> {
         self.out8(0x89, 0)?;
         let control = self.ports.read(0x90)? & 0xdd;
         self.out8(0x90, control)
+    }
+
+    /// Standard banked voice start (C003): loads the 4-word voice descriptor
+    /// from `voice_table + sample_id * 8` into `voice_state`, enables Channel 2
+    /// voice mode (`0x90 |= 0x22`, `0x89 = 0`, `0x94 = 0x0f`), and sets
+    /// `voice_active = 1`. Timer/IRQ/bank ports (`A2h`, `A4h`, `B2h`, `C2h`)
+    /// are outside the sound register range; the trigger is recorded in
+    /// [`Self::voice_triggers`].
+    pub fn start_voice(&mut self, sample_id: u16, hblank_reload: u8) -> Result<()> {
+        let table = self.link.voice_table.ok_or_else(|| {
+            Error::Unsupported(format!(
+                "SDK voice note (sample {sample_id:04x}) requires voice_table in SdkLink"
+            ))
+        })?;
+        self.ww(self.link.voice_state, sample_id);
+        self.out8(0x89, 0)?;
+        let control = self.ports.read(0x90)? | 0x22;
+        self.out8(0x90, control)?;
+        let entry = table.wrapping_add(sample_id.wrapping_mul(8));
+        let pointer = self.dw(entry)?;
+        let bank_word = self.dw(entry.wrapping_add(2))?;
+        let length = self.dw(entry.wrapping_add(4))?;
+        let next = self.dw(entry.wrapping_add(6))?;
+        self.ww(self.link.voice_state.wrapping_add(2), pointer);
+        self.wb(self.link.voice_state.wrapping_add(8), bank_word as u8);
+        self.ww(self.link.voice_state.wrapping_add(4), length);
+        self.ww(self.link.voice_state.wrapping_add(6), next);
+        self.set_g(|g| g.voice_active, 1);
+        self.voice_reload = hblank_reload;
+        self.voice_cycles = 0;
+        self.out8(0x94, 0x0f)?;
+        self.voice_triggers.push(VoiceTrigger {
+            tick: self.ticks,
+            sample_id,
+            hblank_reload,
+            pointer,
+            bank: bank_word as u8,
+            length,
+            next,
+        });
+        Ok(())
+    }
+
+    /// Standard banked voice chain step: advances to the descriptor indexed by
+    /// `voice_state + 6` (`next`) without modifying sound ports.
+    pub fn next_voice(&mut self) -> Result<()> {
+        let table = self.link.voice_table.ok_or_else(|| {
+            Error::Unsupported("SDK voice chain requires voice_table in SdkLink".into())
+        })?;
+        let next_id = self.rw(self.link.voice_state.wrapping_add(6));
+        self.ww(self.link.voice_state, next_id);
+        let entry = table.wrapping_add(next_id.wrapping_mul(8));
+        let pointer = self.dw(entry)?;
+        let bank_word = self.dw(entry.wrapping_add(2))?;
+        let length = self.dw(entry.wrapping_add(4))?;
+        let next = self.dw(entry.wrapping_add(6))?;
+        self.ww(self.link.voice_state.wrapping_add(2), pointer);
+        self.wb(self.link.voice_state.wrapping_add(8), bank_word as u8);
+        self.ww(self.link.voice_state.wrapping_add(4), length);
+        self.ww(self.link.voice_state.wrapping_add(6), next);
+        Ok(())
     }
 
     /// Deferred parameter helper: CH is the track mask, CL the value applied
@@ -800,10 +962,9 @@ impl<'a> SdkDriver<'a> {
         use field::*;
         let channel = self.channel();
         if self.rb(slot + MODE) != 0 && channel == 1 {
-            return Err(Error::Unsupported(format!(
-                "SDK voice note (slot {slot:04x}, sample {:02x}) is not modelled",
-                self.rb(slot + NOISE_OR_SAMPLE)
-            )));
+            let sample_id = u16::from(self.rb(slot + NOISE_OR_SAMPLE));
+            self.clear_voice();
+            return self.start_voice(sample_id, opcode);
         }
         self.wb(slot + DURATION, duration);
         let class = opcode & 0xf;
