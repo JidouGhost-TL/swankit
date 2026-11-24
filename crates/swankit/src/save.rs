@@ -129,7 +129,8 @@ impl Toolkit {
             definition, bytes, name, context, field, value, options, true,
         )
     }
-    /// Legacy-style un-repaired edit, retaining storage and field-policy checks.
+    /// Legacy-style un-repaired edit, retaining storage, input-usability and
+    /// field-policy checks but not the post-edit usability check.
     #[allow(clippy::too_many_arguments)]
     pub fn set_save_unrepaired(
         &self,
@@ -172,6 +173,7 @@ impl Toolkit {
                 "image length is not declared by the save definition".into(),
             ));
         }
+        require_usable_input(definition, bytes, name, context)?;
         let fields: Vec<usize> = if options.all_copies {
             definition
                 .copy_group_for_field(field)
@@ -236,6 +238,48 @@ impl Toolkit {
         }
         Ok(candidate)
     }
+}
+
+/// Refuse an edit unless the unmodified input already holds a record the
+/// selected definition's own validity program accepts. This is the same
+/// predicate as candidate recognition and the post-edit usability check; it
+/// adds no heuristics. It runs before any field write or repair, so a
+/// same-size image of another medium cannot be rewritten into a plausible
+/// record by checksum repair.
+fn require_usable_input(
+    definition: &saves::Format,
+    bytes: &[u8],
+    name: &str,
+    context: &saves::DecodeContext,
+) -> Result<()> {
+    if definition
+        .recognize_with_context(bytes, name, context)?
+        .is_some()
+    {
+        return Ok(());
+    }
+    let reason = if !definition.accepts_primary_size(bytes.len()) {
+        "its length is declared only for a companion medium, not as a primary save image"
+            .to_string()
+    } else {
+        let tree = definition.decode_with_context(bytes, name, context)?;
+        match tree.get("error") {
+            Some(Value::String(message)) => format!("the definition reports: {message}"),
+            Some(e) if !e.is_null() => format!("the definition reports: {e}"),
+            _ if ["valid", "global_valid"]
+                .iter()
+                .any(|key| tree.get(*key) == Some(&Value::Bool(false))) =>
+            {
+                "the definition's validity check marks the image invalid".to_string()
+            }
+            _ => "no record passes the definition's validity checks".to_string(),
+        }
+    };
+    Err(Error::Malformed(format!(
+        "input save has no usable record under definition {}: {reason}; refusing to edit \
+         (check that the image is this game's save for this medium)",
+        definition.id
+    )))
 }
 
 #[derive(serde::Deserialize)]

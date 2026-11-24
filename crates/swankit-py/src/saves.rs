@@ -120,31 +120,19 @@ impl SaveDefinition {
             skip_validation,
             repair,
         };
-        let result = if repair {
-            crate::toolkit()?
-                .set_save_with_options(
-                    self.owner(),
-                    data,
-                    name,
-                    context.map_or(&empty, |c| &c.0),
-                    field,
-                    &value,
-                    options,
-                )
-                .map_err(error)?
-        } else {
-            crate::toolkit()?
-                .set_save_unrepaired(
-                    self.owner(),
-                    data,
-                    name,
-                    context.map_or(&empty, |c| &c.0),
-                    field,
-                    &value,
-                    options,
-                )
-                .map_err(error)?
-        };
+        // repair=False keeps the same input and post-edit usability checks as
+        // the CLI's --no-repair; only skip_validation bypasses the latter.
+        let result = crate::toolkit()?
+            .set_save_with_options(
+                self.owner(),
+                data,
+                name,
+                context.map_or(&empty, |c| &c.0),
+                field,
+                &value,
+                options,
+            )
+            .map_err(error)?;
         Ok(PyBytes::new(py, &result))
     }
     #[pyo3(signature = (data, *, name="save", context=None))]

@@ -218,9 +218,14 @@ def test_save_transaction_and_write_back(tmp_path):
     fixed = definition.fix(original, context=context)
     assert fixed == b"\xA5" + original[1:]
     assert definition.verify(fixed)["usable_flags"] == 1
-    changed = definition.set_field(original, 0, 7)
+    # An input the definition rejects is refused before any edit or repair.
+    for kwargs in ({}, {"repair": False}, {"skip_validation": True},
+                   {"repair": False, "skip_validation": True}):
+        with pytest.raises(ws.SwankitError, match="input save has no usable record"):
+            definition.set_field(original, 0, 7, **kwargs)
+    changed = definition.set_field(fixed, 0, 7)
     assert changed == b"\xA5\x07" + original[2:]
-    assert definition.set_field(original, 0, 8, repair=False) == b"\0\x08" + original[2:]
+    assert definition.set_field(fixed, 0, 8, repair=False) == b"\xA5\x08" + original[2:]
     path = tmp_path / "image.dat"
     path.write_bytes(changed)
     assert definition.decode(path.read_bytes(), name=path.name) == {"valid": True, "setting": 7}
@@ -249,6 +254,21 @@ def test_save_v2_constraints_and_skip_validation_are_explicit():
     assert changed == bytes([165, 10]) + bytes(126)
     with pytest.raises(ws.SwankitError):
         definition.set_field(original, 0, 256, repair=False, skip_validation=True)
+
+
+def test_save_repair_false_keeps_the_post_edit_usability_check():
+    definition = save_definition().to_dict()
+    definition["fields"].append({"name": "signature", "medium": "cart EEPROM", "offset": 0,
+                                 "size": 1, "encoding": "u8"})
+    definition = ws.SaveDefinition(json.dumps(definition))
+    original = bytes([165, 1]) + bytes(126)
+    # The CLI's --no-repair refuses an edit that leaves no usable record;
+    # repair=False does the same, and only skip_validation bypasses it.
+    with pytest.raises(ws.SwankitError, match="no usable record after repair"):
+        definition.set_field(original, 1, 0, repair=False)
+    assert definition.set_field(original, 1, 0, repair=False,
+                                skip_validation=True) == bytes([0, 1]) + bytes(126)
+    assert definition.set_field(original, 0, 9, repair=False) == bytes([165, 9]) + bytes(126)
 
 
 @pytest.mark.parametrize("target", [b"abc", b"ab", b"abcdef", b"aaaaaa", b""])

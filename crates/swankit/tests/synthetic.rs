@@ -238,6 +238,96 @@ fn save_media_validity_exclusions_and_transactional_edits() {
     .is_err());
 }
 
+#[cfg(feature = "saves")]
+#[test]
+fn every_edit_path_refuses_an_unusable_input_before_edit_or_repair() {
+    // A same-size image of another medium: the definition's own validity
+    // program rejects it, while its repair would make it look usable.
+    let toolkit = Toolkit::new().unwrap();
+    let format = swankit::saves::Format::from_json(&save_definition().to_string()).unwrap();
+    let context = swankit::saves::DecodeContext::default();
+    let mut foreign = vec![0x5a; 128];
+    foreign[0] = 0;
+    assert!(format
+        .recognize_with_context(&foreign, "save.eeprom", &context)
+        .unwrap()
+        .is_none());
+    let mut repaired = foreign.clone();
+    format
+        .fix_with_context(&mut repaired, "save.eeprom", &context)
+        .unwrap();
+    assert!(format
+        .recognize_with_context(&repaired, "save.eeprom", &context)
+        .unwrap()
+        .is_some());
+    let options = [
+        swankit::SaveEditOptions::DEFAULT,
+        swankit::SaveEditOptions {
+            repair: false,
+            ..Default::default()
+        },
+        swankit::SaveEditOptions {
+            skip_validation: true,
+            ..Default::default()
+        },
+        swankit::SaveEditOptions {
+            skip_validation: true,
+            repair: false,
+            all_copies: false,
+        },
+    ];
+    for option in options {
+        let error = toolkit
+            .set_save_with_options(
+                &format,
+                &foreign,
+                "save.eeprom",
+                &context,
+                0,
+                &json!(7),
+                option,
+            )
+            .unwrap_err()
+            .to_string();
+        assert!(
+            error.contains("input save has no usable record under definition synthetic")
+                && error.contains("marks the image invalid"),
+            "{option:?}: {error}"
+        );
+        let error = toolkit
+            .set_save_unrepaired(
+                &format,
+                &foreign,
+                "save.eeprom",
+                &context,
+                0,
+                &json!(7),
+                option,
+            )
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("input save has no usable record"), "{error}");
+    }
+    assert!(toolkit
+        .set_save(&format, &foreign, "save.eeprom", &context, 0, &json!(7))
+        .is_err());
+    // The same edit on a usable input still succeeds with unchanged bytes.
+    let usable = toolkit
+        .set_save(&format, &repaired, "save.eeprom", &context, 0, &json!(7))
+        .unwrap();
+    let mut expected = repaired.clone();
+    expected[1] = 7;
+    assert_eq!(usable, expected);
+    // Repair keeps its documented purpose: a damaged image is repaired and
+    // checked after repair.
+    assert_eq!(
+        toolkit
+            .fix_save(&format, &foreign, "save.eeprom", &context)
+            .unwrap(),
+        repaired
+    );
+}
+
 #[test]
 fn v2_constraint_rejects_by_default_and_explicit_override_keeps_storage_checks() {
     let toolkit = Toolkit::new().unwrap();

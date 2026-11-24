@@ -223,3 +223,103 @@ fn corpus_cli_saves() {
         eprintln!("swankit CLI saves: {count} detection/decode cases and configured repair bytes/trees passed against independent expectations");
     }
 }
+
+/// Retained save inputs replayed through the binary's `save set`, compared with
+/// independently recorded outcomes: exact output bytes for qualified edits and
+/// the refusal class for inputs the selected definition does not accept.
+#[cfg(feature = "saves")]
+struct SaveEditDigest;
+#[cfg(feature = "saves")]
+impl Digest for SaveEditDigest {
+    fn digest(&self, bytes: &[u8], args: &Args) -> Result<Value> {
+        struct Directory(std::path::PathBuf);
+        impl Drop for Directory {
+            fn drop(&mut self) {
+                let _ = fs::remove_dir_all(&self.0);
+            }
+        }
+        let text = |key: &str| {
+            args.get(key)
+                .and_then(Value::as_str)
+                .ok_or_else(|| Error::Malformed(format!("missing save edit {key}")))
+        };
+        let name = text("name")?;
+        if name.contains(['/', '\\']) || name == "." || name == ".." {
+            return Err(Error::Malformed(
+                "save edit name must be a bare file name".into(),
+            ));
+        }
+        let field = args
+            .get("field")
+            .and_then(Value::as_u64)
+            .ok_or_else(|| Error::Malformed("missing save edit field".into()))?
+            .to_string();
+        let options = args
+            .get("options")
+            .and_then(Value::as_array)
+            .ok_or_else(|| Error::Malformed("missing save edit options".into()))?
+            .iter()
+            .map(|o| {
+                o.as_str()
+                    .filter(|o| matches!(*o, "--all-copies" | "--no-repair" | "--skip-validation"))
+                    .ok_or_else(|| Error::Malformed("unknown save edit option".into()))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let path = std::env::temp_dir().join(format!("swankit-save-edit-{}", std::process::id()));
+        fs::create_dir(&path).map_err(|e| Error::Malformed(e.to_string()))?;
+        let directory = Directory(path);
+        let input = directory.0.join(name);
+        let output = directory.0.join("edited");
+        fs::write(&input, bytes).map_err(|e| Error::Malformed(e.to_string()))?;
+        let result = Command::new(env!("CARGO_BIN_EXE_swankit"))
+            .args(["save", "set", text("definition")?])
+            .arg(&input)
+            .args(["--field", &field, "--value", text("value")?])
+            .args(&options)
+            .arg("--output")
+            .arg(&output)
+            .arg("--json")
+            .output()
+            .map_err(|e| Error::Malformed(e.to_string()))?;
+        if fs::read(&input).map_err(|e| Error::Malformed(e.to_string()))? != bytes {
+            return Err(Error::Malformed("save edit changed its input".into()));
+        }
+        let mut digest = json!({"input_sha256": hash_bytes(bytes)});
+        if result.status.success() {
+            let edited = fs::read(&output).map_err(|e| Error::Malformed(e.to_string()))?;
+            digest["outcome"] = json!("written");
+            digest["output_sha256"] = json!(hash_bytes(&edited));
+        } else {
+            if output.exists() {
+                return Err(Error::Malformed(
+                    "refused save edit created an output".into(),
+                ));
+            }
+            let error: Value = serde_json::from_slice(&result.stderr)
+                .map_err(|e| Error::Malformed(e.to_string()))?;
+            let message = error["error"].as_str().unwrap_or_default();
+            digest["outcome"] = json!("refused");
+            digest["reason"] = json!(if message.starts_with("input save has no usable record") {
+                "input-unusable".to_string()
+            } else if message == "save has no usable record after repair" {
+                "post-edit-unusable".to_string()
+            } else {
+                format!("other: {message}")
+            });
+        }
+        Ok(digest)
+    }
+}
+#[cfg(feature = "saves")]
+#[test]
+fn corpus_cli_save_edits() {
+    assert_ne!(
+        std::env::var("FORMATKIT_CORPUS_WRITE").as_deref(),
+        Ok("1"),
+        "never rewrite frozen CLI save edit expectations"
+    );
+    let count = run_dir("swankit-save-edits", &SaveEditDigest);
+    if count > 0 {
+        eprintln!("swankit CLI save edits: {count} retained inputs matched recorded output bytes or refusal classes");
+    }
+}

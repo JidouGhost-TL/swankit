@@ -343,6 +343,32 @@ fn save_decode_set_fix_and_auto_errors() {
     ])
     .status
     .success());
+    // An input the definition rejects is never edited, whatever the options;
+    // the refusal names the reason and writes nothing.
+    for options in [
+        &[][..],
+        &["--no-repair"][..],
+        &["--skip-validation"][..],
+        &["--skip-validation", "--no-repair"][..],
+    ] {
+        let refused = f.path("refused-unusable");
+        let mut args = vec![
+            "save", "set", &def, &corrupt, "--field", "0", "--value", "7", "--output", &refused,
+            "--json",
+        ];
+        args.extend_from_slice(options);
+        let out = command(&args);
+        assert!(!out.status.success(), "{options:?}");
+        let error: Value = serde_json::from_slice(&out.stderr).unwrap();
+        assert!(
+            error["error"]
+                .as_str()
+                .unwrap()
+                .contains("input save has no usable record under definition synthetic"),
+            "{options:?}: {error}"
+        );
+        assert!(!std::path::Path::new(&refused).exists());
+    }
     let unknown = f.put("unknown", b"unknown");
     assert!(!command(&["save", "decode", "auto", &unknown, "--json"])
         .status

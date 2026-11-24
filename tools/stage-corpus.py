@@ -388,6 +388,8 @@ def main():
     selection.add_argument("--link-manifest", type=Path,
                            help="enroll recorded relay payloads and independent byte oracles in a NEW ws-link selection")
     selection.add_argument("--save-manifest", type=Path)
+    selection.add_argument("--save-edit-manifest", type=Path,
+                           help="enroll retained save inputs with independently recorded CLI edit outcomes in a NEW swankit-save-edits selection")
     parser.add_argument("--save-namespace", default="ws-saves")
     selection.add_argument("--gfx-manifest", type=Path,
                            help="enroll independently rendered graphics snapshots/fixtures into a new spec directory")
@@ -441,6 +443,10 @@ def main():
             log(args.progress_log, "interop staging", f"{count} Java vectors, 1 new frozen spec", "run safe corpus gate")
         elif args.save_manifest:
             stage_saves(args)
+        elif args.save_edit_manifest:
+            from stage_save_edits import stage_save_edits
+            count = stage_save_edits(args.save_edit_manifest, args.output)
+            log(args.progress_log, "save edit staging", f"{count} edit cases, 1 frozen spec", "run CLI save edit corpus through safe runner")
         elif args.python_bindings:
             from stage_python import stage_python
             count = stage_python(args.output)

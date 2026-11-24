@@ -114,9 +114,12 @@ assert swankit.ips_apply(b"before", patch) == b"after"
 Version 2 save definitions may enforce a field constraint. Use
 `set_field(..., all_copies=True)` only for a declared copy group;
 `skip_validation=True` explicitly bypasses semantic constraints and the
-post-edit usability check while keeping representation bounds. The default
-`repair=True` repairs the save; `repair=False` leaves stored repair bytes alone
-while still enforcing constraints unless `skip_validation=True` is also set.
+post-edit usability check while keeping representation bounds. `set_field`
+always refuses an input that has no usable record under the definition, before
+editing or repairing it. The default `repair=True` repairs the save;
+`repair=False` leaves stored repair bytes alone while still enforcing
+constraints and the post-edit usability check, exactly as the CLI's
+`--no-repair`, unless `skip_validation=True` is also set.
 
 `Wave` unpacks the low nibble before the high nibble into 32 values in 0..15.
 `Wave.to_pcm(rate)` returns one mono cycle with signed samples `(n - 8) * 4096`
@@ -149,7 +152,8 @@ images, and checks exact bytes and refused writes through both interfaces.
 
 Edits and repairs return new `bytes`; callers choose their write destination.
 `set_field` repairs transactionally by default. `repair=False` changes only
-the stored field and leaves verification/repair to the caller. `fix` validates
+the stored field and still requires a usable record afterwards; combine it
+with `skip_validation=True` to leave verification and repair to the caller. `fix` validates
 the repaired image before returning. IPS growth and overlaps require explicit
 `allow_growth`/`allow_overlap`; output limits are checked before allocation.
 

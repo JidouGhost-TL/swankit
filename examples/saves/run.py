@@ -151,8 +151,17 @@ class Trial:
                 kind + ": Python repair changed wrong bytes")
         self.diff(kind + "-fix", damaged, expected_fix, [31] if multiple else [15])
 
+        # Without repair the edited record's checksum is stale, so no record is
+        # usable: the CLI's --no-repair and Python's repair=False both refuse.
+        self.api(kind + "-py-norepair-refusal", definition, "set_field", original,
+                 field=0, value=7, repair=False, refuse=True)
+        norepair_path = self.out / (kind + "-norepair-refused.eep")
+        self.command(kind + "-norepair-refusal", ["set", definition_path, image, "--field", "0",
+                     "--value", "7", "--no-repair", "--output", norepair_path, "--json"],
+                     refuse=True)
+        require(not norepair_path.exists(), kind + ": refused --no-repair edit created output")
         raw = self.api(kind + "-py-raw-set", definition, "set_field", original,
-                       field=0, value=7, repair=False)
+                       field=0, value=7, repair=False, skip_validation=True)
         self.diff(kind + "-raw-set", original, raw, [1])
         require(self.api(kind + "-py-raw-fix", definition, "fix", raw) == expected_edit,
                 kind + ": explicit raw edit then repair differs")
@@ -179,19 +188,28 @@ class Trial:
         invalid_path.write_bytes(invalid)
         require(self.api(kind + "-py-invalid-verify", definition, "verify", invalid) is None,
                 kind + ": invalid signatures recognized as usable")
-        for action in ("fix", "set"):
-            options = ["--field", "0", "--value", "7"] if action == "set" else []
-            method = "set_field" if action == "set" else "fix"
-            kwargs = dict(field=0, value=7) if action == "set" else {}
+        for action in ("fix", "set", "set-norepair", "set-unchecked"):
+            # Every edit path refuses an input with no usable record before
+            # editing or repairing it, including --no-repair and --skip-validation.
+            flags = {"set": [], "set-norepair": ["--no-repair"],
+                     "set-unchecked": ["--skip-validation"]}.get(action)
+            options = ["--field", "0", "--value", "7", *flags] if flags is not None else []
+            method = "set_field" if flags is not None else "fix"
+            kwargs = dict(field=0, value=7) if flags is not None else {}
+            if action == "set-norepair":
+                kwargs["repair"] = False
+            if action == "set-unchecked":
+                kwargs["skip_validation"] = True
             self.api(kind + "-py-refuse-" + action, definition, method, invalid,
                      refuse=True, **kwargs)
             fresh = self.out / (kind + "-refused-" + action + ".eep")
-            self.command(kind + "-refuse-" + action, [action, definition_path, invalid_path,
+            verb = "fix" if flags is None else "set"
+            self.command(kind + "-refuse-" + action, [verb, definition_path, invalid_path,
                          *options, "--output", fresh, "--json"], refuse=True)
             require(not fresh.exists(), kind + ": refused operation created output")
             sentinel = self.out / (kind + "-sentinel-" + action + ".eep")
             sentinel.write_bytes(b"preserve this destination")
-            self.command(kind + "-force-refuse-" + action, [action, definition_path, invalid_path,
+            self.command(kind + "-force-refuse-" + action, [verb, definition_path, invalid_path,
                          *options, "--output", sentinel, "--force", "--json"], refuse=True)
             require(sentinel.read_bytes() == b"preserve this destination",
                     kind + ": force bypassed semantic refusal")

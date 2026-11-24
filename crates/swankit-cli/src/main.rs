@@ -45,9 +45,10 @@ const HELP: &str = "swankit: WonderSwan format tools
   assets search|search-corpus|discover|resolve-table|extract|replace|verify ... (see swankit assets --help)
 Options: --json where listed; output-writing commands accept --force to replace files.
 Integers accept decimal or 0x hexadecimal.
-For save set, --no-repair disables repair while keeping validation enabled.
+For save set, the input must already hold a usable record under the definition.
+--no-repair disables repair while keeping validation enabled.
 --skip-validation bypasses field constraints and post-edit usability only;
-storage bounds and byte representation checks remain active.
+input usability, storage bounds and byte representation checks remain active.
 Experimental: interop --json [--server] (versioned JSON-lines requests on stdin).
   wg-server --data DIR --wire DIR [--bind IP] [--http-port N] [--bpl-port N]
             [--clock system|fixed:YYYYMMDDhhmmss] [--seed N]

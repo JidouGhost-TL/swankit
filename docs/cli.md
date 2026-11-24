@@ -306,8 +306,12 @@ from a parse. See [save definitions](save-definitions.md) for the full schema.
 or byte array matching the stored encoding. Version 2 definitions may add an
 unsigned range, numeric enum or packed BCD constraint. `--all-copies` applies
 the value to every explicitly named member of its copy group in one staged edit.
-By default, `set` repairs the candidate and requires a usable post-repair record
-according to the definition's program and excluded working regions.
+`set` first requires the unmodified input to hold a usable record under the
+selected definition, using the same validity program as detection; otherwise it
+refuses before editing or repairing and names the reason. No option bypasses
+this input check. By default, `set` then repairs the candidate and requires a
+usable post-repair record according to the definition's program and excluded
+working regions.
 `--no-repair` disables checksum and record repair while keeping validation and
 the usability check enabled. `--skip-validation` explicitly bypasses semantic
 constraints and the post-edit usability check while keeping storage bounds and

@@ -24,7 +24,8 @@ Constraints validate values presented to edits. Packed BCD uses the existing
 byte-array field representation; byte order describes the order of packed
 digits across bytes. `skip_validation` bypasses semantic checks and the
 post-edit usability check while retaining storage extent and representation
-checks.
+checks. It never bypasses the input check: every edit first requires the
+unmodified input to hold a usable record under the selected definition.
 
 Version 2 may also declare `copy_groups`, each with a unique name and at least
 two unique field names. Groups describe explicit physical copies; they do not
@@ -102,12 +103,14 @@ using zero-based byte offsets, are:
 | --- | --- | --- |
 | Set field zero to 7 with default repair | 1: `03` → `07`; 15: `dd` → `e1` | Same changes, plus 31: `5b` → `db` |
 | Fix the script's damaged input | 15: `5d` → `dd` | 31: `5b` → `db` |
-| Python `set_field(..., repair=False)` | Only byte 1 | Only byte 1; the second checksum remains damaged |
+| Python `set_field(..., repair=False)` or CLI `--no-repair` | Refused: the stale checksum leaves no usable record | Refused: neither record is usable |
+| Python `set_field(..., repair=False, skip_validation=True)` | Only byte 1 | Only byte 1; the second checksum remains damaged |
 
 All other bytes and original files must remain unchanged. The script also
 checks selection of the second copy when the first has an invalid signature.
 It exercises refused edits above the `u8` storage range and refused fix/set
-operations when every signature is invalid. Fresh destinations stay absent;
+operations when every signature is invalid, including set with `--no-repair`
+or `--skip-validation`. Fresh destinations stay absent;
 existing sentinel files survive the same semantic refusals with `--force`.
 `--force` permits replacing a destination; it does not make invalid records
 usable. A usable sibling can coexist with an invalid edited record, so inspect
@@ -260,7 +263,12 @@ The caller must validate the selected medium's full image length, then inspect
 the returned checks and decoded record-selection state before committing the
 candidate. The low-level `Format` methods above do not require a usable record
 after repair. The composed `Toolkit::set_save` and `Toolkit::fix_save` methods
-add declared-length and usable-record checks; those checks still do not prove
+add declared-length and usable-record checks. Every composed edit method,
+including `set_save_unrepaired`, first refuses an input that has no usable
+record under the selected definition, before any field write or repair; a
+same-size image of another medium is therefore not rewritten into a plausible
+record. `fix_save` checks only after repair, because its input is damaged by
+definition; those checks still do not prove
 that the particular edited field belongs to the record the game will select.
 
 1. Load the JSON with `Format::from_json`, or select a bundled definition by
