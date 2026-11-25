@@ -20,6 +20,10 @@ pub fn decode(
         },
         OkumuraDecodeError::Truncated { offset } => Error::Truncated { offset, needed: 1, available: 0 },
         OkumuraDecodeError::TokenOvershoot { produced, token_len, expected } => Error::Malformed(format!("Okumura token of {token_len} bytes at output {produced} crosses declared size {expected}")),
+        OkumuraDecodeError::InvalidInitialCursor { initial_cursor } => Error::InvalidField {
+            what: "okumura initial cursor",
+            value: initial_cursor as u64,
+        },
     })
 }
 
