@@ -233,3 +233,80 @@ fn v2_packed_bcd_requires_byte_storage_even_when_validation_is_skipped() {
         json!({"kind":"packed-bcd","digits":2,"byte_order":"little","minimum":0,"maximum":99});
     assert!(Format::from_json(&d.to_string()).is_err());
 }
+
+#[test]
+fn enrolled_group_a_fixes_exclusions_and_preserved_constraints_hold() {
+    let beatmania = ws_saves::format("beatmania_for_WonderSwan_Japan").unwrap();
+    let mut sram = vec![0; 32768];
+    beatmania.set_field(&mut sram, 34, &json!(0)).unwrap();
+    beatmania.set_field(&mut sram, 34, &json!(3)).unwrap();
+    assert!(beatmania.set_field(&mut sram, 34, &json!(4)).is_err());
+    beatmania.set_field(&mut sram, 51, &json!(0)).unwrap();
+    beatmania.set_field(&mut sram, 51, &json!(4)).unwrap();
+    assert!(beatmania.set_field(&mut sram, 51, &json!(5)).is_err());
+
+    let kiss = ws_saves::format("Kiss_Yori.._-_Seaside_Serenade_Japan_Rev_2").unwrap();
+    kiss.set_field(&mut sram, 17, &json!(0)).unwrap();
+    kiss.set_field(&mut sram, 17, &json!(4)).unwrap();
+    assert!(kiss.set_field(&mut sram, 17, &json!(5)).is_err());
+
+    let kishi = ws_saves::format("SD_Gundam_Eiyuu_Den_-_Kishi_Densetsu_Japan").unwrap();
+    assert_eq!(kishi.fields[24].name, "script_result");
+    kishi.set_field(&mut sram, 24, &json!(0)).unwrap();
+    kishi.set_field(&mut sram, 24, &json!(4)).unwrap();
+    kishi.set_field(&mut sram, 24, &json!(255)).unwrap();
+
+    let sennou = ws_saves::format("Sennou_Millennium_Japan").unwrap();
+    let mut eeprom = vec![0; 128];
+    sennou
+        .set_field(&mut eeprom, 4, &json!(1_476_242_430u32))
+        .unwrap();
+    sennou.set_field(&mut eeprom, 19, &json!(150)).unwrap();
+
+    let frontier = ws_saves::format("Battle_Spirit_-_Digimon_Frontier_Japan_Rev_1").unwrap();
+    assert_eq!(frontier.fields[16].name, "match_time");
+    frontier.set_field(&mut sram, 16, &json!(0)).unwrap();
+    frontier.set_field(&mut sram, 16, &json!(2)).unwrap();
+    assert!(frontier.set_field(&mut sram, 16, &json!(3)).is_err());
+}
+
+#[test]
+fn pro_mahjong_kiwame_streak_counters_split_into_independent_bcd_bytes() {
+    let format = ws_saves::format("Pro_Mahjong_Kiwame_for_WonderSwan_Japan_Rev_1").unwrap();
+    assert_eq!(format.fields[24].name, "streak counter, type A");
+    assert_eq!(format.fields[24].offset, 0x122);
+    assert_eq!(format.fields[24].size, 1);
+    assert_eq!(format.fields[24].encoding, "BCD u8");
+    assert_eq!(format.fields[25].name, "streak counter, type B");
+    assert_eq!(format.fields[25].offset, 0x123);
+    assert_eq!(format.fields[25].size, 1);
+    assert_eq!(format.fields[25].encoding, "BCD u8");
+
+    let block_names: Vec<&str> = format.definition()["blocks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|b| {
+            format.fields[b["field"].as_u64().unwrap() as usize]
+                .name
+                .as_str()
+        })
+        .collect();
+    assert_eq!(
+        block_names,
+        vec!["turn log", "kept hands 1-4", "replay slot"]
+    );
+
+    let mut sram = vec![0; 32768];
+    format.set_field(&mut sram, 24, &json!([0x99])).unwrap();
+    assert_eq!(sram[0x122], 0x99);
+    assert_eq!(sram[0x123], 0x00);
+    format.set_field(&mut sram, 25, &json!([0x42])).unwrap();
+    assert_eq!(sram[0x122], 0x99);
+    assert_eq!(sram[0x123], 0x42);
+
+    assert!(format.set_field(&mut sram, 24, &json!([0x9a])).is_err());
+    assert!(format.set_field(&mut sram, 25, &json!([0xff])).is_err());
+    assert_eq!(sram[0x122], 0x99);
+    assert_eq!(sram[0x123], 0x42);
+}
