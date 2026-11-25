@@ -1,7 +1,10 @@
 //! Flat cartridge offset tables and bounded padding inspection.
 use crate::{check_rom_identity, malformed, map::RomIdentity, AssetMap};
 use formatkit_core::{bytes_at, classify_padding, PaddingKind, Result};
-use formatkit_layout::tables::{FixedStrideOffsetTable, TableSizeMode};
+use formatkit_layout::{
+    parse_fixed_record_table_metadata, FixedRecordTableSpec, IntFieldSpec, SizeMode,
+    TableTermination,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::ops::Range;
@@ -72,27 +75,37 @@ pub fn resolve(rom: &[u8], definition: &Definition) -> Result<Resolution> {
     let table = bytes_at(rom, definition.table_offset, length)?;
     let table_span = definition.table_offset..definition.table_offset + table.len();
     let data = bytes_at(rom, definition.data_offset, definition.data_length)?;
-    let descriptor = FixedStrideOffsetTable {
-        entry_count: definition.entry_count,
-        entry_stride: definition.entry_stride,
-        offset_field: definition.offset_field,
-        offset_unit: definition.offset_unit,
-        size_mode: match definition.size {
-            Size::ExplicitU32 { field_offset, unit } => {
-                TableSizeMode::ExplicitU32 { field_offset, unit }
+    let (size_mode, size_unit, carrier_len) = match definition.size {
+        Size::ExplicitU32 { field_offset, unit } => (
+            SizeMode::Stored(IntFieldSpec::u32_le(field_offset)),
+            unit,
+            data.len() as u64,
+        ),
+        Size::SequentialUntil { sentinel_end } => {
+            let end = sentinel_end.unwrap_or(data.len() as u64);
+            if end > data.len() as u64 {
+                return Err(malformed(
+                    "fixed-stride table sentinel end exceeds data length",
+                ));
             }
-            Size::SequentialUntil { sentinel_end } => {
-                TableSizeMode::SequentialUntil { sentinel_end }
-            }
-        },
-        name_prefix: "",
+            (SizeMode::NextOffset, 1, end)
+        }
     };
-    let entries = descriptor
-        .parse_entries(table, data.len() as u64)?
+    let spec = FixedRecordTableSpec::new(
+        definition.entry_stride,
+        0,
+        crate::map::MAX_ASSETS,
+        Some(IntFieldSpec::u32_le(definition.offset_field)),
+        size_mode,
+        TableTermination::Counted(definition.entry_count),
+    )
+    .with_offset_unit(definition.offset_unit)
+    .with_size_unit(size_unit);
+    let entries = parse_fixed_record_table_metadata(table, &spec, carrier_len)
+        .map_err(|err| malformed(err.to_string()))?
         .into_iter()
-        .enumerate()
-        .map(|(index, row)| Entry {
-            id: format!("entry.{index:04}"),
+        .map(|row| Entry {
+            id: format!("entry.{:04}", row.index),
             offset: definition.data_offset + row.offset as usize,
             length: row.size as usize,
         })
