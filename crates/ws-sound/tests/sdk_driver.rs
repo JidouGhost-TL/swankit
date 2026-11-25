@@ -44,6 +44,11 @@ fn link() -> SdkLink {
         track_table: TRACKS,
         voice_state: 0x55f,
         voice_table: None,
+        envelope_group_table: None,
+        extended_opcodes: false,
+        branch_selector: None,
+        inline_sweep: false,
+        merge_voice_active: true,
         mute_tail: MuteTail::SavedPointer,
     }
 }
@@ -401,4 +406,73 @@ fn sweep_readback_triggers_channel_three_mute_below_96h() {
     assert!(tick1.contains(&(0x84, 0x00)));
     assert!(tick1.contains(&(0x85, 0x00)));
     assert_eq!(model.ram[0x4a8 + 0x10..0x4a8 + 0x12], [0x00, 0x00]);
+}
+
+#[test]
+fn inline_sweep_and_no_mute_tail_behave_as_reconstructed() {
+    // Channel 2 with sweep byte 0x2b (period=2, sign=1, mag=3 -> -3 = 0xfd), pitch 0x0760 -> divisor 0x00a0.
+    let data = segment(2, &[0x00, 0x00, 0x0f, 0x2b, 0x00, 0x04, 0xff, 0x00], 0x0760);
+    let mut lnk = link();
+    lnk.inline_sweep = true;
+    lnk.sweep_table = 0;
+    lnk.mute_tail = MuteTail::None;
+    let mut model = SdkDriver::new(lnk, &data, true).unwrap();
+    model.reset(0).unwrap();
+    model.writes.clear();
+    model.start(0, 1).unwrap();
+    model.tick().unwrap();
+    let tick0 = ports(&model.writes, 0);
+    assert!(tick0.contains(&(0x8d, 0x02)));
+    assert!(tick0.contains(&(0x8c, 0xfd)));
+    // Even if divisor drops below 0x96, MuteTail::None does not zero it.
+    model.ports.write(0x84, 0x50).unwrap();
+    model.ports.write(0x85, 0x00).unwrap();
+    model.tick().unwrap();
+    assert_eq!(model.ram[0x4a8 + 0x10..0x4a8 + 0x12], [0xa0, 0x00]);
+}
+
+#[test]
+fn extended_indirect_envelope_and_ch3_noise_on_note() {
+    // Channel 3 with mode=1, envelope bank switched via A8 01, envelope group 1 (C1 04), note 00 04.
+    let mut data = segment(
+        3,
+        &[
+            0x00, 0x00, 0x0f, 0x01, // header: mode=1 (noise)
+            0xa8, 0x01, // select envelope bank 1
+            0xc1, 0x04, // group 1, period 4
+            0x00, 0x04, // note
+            0xff, 0x00,
+        ],
+        0x0400,
+    );
+    // Envelope group table at 0x0380: bank 0 -> 0x0300, bank 1 -> 0x0320.
+    data[0x0380..0x0382].copy_from_slice(&0x0300u16.to_le_bytes());
+    data[0x0382..0x0384].copy_from_slice(&0x0320u16.to_le_bytes());
+    data[0x0320..0x0330].fill(0x50); // bank 1 group 1 step = 0x50 -> combined 0x5f
+
+    let mut lnk = link();
+    lnk.slot_stride = 0x2c;
+    lnk.envelope_group_table = Some(0x0380);
+    lnk.extended_opcodes = true;
+    // Track table slot offset for slot 4 with stride 0x2c = 0xb0.
+    data[usize::from(TRACKS)..usize::from(TRACKS) + 2].copy_from_slice(&0x00b0u16.to_le_bytes());
+
+    let mut model = SdkDriver::new(lnk, &data, true).unwrap();
+    model.reset(0).unwrap();
+    model.writes.clear();
+    model.start(0, 1).unwrap();
+    model.tick().unwrap();
+    let tick0 = ports(&model.writes, 0);
+    // In extended mode, ch3 noise bit (0x80) and noise port (0x8e) are written on note, after divisor.
+    let pos_div = tick0.iter().position(|&(p, _)| p == 0x86).unwrap();
+    let pos_8e = tick0.iter().position(|&(p, _)| p == 0x8e).unwrap();
+    let pos_90_noise = tick0
+        .iter()
+        .position(|&(p, v)| p == 0x90 && v & 0x80 != 0)
+        .unwrap();
+    assert!(pos_div < pos_8e && pos_8e < pos_90_noise);
+    // Tick 1 reads indirect bank-1 envelope (0x50 | 0x0f = 0x5f -> mirror=0x5f -> vol port 8Bh = 0x5f).
+    model.tick().unwrap();
+    let tick1 = ports(&model.writes, 1);
+    assert!(tick1.contains(&(0x8b, 0x5f)));
 }

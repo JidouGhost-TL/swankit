@@ -95,6 +95,11 @@ fn sdk_link() -> SdkLink {
         track_table: TRACKS,
         voice_state: 0x55f,
         voice_table: None,
+        envelope_group_table: None,
+        extended_opcodes: false,
+        branch_selector: None,
+        inline_sweep: false,
+        merge_voice_active: true,
         mute_tail: MuteTail::SavedPointer,
     }
 }
@@ -525,4 +530,80 @@ fn sound_sdk_voice_note_renders_wav_with_voice_table() {
         "stderr: {}",
         String::from_utf8_lossy(&bad_auto.stderr)
     );
+}
+
+#[test]
+fn cell_render_synthetic_song_produces_metadata_events_and_wav() {
+    let fixture = Fixture::new();
+    let mut rom = vec![0u8; 0x40000];
+    let d_base = 0x10000usize;
+    let c_base = 0x00000usize;
+    rom[d_base + 0x0100..d_base + 0x0104].copy_from_slice(&[0x00, 0xc0, 0x00, 0x00]);
+    rom[d_base + 0x0200..d_base + 0x0210].fill(0x22);
+    for r in 0..16usize {
+        for c in 0..16usize {
+            rom[d_base + 0x0300 + r * 16 + c] = ((r * c) / 15) as u8;
+        }
+    }
+    rom[c_base..c_base + 13].copy_from_slice(&[
+        0x00, 0x01, 0x00, 0x02, 0x00, 0x02, 0x00, 0x02, 0x00, 0x03, 0x20, 0x00, 0x00,
+    ]);
+    rom[c_base + 0x20..c_base + 0x24].copy_from_slice(&[0, 0, 0, 0]);
+    rom[c_base + 0x0204..c_base + 0x0206].copy_from_slice(&[0xff, 0xff]);
+    rom[c_base + 0x0300..c_base + 0x0310]
+        .copy_from_slice(&[0, 0xff, 1, 0, 0, 0x11, 2, 0, 0, 0, 0, 0, 0, 0x22, 1, 0]);
+    rom[c_base + 0x0104..c_base + 0x0110].copy_from_slice(&[
+        0x02, 0x80, 0x00, 0x00, 0x03, 0x88, 0x00, 0x05, 0xff, 0xff, 0xff, 0xff,
+    ]);
+    let rom_path = fixture.put("cell.ws", &rom);
+    let link_path = fixture.json(
+        "cell-link.json",
+        json!({
+            "link": {
+                "driver_segment": 0xd000,
+                "directory": 0x0100,
+                "group_count": 1,
+                "wave_table": 0x0200,
+                "volume_curve": 0x0300,
+                "wave_ram": 0x0400
+            }
+        }),
+    );
+    let out_json = fixture.path("cell.json");
+    let out_wav = fixture.path("cell.wav");
+    let out_tsv = fixture.path("cell.tsv");
+    let out = command(&[
+        "sound",
+        "cell-render",
+        "--rom",
+        &rom_path,
+        "--link",
+        &link_path,
+        "--song",
+        "0",
+        "--ticks",
+        "4",
+        "--out-json",
+        &out_json,
+        "--out-wav",
+        &out_wav,
+        "--out-events",
+        &out_tsv,
+        "--json",
+    ]);
+    assert!(
+        out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let meta: Value = serde_json::from_slice(&fs::read(&out_json).unwrap()).unwrap();
+    assert_eq!(meta["schema"], "swankit-cell-sound/1");
+    assert_eq!(meta["completed_ticks"], 4);
+    assert!(meta["port_writes"].as_u64().unwrap() > 0);
+    assert!(meta["wave_writes"].as_u64().unwrap() > 0);
+    let wav = fs::read(&out_wav).unwrap();
+    assert_eq!(&wav[0..4], b"RIFF");
+    let tsv = fs::read_to_string(&out_tsv).unwrap();
+    assert!(tsv.contains("\tport\t80\t00\n"));
+    assert!(tsv.contains("\tport\t88\t88\n"));
 }

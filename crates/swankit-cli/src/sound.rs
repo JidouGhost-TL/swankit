@@ -8,6 +8,7 @@ use swankit::{
     rom::{BankState, RomGeometry},
     sound::{
         drivers::{
+            cell_driver::{CellDriver, CellLink},
             sdk_discover::discover_sdk_link,
             sdk_driver::{field, SdkDriver, SdkLink, Target, VoiceTrigger},
         },
@@ -32,10 +33,20 @@ pub const HELP: &str =
 swankit sound sdk-render --rom ROM (--link LINK.json | --auto-link) --song N --ticks N --out-json JSON
   [--out-wav WAV] [--out-events FILE] [--reload-mode next-period|immediate]
   [--tracks N] [--initial-phase N] [--force] [--json]
-Discover linked SDK sound-driver tables from ROM bytes or simulate the standard
-SDK two-byte-cell sound driver and emit metadata, optional per-tick register
-events (.json or .tsv), and an optional 24 kHz cycle-timed stereo WAV.
-Integers accept decimal or 0x hexadecimal.";
+swankit sound cell-render --rom ROM --link LINK.json --song N --ticks N --out-json JSON
+  [--out-wav WAV] [--out-events FILE] [--reload-mode next-period|immediate]
+  [--force] [--json]
+Discover linked SDK sound-driver tables from ROM bytes or simulate the SDK
+two-byte-cell or four-byte-cell sound driver and emit metadata, optional
+per-tick register events (.json or .tsv), and an optional 24 kHz cycle-timed
+stereo WAV. Integers accept decimal or 0x hexadecimal.";
+
+#[derive(Debug, Deserialize)]
+struct CellLinkConfig {
+    link: CellLink,
+    #[serde(default = "default_cycles_per_tick")]
+    cycles_per_tick: u64,
+}
 
 #[derive(Debug, Deserialize)]
 struct SongEntry {
@@ -82,13 +93,184 @@ struct TrackMetadata {
 
 pub fn run(a: Args, json_mode: bool) -> Result<()> {
     let action = a.positional.get(1).cloned().ok_or(
-        "sound requires a subcommand (sdk-discover, sdk-render); see swankit sound --help",
+        "sound requires a subcommand (sdk-discover, sdk-render, cell-render); see swankit sound --help",
     )?;
     match action.as_str() {
         "sdk-discover" => sdk_discover(a, json_mode),
         "sdk-render" => sdk_render(a, json_mode),
+        "cell-render" => cell_render(a, json_mode),
         _ => Err(format!("unknown sound subcommand: {action}; see swankit sound --help").into()),
     }
+}
+
+fn cell_render(mut a: Args, json_mode: bool) -> Result<()> {
+    let rom_path = a.require("--rom")?;
+    let link_path = a.require("--link")?;
+    let song_raw = a.require("--song")?;
+    let ticks_raw = a.require("--ticks")?;
+    let out_json = a.require("--out-json")?;
+    let out_wav = a.value("--out-wav");
+    let out_events = a.value("--out-events");
+    let reload_raw = a
+        .value("--reload-mode")
+        .unwrap_or_else(|| "next-period".to_owned());
+    let force = a.flag("--force");
+    a.finish(2)?;
+
+    let song = u8::try_from(args::number(&song_raw)?)
+        .map_err(|_| format!("cell song id out of u8 range: {song_raw}"))?;
+    let ticks = u32::try_from(args::number(&ticks_raw)?)
+        .map_err(|_| format!("ticks out of u32 range: {ticks_raw}"))?;
+    if ticks == 0 {
+        return Err("ticks must be at least 1".into());
+    }
+    if ticks > MAX_TICKS {
+        return Err(format!("ticks {ticks} exceeds limit {MAX_TICKS}").into());
+    }
+
+    let (reload_mode, reload_label) = match reload_raw.as_str() {
+        "next-period" => (CounterReload::NextPeriod, "next-period"),
+        "immediate" => (CounterReload::Remainder, "immediate"),
+        other => {
+            return Err(format!(
+                "invalid --reload-mode '{other}'; expected next-period or immediate"
+            )
+            .into())
+        }
+    };
+
+    let rom = io::read(&rom_path, MAX_FILE)?;
+    let link_bytes = io::read(&link_path, extract::MAX_DEFINITION_BYTES)?;
+    let config: CellLinkConfig = serde_json::from_slice(&link_bytes)
+        .map_err(|e| format!("invalid cell link JSON ({link_path}): {e}"))?;
+    if config.cycles_per_tick == 0 {
+        return Err("cell link cycles_per_tick must be non-zero".into());
+    }
+
+    let wav_frames = if out_wav.is_some() {
+        let total_cycles = u64::from(ticks)
+            .checked_mul(config.cycles_per_tick)
+            .ok_or("total render cycles overflow")?;
+        let frames = usize::try_from(total_cycles / 128).map_err(|_| "WAV frame count overflow")?;
+        if frames == 0 {
+            return Err("WAV frame count is zero; increase --ticks or cycles_per_tick".into());
+        }
+        if frames > swankit::sound::render::MAX_FRAMES {
+            return Err(format!(
+                "WAV frame count {frames} exceeds limit {}",
+                swankit::sound::render::MAX_FRAMES
+            )
+            .into());
+        }
+        Some(frames)
+    } else {
+        None
+    };
+
+    let mut model = CellDriver::new(config.link, &rom, BankState::RESET)?;
+    model.init()?;
+    model.play(song)?;
+    for _ in 0..ticks {
+        model.tick()?;
+    }
+
+    let mut port_writes = 0usize;
+    let mut wave_writes = 0usize;
+    for w in &model.writes {
+        match w.target {
+            Target::Port(_) => port_writes += 1,
+            Target::WaveWord(_) => wave_writes += 1,
+        }
+    }
+
+    let wav_bytes = if let Some(frames) = wav_frames {
+        let mut image = [0u8; 64];
+        let mut events = Vec::with_capacity(model.writes.len());
+        for w in &model.writes {
+            let cycle = u64::from(w.tick)
+                .checked_mul(config.cycles_per_tick)
+                .ok_or("event cycle overflow")?;
+            let action = match w.target {
+                Target::Port(port) => Action::Write {
+                    port,
+                    value: w.value as u8,
+                },
+                Target::WaveWord(addr) => {
+                    let offset = addr
+                        .checked_sub(config.link.wave_ram)
+                        .map(usize::from)
+                        .filter(|&at| at + 1 < image.len())
+                        .ok_or_else(|| {
+                            format!(
+                                "wave RAM write {addr:04x} outside 64-byte bank at {:04x}",
+                                config.link.wave_ram
+                            )
+                        })?;
+                    image[offset] = w.value as u8;
+                    image[offset + 1] = (w.value >> 8) as u8;
+                    Action::Waves(WaveBank::decode(&image)?)
+                }
+            };
+            events.push(CycleEvent { cycle, action });
+        }
+        let pcm = render_cycles(&events, frames, reload_mode)?;
+        let bytes = pcm.to_wav_bytes()?;
+        Some((pcm.sample_rate(), pcm.channels(), pcm.frame_count(), bytes))
+    } else {
+        None
+    };
+
+    let events_bytes = if let Some(path) = &out_events {
+        Some(encode_events(path, &model.writes, config.cycles_per_tick)?)
+    } else {
+        None
+    };
+
+    let mut metadata = json!({
+        "schema": "swankit-cell-sound/1",
+        "song": song,
+        "ticks": ticks,
+        "completed_ticks": model.ticks,
+        "complete": true,
+        "cycles_per_tick": config.cycles_per_tick,
+        "reload_mode": reload_label,
+        "port_writes": port_writes,
+        "wave_writes": wave_writes,
+        "total_writes": model.writes.len(),
+    });
+    if let (Some(path), Some((sample_rate, channels, frames, ref bytes))) = (&out_wav, &wav_bytes) {
+        metadata["wav"] = json!({
+            "path": path,
+            "sample_rate": sample_rate,
+            "channels": channels,
+            "frames": frames,
+            "bytes": bytes.len(),
+        });
+    }
+    if let (Some(path), Some(ref bytes)) = (&out_events, &events_bytes) {
+        metadata["events"] = json!({
+            "path": path,
+            "bytes": bytes.len(),
+        });
+    }
+    let meta_bytes = serde_json::to_vec_pretty(&metadata)?;
+
+    if let (Some(path), Some((_, _, _, bytes))) = (&out_wav, &wav_bytes) {
+        io::write(path, bytes, force)?;
+    }
+    if let (Some(path), Some(bytes)) = (&out_events, &events_bytes) {
+        io::write(path, bytes, force)?;
+    }
+    io::write(&out_json, &meta_bytes, force)?;
+
+    if json_mode {
+        println!("{}", serde_json::to_string_pretty(&metadata)?);
+    } else {
+        println!(
+            "Rendered cell song {song} for {ticks} ticks ({port_writes} port writes, {wave_writes} wave writes) -> {out_json}"
+        );
+    }
+    Ok(())
 }
 
 fn sdk_discover(mut a: Args, json_mode: bool) -> Result<()> {

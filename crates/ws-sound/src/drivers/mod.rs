@@ -1,6 +1,7 @@
 //! Decoded driver grammars. Linked table locations are caller-supplied.
 pub mod byte;
 pub mod cell;
+pub mod cell_driver;
 pub mod sdk;
 pub mod sdk_discover;
 pub mod sdk_driver;

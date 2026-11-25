@@ -32,20 +32,38 @@ pub mod field {
     pub const VOLUME_CAP: u16 = 0x12;
     pub const KEY_ON_RELOAD: u16 = 0x13;
     pub const KEY_ON_COUNTER: u16 = 0x14;
+    pub const ENVELOPE_BANK: u16 = 0x15;
     pub const LOOP_AREA: u16 = 0x16;
     pub const SLIDE_BUDGET: u16 = 0x22;
     pub const SLIDE_PERIOD: u16 = 0x23;
     pub const SLIDE_DIVIDER: u16 = 0x24;
     pub const WAVE_OFFSET: u16 = 0x25;
     pub const VOLUME_MIRROR: u16 = 0x26;
+    pub const BRANCH_INDEX: u16 = 0x28;
+    pub const SUB_COUNTER: u16 = 0x29;
+    pub const SUB_RETURN: u16 = 0x2a;
 }
 
 /// Post-tick channel-3 mute tail: C035/C042 restore the saved slot pointer
-/// before clearing its frequency; C036 clears through the live pointer.
+/// before clearing its frequency; C036 clears through the live pointer;
+/// earlier builds omit the low-divisor mute check altogether.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MuteTail {
     SavedPointer,
     LivePointer,
+    None,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn is_true(v: &bool) -> bool {
+    *v
+}
+
+fn is_false(v: &bool) -> bool {
+    !*v
 }
 
 /// Global driver bytes (data-segment offsets).
@@ -90,6 +108,23 @@ pub struct SdkLink {
     /// Optional 8-byte-per-entry voice descriptor table offset in the driver segment.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub voice_table: Option<u16>,
+    /// Optional word table of envelope-group base pointers indexed by `slot[0x15] * 2`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub envelope_group_table: Option<u16>,
+    /// Extended jump-table SDK variant (banked envelopes `A8`, speaker volume `A6`,
+    /// branch/subroutine `A9`/`AC`/`AD`, channel-3 noise toggle on note, play port-90h clear).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub extended_opcodes: bool,
+    /// Optional global branch-selector byte used by extended opcode `A9 FF`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub branch_selector: Option<u16>,
+    /// When true, channel-3 sweep delta is computed inline as 4-bit sign-magnitude
+    /// (`(n & 7)` negated if `n & 8 != 0`) rather than read from `sweep_table`.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub inline_sweep: bool,
+    /// Whether `merge_control` ORs `0x22` into port `0x90` when `voice_active != 0`.
+    #[serde(default = "default_true", skip_serializing_if = "is_true")]
+    pub merge_voice_active: bool,
     pub mute_tail: MuteTail,
 }
 
@@ -361,6 +396,9 @@ impl<'a> SdkDriver<'a> {
         for slot in 0..8u16 {
             let base = self.link.slots.wrapping_add(slot * self.link.slot_stride);
             self.ww(base, 0xffff);
+            if self.link.extended_opcodes && self.link.slot_stride >= 0x2c {
+                self.ww(base.wrapping_add(field::SUB_COUNTER), 0);
+            }
         }
         self.set_g(|g| g.first_track, 0);
         self.set_g(|g| g.route_last, 0);
@@ -492,6 +530,10 @@ impl<'a> SdkDriver<'a> {
                 let mask = [0xee, 0xdd, 0xbb, 0x77][usize::from(self.rb(slot + 2) & 3)];
                 let shadow = self.g(|g| g.control_shadow) & mask;
                 self.set_g(|g| g.control_shadow, shadow);
+                if self.link.extended_opcodes {
+                    let control = self.ports.read(0x90)? & (mask | 0xf0);
+                    self.out8(0x90, control)?;
+                }
             }
             self.ww(slot, 0);
             self.wb(slot + 2, self.dw(entry + 2)? as u8);
@@ -503,6 +545,9 @@ impl<'a> SdkDriver<'a> {
             }
             for offset in [0x21, 0x23, 0x25] {
                 self.ww(slot + offset, 0);
+            }
+            if self.link.extended_opcodes && self.link.slot_stride >= 0x2c {
+                self.ww(slot + 0x27, 0);
             }
             index = index.wrapping_add(1);
         }
@@ -591,7 +636,7 @@ impl<'a> SdkDriver<'a> {
             self.wb(slot + SWEEP, mode);
         } else {
             self.wb(slot + MODE, mode);
-            if mode != 0 && channel == 3 {
+            if !self.link.extended_opcodes && mode != 0 && channel == 3 {
                 let control = self.ports.read(0x90)? | 0x80;
                 self.out8(0x90, control)?;
             }
@@ -633,11 +678,13 @@ impl<'a> SdkDriver<'a> {
             fraction = (fraction << 1) | bit;
         }
         let index = u16::from(self.rb(slot + ENVELOPE_GROUP) | fraction);
-        let step = self.db(self
-            .link
-            .envelope_groups
-            .wrapping_sub(0x10)
-            .wrapping_add(index))?;
+        let group_base = if let Some(table) = self.link.envelope_group_table {
+            let bank_off = u16::from(self.rb(slot + ENVELOPE_BANK).wrapping_shl(1));
+            self.dw(table.wrapping_add(bank_off))?
+        } else {
+            self.link.envelope_groups
+        };
+        let step = self.db(group_base.wrapping_sub(0x10).wrapping_add(index))?;
         let combined = (step & 0xf0) | self.rb(slot + VOLUME);
         self.db(self.link.envelope_volumes.wrapping_add(combined.into()))
     }
@@ -720,10 +767,11 @@ impl<'a> SdkDriver<'a> {
         let bits = self.g(|g| g.channel_bits);
         let taken = self.g(|g| g.taken_mask) | bits;
         self.set_g(|g| g.taken_mask, taken);
-        if self.channel() == 2 && self.in16(0x84)? < 0x96 {
+        if self.link.mute_tail != MuteTail::None && self.channel() == 2 && self.in16(0x84)? < 0x96 {
             let target = match self.link.mute_tail {
                 MuteTail::SavedPointer => slot,
                 MuteTail::LivePointer => self.si,
+                MuteTail::None => unreachable!(),
             };
             self.ww(target.wrapping_add(field::FREQUENCY), 0);
             self.out16(0x84, 0)?;
@@ -734,7 +782,7 @@ impl<'a> SdkDriver<'a> {
 
     fn merge_control(&mut self) -> Result<()> {
         let mut control = self.ports.read(0x90)? | (self.g(|g| g.control_shadow) & 0xf);
-        if self.g(|g| g.voice_active) != 0 {
+        if self.link.merge_voice_active && self.g(|g| g.voice_active) != 0 {
             control |= 0x22;
         }
         self.out8(0x90, control)?;
@@ -876,7 +924,7 @@ impl<'a> SdkDriver<'a> {
                     }
                     0xa4 => {
                         self.wb(slot + MODE, operand);
-                        if self.channel() == 3 {
+                        if !self.link.extended_opcodes && self.channel() == 3 {
                             let control = self.ports.read(0x90)?;
                             let control = if operand != 0 {
                                 control | 0x80
@@ -887,10 +935,69 @@ impl<'a> SdkDriver<'a> {
                         }
                     }
                     0xa5 => self.wb(slot + VOLUME_CAP, operand),
+                    0xa6 if self.link.extended_opcodes => {
+                        let control = (self.ports.read(0x91)? & 0xf9) | operand.wrapping_shl(1);
+                        self.out8(0x91, control)?;
+                    }
                     0xa7 => {
                         self.wb(slot + DURATION, operand);
                         self.enable_shadow();
+                        if self.link.extended_opcodes && self.channel() == 3 {
+                            self.apply_extended_ch3_noise(slot)?;
+                        }
                         return Ok(());
+                    }
+                    0xa8 if self.link.extended_opcodes => {
+                        self.wb(slot + ENVELOPE_BANK, operand);
+                    }
+                    0xa9 if self.link.extended_opcodes => match operand {
+                        0xf0 => {
+                            let v = self.rb(slot + BRANCH_INDEX).wrapping_add(1);
+                            self.wb(slot + BRANCH_INDEX, v);
+                        }
+                        0xf1 => {
+                            let v = self.rb(slot + BRANCH_INDEX).wrapping_sub(1);
+                            self.wb(slot + BRANCH_INDEX, v);
+                        }
+                        0xfe | 0xff => {
+                            let sel = if operand == 0xfe {
+                                self.rb(slot + BRANCH_INDEX)
+                            } else {
+                                self.link.branch_selector.map_or(0, |a| self.rb(a))
+                            };
+                            let table_off = bx.wrapping_add(1).wrapping_add(u16::from(sel) << 1);
+                            let target = self.dw(table_off)?;
+                            self.ww(slot + POSITION, target);
+                            continue 'restart;
+                        }
+                        _ => {
+                            self.wb(slot + BRANCH_INDEX, operand);
+                        }
+                    },
+                    0xac if self.link.extended_opcodes => {
+                        let count = self.rb(slot + SUB_COUNTER);
+                        let next = count.wrapping_sub(1);
+                        if next == 0 {
+                            self.wb(slot + SUB_COUNTER, 0);
+                            let pos = self.rw(slot + POSITION).wrapping_add(1);
+                            self.ww(slot + POSITION, pos);
+                            continue 'restart;
+                        }
+                        if count == 0 {
+                            self.wb(slot + SUB_COUNTER, operand);
+                        } else {
+                            self.wb(slot + SUB_COUNTER, next);
+                        }
+                        let ret_pos = self.rw(slot + POSITION).wrapping_sub(1);
+                        self.ww(slot + SUB_RETURN, ret_pos);
+                        let target = self.dw(bx.wrapping_add(1))? >> 1;
+                        self.ww(slot + POSITION, target);
+                        continue 'restart;
+                    }
+                    0xad if self.link.extended_opcodes => {
+                        let ret_pos = self.rw(slot + SUB_RETURN);
+                        self.ww(slot + POSITION, ret_pos);
+                        continue 'restart;
                     }
                     0xae => {
                         let flags = (self.rb(slot + HEADER_FLAGS) & 0xef) | (operand & 0x10);
@@ -970,7 +1077,7 @@ impl<'a> SdkDriver<'a> {
         let class = opcode & 0xf;
         if class >= 0xc {
             self.ww(slot + FREQUENCY, 0);
-            if !self.taken() {
+            if self.link.extended_opcodes || !self.taken() {
                 self.wb(slot + VOLUME_MIRROR, 0);
             }
             return Ok(());
@@ -1000,7 +1107,7 @@ impl<'a> SdkDriver<'a> {
             self.wb(slot + VOLUME_MIRROR, value);
         }
         self.wb(slot + VOLUME_MIRROR, self.rb(slot + VOLUME).rotate_right(4));
-        if channel == 3 && self.rb(slot + MODE) != 0 {
+        if !self.link.extended_opcodes && channel == 3 && self.rb(slot + MODE) != 0 {
             self.out8(0x8e, self.rb(slot + NOISE_OR_SAMPLE) | 0x18)?;
         }
         self.out16(0x80 + channel * 2, divisor)?;
@@ -1010,14 +1117,37 @@ impl<'a> SdkDriver<'a> {
             let mut amount = 0;
             if sweep != 0 {
                 self.out8(0x8d, sweep >> 4)?;
-                let offset = u16::from(sweep & 0xf).wrapping_sub(1);
-                self.si = self.link.sweep_table.wrapping_add(offset);
-                amount = self.db(self.si)?;
+                amount = if self.link.inline_sweep {
+                    let mag = sweep & 7;
+                    if sweep & 8 != 0 {
+                        mag.wrapping_neg()
+                    } else {
+                        mag
+                    }
+                } else {
+                    let offset = u16::from(sweep & 0xf).wrapping_sub(1);
+                    self.si = self.link.sweep_table.wrapping_add(offset);
+                    self.db(self.si)?
+                };
             }
             self.out8(0x8c, amount)?;
         }
         self.enable_shadow();
+        if self.link.extended_opcodes && channel == 3 {
+            self.apply_extended_ch3_noise(slot)?;
+        }
         Ok(())
+    }
+
+    fn apply_extended_ch3_noise(&mut self, slot: u16) -> Result<()> {
+        if self.rb(slot + field::MODE) != 0 {
+            self.out8(0x8e, self.rb(slot + field::NOISE_OR_SAMPLE) | 0x18)?;
+            let control = self.ports.read(0x90)? | 0x80;
+            self.out8(0x90, control)
+        } else {
+            let control = self.ports.read(0x90)? & 0x7f;
+            self.out8(0x90, control)
+        }
     }
 }
 

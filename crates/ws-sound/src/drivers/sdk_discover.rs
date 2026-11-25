@@ -17,6 +17,8 @@ pub enum FetchVariant {
     NearJumps,
     /// Short 8-bit relative jumps (`0xEB`).
     ShortJumps,
+    /// Indirect 16-bit jump table (`JMP CS:[DI + table]`) for opcodes `0xA0..=0xFF`.
+    JumpTable,
     /// Unclassified jump encoding.
     Unknown,
 }
@@ -275,6 +277,7 @@ pub fn discover_sdk_link(rom: &[u8]) -> Result<SdkDiscovery> {
     let vibrato_table = read_u16(tick_win, vib_pos + 1).unwrap();
 
     // Envelope groups & envelope volumes:
+    // Direct form (standard SDK) or indirect form (banked pointer table indexed by [SI+15h]*2).
     const ENV_PAT: &[Pat] = &[
         Lit(0xbf),
         Any,
@@ -308,10 +311,75 @@ pub fn discover_sdk_link(rom: &[u8]) -> Result<SdkDiscovery> {
         Lit(0x44),
         Lit(0x26),
     ];
-    let env_pos = find_pattern(tick_win, ENV_PAT)
-        .ok_or_else(|| Error::Unsupported("SDK envelope-table pattern not found".into()))?;
-    let envelope_groups = read_u16(tick_win, env_pos + 1).unwrap();
-    let envelope_volumes = read_u16(tick_win, env_pos + 19).unwrap();
+    const ENV_IND_PAT: &[Pat] = &[
+        Lit(0x50),
+        Lit(0xbf),
+        Any,
+        Any,
+        Lit(0xb8),
+        Any,
+        Any,
+        Lit(0x8e),
+        Lit(0xc0),
+        Lit(0x8a),
+        Lit(0x44),
+        Lit(0x15),
+        Lit(0xd0),
+        Lit(0xe0),
+        Lit(0x32),
+        Lit(0xe4),
+        Lit(0x03),
+        Lit(0xf8),
+        Lit(0x26),
+        Lit(0x8b),
+        Lit(0x3d),
+        Lit(0x83),
+        Lit(0xef),
+        Lit(0x10),
+        Lit(0x58),
+        Lit(0x03),
+        Lit(0xf8),
+        Lit(0x8a),
+        Lit(0x64),
+        Lit(0x08),
+        Lit(0x2e),
+        Lit(0x8a),
+        Lit(0x05),
+        Lit(0x24),
+        Lit(0xf0),
+        Lit(0x0a),
+        Lit(0xc4),
+        Lit(0xbf),
+        Any,
+        Any,
+        Lit(0x32),
+        Lit(0xe4),
+        Lit(0x03),
+        Lit(0xf8),
+        Lit(0x2e),
+        Lit(0x8a),
+        Lit(0x05),
+        Lit(0x88),
+        Lit(0x44),
+        Lit(0x26),
+    ];
+    let (envelope_groups, envelope_group_table, envelope_volumes) =
+        if let Some(env_pos) = find_pattern(tick_win, ENV_PAT) {
+            (
+                read_u16(tick_win, env_pos + 1).unwrap(),
+                None,
+                read_u16(tick_win, env_pos + 19).unwrap(),
+            )
+        } else if let Some(env_pos) = find_pattern(tick_win, ENV_IND_PAT) {
+            let table = read_u16(tick_win, env_pos + 2).unwrap();
+            let default_groups = read_u16(seg, usize::from(table)).unwrap_or(0);
+            let volumes = read_u16(tick_win, env_pos + 38).unwrap();
+            (default_groups, Some(table), volumes)
+        } else {
+            return Err(Error::Unsupported(
+                "SDK envelope-table pattern not found".into(),
+            ));
+        };
 
     // Slot stride: ADD SI,<stride>; INC BYTE [track_index]; CMP BYTE [track_index], 8
     let ti = track_index.to_le_bytes();
@@ -338,7 +406,7 @@ pub fn discover_sdk_link(rom: &[u8]) -> Result<SdkDiscovery> {
         ));
     }
 
-    // Control merge + deferred parameter apply:
+    // Control merge + deferred parameter apply (with or without voice_active OR):
     const CTRL_PAT: &[Pat] = &[
         Lit(0xe4),
         Lit(0x90),
@@ -379,16 +447,91 @@ pub fn discover_sdk_link(rom: &[u8]) -> Result<SdkDiscovery> {
         Any,
         Any,
     ];
-    let ctrl_pos = find_pattern(tick_win, CTRL_PAT)
-        .ok_or_else(|| Error::Unsupported("SDK control-merge pattern not found".into()))?;
-    let control_shadow = read_u16(tick_win, ctrl_pos + 4).unwrap();
-    let voice_active = read_u16(tick_win, ctrl_pos + 13).unwrap();
-    let expired_mask = read_u16(tick_win, ctrl_pos + 23).unwrap();
-    let deferred_mask = read_u16(tick_win, ctrl_pos + 27).unwrap();
-    let deferred_target = read_u16(tick_win, ctrl_pos + 32).unwrap();
-    let deferred_value = read_u16(tick_win, ctrl_pos + 36).unwrap();
+    const CTRL_PAT_NO_VOICE: &[Pat] = &[
+        Lit(0xe4),
+        Lit(0x90),
+        Lit(0x8a),
+        Lit(0x26),
+        Any,
+        Any,
+        Lit(0x80),
+        Lit(0xe4),
+        Lit(0x0f),
+        Lit(0x0a),
+        Lit(0xc4),
+        Lit(0xe6),
+        Lit(0x90),
+        Lit(0xa0),
+        Any,
+        Any,
+        Lit(0x22),
+        Lit(0x06),
+        Any,
+        Any,
+        Lit(0x74),
+        Any,
+        Lit(0xbb),
+        Any,
+        Any,
+        Lit(0x8a),
+        Lit(0x26),
+        Any,
+        Any,
+    ];
+    let (
+        control_shadow,
+        voice_active,
+        expired_mask,
+        deferred_mask,
+        deferred_target,
+        deferred_value,
+        merge_voice_active,
+    ) = if let Some(ctrl_pos) = find_pattern(tick_win, CTRL_PAT) {
+        (
+            read_u16(tick_win, ctrl_pos + 4).unwrap(),
+            read_u16(tick_win, ctrl_pos + 13).unwrap(),
+            read_u16(tick_win, ctrl_pos + 23).unwrap(),
+            read_u16(tick_win, ctrl_pos + 27).unwrap(),
+            read_u16(tick_win, ctrl_pos + 32).unwrap(),
+            read_u16(tick_win, ctrl_pos + 36).unwrap(),
+            true,
+        )
+    } else if let Some(ctrl_pos) = find_pattern(tick_win, CTRL_PAT_NO_VOICE) {
+        // Extract voice_active from the channel-1 volume guard in the tick loop:
+        //   CMP BYTE [ch_idx], 1; JNE +7; TEST BYTE [voice_active], 0FFh
+        let ci = channel_index.to_le_bytes();
+        let va_pat = [
+            Lit(0x80),
+            Lit(0x3e),
+            Lit(ci[0]),
+            Lit(ci[1]),
+            Lit(0x01),
+            Lit(0x75),
+            Lit(0x07),
+            Lit(0xf6),
+            Lit(0x06),
+            Any,
+            Any,
+            Lit(0xff),
+        ];
+        let va_pos = find_pattern(tick_win, &va_pat)
+            .ok_or_else(|| Error::Unsupported("SDK voice_active guard not found".into()))?;
+        (
+            read_u16(tick_win, ctrl_pos + 4).unwrap(),
+            read_u16(tick_win, va_pos + 9).unwrap(),
+            read_u16(tick_win, ctrl_pos + 14).unwrap(),
+            read_u16(tick_win, ctrl_pos + 18).unwrap(),
+            read_u16(tick_win, ctrl_pos + 23).unwrap(),
+            read_u16(tick_win, ctrl_pos + 27).unwrap(),
+            false,
+        )
+    } else {
+        return Err(Error::Unsupported(
+            "SDK control-merge pattern not found".into(),
+        ));
+    };
 
-    // Channel-3 mute tail: IN AX,84h; CMP AX,96h; JB rel8
+    // Channel-3 mute tail: IN AX,84h; CMP AX,96h; JB rel8 (absent on earlier builds)
     const MUTE_PAT: &[Pat] = &[
         Lit(0xe5),
         Lit(0x84),
@@ -398,18 +541,20 @@ pub fn discover_sdk_link(rom: &[u8]) -> Result<SdkDiscovery> {
         Lit(0x72),
         Any,
     ];
-    let mute_pos = find_pattern(tick_win, MUTE_PAT)
-        .ok_or_else(|| Error::Unsupported("SDK channel-3 mute tail pattern not found".into()))?;
-    let rel = tick_win[mute_pos + 6] as i8;
-    let target_idx = (mute_pos as isize + 7 + isize::from(rel)) as usize;
-    let mute_tail = match tick_win.get(target_idx).copied() {
-        Some(0x5e) => MuteTail::SavedPointer,
-        Some(0xb8) => MuteTail::LivePointer,
-        _ => {
-            return Err(Error::Unsupported(
-                "unrecognized SDK channel-3 mute tail opcode".into(),
-            ));
+    let mute_tail = if let Some(mute_pos) = find_pattern(tick_win, MUTE_PAT) {
+        let rel = tick_win[mute_pos + 6] as i8;
+        let target_idx = (mute_pos as isize + 7 + isize::from(rel)) as usize;
+        match tick_win.get(target_idx).copied() {
+            Some(0x5e) => MuteTail::SavedPointer,
+            Some(0xb8) => MuteTail::LivePointer,
+            _ => {
+                return Err(Error::Unsupported(
+                    "unrecognized SDK channel-3 mute tail opcode".into(),
+                ));
+            }
         }
+    } else {
+        MuteTail::None
     };
 
     // Fetch prefix (preceding fetch_off):
@@ -475,7 +620,7 @@ pub fn discover_sdk_link(rom: &[u8]) -> Result<SdkDiscovery> {
     let wave_bank = read_u16(prefix, wave_pos + 24).unwrap();
     let wave_ram = read_u16(prefix, wave_pos + 31).unwrap();
 
-    // Sweep table: OUT 8Dh,AL; MOV AL,AH; AND AX,0Fh; DEC AX; MOV SI,<sweep>; ADD SI,AX; MOV AL,CS:[SI]; OUT 8Ch,AL
+    // Sweep table or inline 4-bit sign-magnitude sweep:
     const SWEEP_PAT: &[Pat] = &[
         Lit(0xe6),
         Lit(0x8d),
@@ -496,9 +641,32 @@ pub fn discover_sdk_link(rom: &[u8]) -> Result<SdkDiscovery> {
         Lit(0xe6),
         Lit(0x8c),
     ];
-    let sweep_pos = find_pattern(prefix, SWEEP_PAT)
-        .ok_or_else(|| Error::Unsupported("SDK sweep-table pattern not found".into()))?;
-    let sweep_table = read_u16(prefix, sweep_pos + 9).unwrap();
+    const SWEEP_INLINE_PAT: &[Pat] = &[
+        Lit(0xe6),
+        Lit(0x8d),
+        Lit(0x8a),
+        Lit(0xc4),
+        Lit(0x24),
+        Lit(0x07),
+        Lit(0xf6),
+        Lit(0xc4),
+        Lit(0x08),
+        Lit(0x74),
+        Lit(0x02),
+        Lit(0xf6),
+        Lit(0xd8),
+        Lit(0xe6),
+        Lit(0x8c),
+    ];
+    let (sweep_table, inline_sweep) = if let Some(sweep_pos) = find_pattern(prefix, SWEEP_PAT) {
+        (read_u16(prefix, sweep_pos + 9).unwrap(), false)
+    } else if find_pattern(prefix, SWEEP_INLINE_PAT).is_some() {
+        (0, true)
+    } else {
+        return Err(Error::Unsupported(
+            "SDK sweep-table pattern not found".into(),
+        ));
+    };
 
     // Voice clear / start helper calls at the tail of fetch prefix:
     //   CALL clear_voice; MOV CL,AL; XOR CH,CH; MOV AL,[SI+0Ch]; XOR AH,AH; CALL start_voice; RET
@@ -561,10 +729,57 @@ pub fn discover_sdk_link(rom: &[u8]) -> Result<SdkDiscovery> {
     let play_index = read_u16(seg, play_pos + 2).unwrap();
     let track_table = read_u16(seg, play_pos + 5).unwrap();
 
-    let fetch_variant = match seg.get(fetch_off + 26).copied() {
-        Some(0xe9) => FetchVariant::NearJumps,
-        Some(0xeb) => FetchVariant::ShortJumps,
-        _ => FetchVariant::Unknown,
+    // Jump-table dispatch check (extended SDK): SUB DI, 0xA0; ADD DI, DI; JMP CS:[DI+table]
+    const JT_PAT: &[Pat] = &[
+        Lit(0x81),
+        Lit(0xef),
+        Lit(0xa0),
+        Lit(0x00),
+        Lit(0x03),
+        Lit(0xff),
+        Lit(0x2e),
+        Lit(0xff),
+        Lit(0xa5),
+    ];
+    let fetch_head = &seg[fetch_off..seg.len().min(fetch_off + 0x60)];
+    let extended_opcodes = find_pattern(fetch_head, JT_PAT).is_some();
+    let fetch_variant = if extended_opcodes {
+        FetchVariant::JumpTable
+    } else {
+        match seg.get(fetch_off + 26).copied() {
+            Some(0xe9) => FetchVariant::NearJumps,
+            Some(0xeb) => FetchVariant::ShortJumps,
+            _ => FetchVariant::Unknown,
+        }
+    };
+
+    // Optional global branch selector byte for extended opcode A9 FF:
+    //   CMP AL, 0FFh; JNE +rel8; MOV AL, [SI+28h]; JMP +2/+3; MOV AL, [branch_selector]
+    const BRANCH_SEL_PAT: &[Pat] = &[
+        Lit(0x3c),
+        Lit(0xff),
+        Lit(0x75),
+        Any,
+        Lit(0x8a),
+        Lit(0x44),
+        Lit(0x28),
+    ];
+    let branch_selector = if extended_opcodes {
+        let fetch_body = &seg[fetch_off..seg.len().min(fetch_off + 0x260)];
+        find_pattern(fetch_body, BRANCH_SEL_PAT).and_then(|pos| {
+            let after = pos + BRANCH_SEL_PAT.len();
+            if fetch_body.get(after) == Some(&0xe9) && fetch_body.get(after + 3) == Some(&0xa0) {
+                read_u16(fetch_body, after + 4)
+            } else if fetch_body.get(after) == Some(&0xeb)
+                && fetch_body.get(after + 2) == Some(&0xa0)
+            {
+                read_u16(fetch_body, after + 3)
+            } else {
+                None
+            }
+        })
+    } else {
+        None
     };
 
     Ok(SdkDiscovery {
@@ -600,6 +815,11 @@ pub fn discover_sdk_link(rom: &[u8]) -> Result<SdkDiscovery> {
             track_table,
             voice_state,
             voice_table,
+            envelope_group_table,
+            extended_opcodes,
+            branch_selector,
+            inline_sweep,
+            merge_voice_active,
             mute_tail,
         },
         fetch_variant,

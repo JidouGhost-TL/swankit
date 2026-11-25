@@ -114,6 +114,7 @@ fn build_synthetic_sdk_rom(
     match link.mute_tail {
         MuteTail::SavedPointer => put(&mut rom, &mut p, &[0x5e]),
         MuteTail::LivePointer => put(&mut rom, &mut p, &[0xb8, 0x00, 0x00]),
+        MuteTail::None => {}
     }
 
     // Slot stride
@@ -273,6 +274,11 @@ fn sample_link(mute_tail: MuteTail, voice_table: Option<u16>) -> SdkLink {
         track_table: 0x0d00,
         voice_state: 0x055f,
         voice_table,
+        envelope_group_table: None,
+        extended_opcodes: false,
+        branch_selector: None,
+        inline_sweep: false,
+        merge_voice_active: true,
         mute_tail,
     }
 }
@@ -304,4 +310,91 @@ fn rejects_non_sdk_and_empty_roms_without_panicking() {
     assert!(discover_sdk_link(&[]).is_err());
     assert!(discover_sdk_link(&[0u8; 64]).is_err());
     assert!(discover_sdk_link(&[0x90u8; 0x10000]).is_err());
+}
+
+#[test]
+fn discovers_inline_sweep_and_no_mute_tail_variant() {
+    let mut expected = sample_link(MuteTail::None, Some(0x5442));
+    expected.inline_sweep = true;
+    expected.sweep_table = 0;
+    let mut rom = build_synthetic_sdk_rom(&expected, 0xf000, false, false);
+    // Remove mute check (IN AX,84h; CMP AX,96h; JB)
+    let mute_pat = [0xe5, 0x84, 0x3d, 0x96, 0x00, 0x72];
+    let mp = rom
+        .windows(mute_pat.len())
+        .position(|w| w == mute_pat)
+        .unwrap();
+    rom[mp..mp + 9].fill(0x90);
+    // Replace table sweep with inline sign-magnitude sweep
+    let sw_pat = [0xe6, 0x8d, 0x8a, 0xc4, 0x25, 0x0f, 0x00, 0x48, 0xbe];
+    let sp = rom.windows(sw_pat.len()).position(|w| w == sw_pat).unwrap();
+    let inline = [
+        0xe6, 0x8d, 0x8a, 0xc4, 0x24, 0x07, 0xf6, 0xc4, 0x08, 0x74, 0x02, 0xf6, 0xd8, 0xe6, 0x8c,
+        0x90, 0x90, 0x90,
+    ];
+    rom[sp..sp + inline.len()].copy_from_slice(&inline);
+
+    let disc = discover_sdk_link(&rom).unwrap();
+    assert_eq!(disc.link, expected);
+    assert!(disc.link.inline_sweep);
+    assert_eq!(disc.link.mute_tail, MuteTail::None);
+}
+
+#[test]
+fn discovers_jump_table_indirect_envelope_and_no_voice_merge_variant() {
+    let mut expected = sample_link(MuteTail::LivePointer, Some(0x5442));
+    expected.envelope_group_table = Some(0x0c40);
+    expected.envelope_groups = 0x0c50;
+    expected.extended_opcodes = true;
+    expected.merge_voice_active = false;
+    let mut rom = build_synthetic_sdk_rom(&expected, 0xf000, false, false);
+    // Populate bank-0 pointer at envelope_group_table
+    rom[0x0c40..0x0c42].copy_from_slice(&0x0c50u16.to_le_bytes());
+
+    // Patch indirect envelope lookup into tick window (replacing direct ENV_PAT)
+    let env_pat = [0xbf, 0x50, 0x0c, 0x83, 0xef, 0x10];
+    let ep = rom
+        .windows(env_pat.len())
+        .position(|w| w == env_pat)
+        .unwrap();
+    let mut ind = vec![
+        0x50, 0xbf, 0x40, 0x0c, 0xb8, 0x00, 0xf0, 0x8e, 0xc0, 0x8a, 0x44, 0x15, 0xd0, 0xe0, 0x32,
+        0xe4, 0x03, 0xf8, 0x26, 0x8b, 0x3d, 0x83, 0xef, 0x10, 0x58, 0x03, 0xf8, 0x8a, 0x64, 0x08,
+        0x2e, 0x8a, 0x05, 0x24, 0xf0, 0x0a, 0xc4, 0xbf, 0x30, 0x08, 0x32, 0xe4, 0x03, 0xf8, 0x2e,
+        0x8a, 0x05, 0x88, 0x44, 0x26,
+    ];
+    // Append voice_active tick guard right after indirect envelope
+    ind.extend_from_slice(&[
+        0x80, 0x3e, 0x52, 0x05, 0x01, 0x75, 0x07, 0xf6, 0x06, 0x5e, 0x05, 0xff,
+    ]);
+    let mut p = ep;
+    rom[p..p + ind.len()].copy_from_slice(&ind);
+    p += ind.len();
+    let mute = [
+        0xe5, 0x84, 0x3d, 0x96, 0x00, 0x72, 0x02, 0x90, 0x90, 0xb8, 0x00, 0x00,
+    ];
+    rom[p..p + mute.len()].copy_from_slice(&mute);
+    p += mute.len();
+    let stride = [
+        0x83, 0xc6, 42, 0xfe, 0x06, 0x55, 0x05, 0x80, 0x3e, 0x55, 0x05, 0x08,
+    ];
+    rom[p..p + stride.len()].copy_from_slice(&stride);
+    p += stride.len();
+    let ctrl_nv = [
+        0xe4, 0x90, 0x8a, 0x26, 0x51, 0x05, 0x80, 0xe4, 0x0f, 0x0a, 0xc4, 0xe6, 0x90, 0xa0, 0x5a,
+        0x05, 0x22, 0x06, 0x58, 0x05, 0x74, 0x10, 0xbb, 0x06, 0x04, 0x8a, 0x26, 0x59, 0x05,
+    ];
+    rom[p..p + ctrl_nv.len()].copy_from_slice(&ctrl_nv);
+    p += ctrl_nv.len();
+    rom[p..0x0480].fill(0x90);
+
+    // Patch jump-table dispatch into fetch head at 0x0580 + 18
+    let jt = [
+        0x81, 0xef, 0xa0, 0x00, 0x03, 0xff, 0x2e, 0xff, 0xa5, 0x00, 0x10,
+    ];
+    rom[0x0580 + 18..0x0580 + 18 + jt.len()].copy_from_slice(&jt);
+
+    let disc = discover_sdk_link(&rom).unwrap();
+    assert_eq!(disc.fetch_variant, FetchVariant::JumpTable);
+    assert_eq!(disc.link, expected);
 }
