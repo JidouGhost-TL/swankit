@@ -15,7 +15,9 @@ private crate inherits the workspace publication policy.
 | `drivers::byte` | Distinct A/B/C headers and command lengths, two-group varlens, direct mode, PCM SE commands and mask-zero C PCM descriptors |
 | `drivers::cell` | Four-byte directory groups, 13-byte song records, PCM descriptors and four-byte track cells |
 | `drivers::sdk` | Standard six-byte track and eight-byte voice records, two-byte cells and linked pitch lookup |
-| `drivers::sdk_driver` | Tick-level standard SDK driver model: driver state as data-segment bytes, reset/play/voice-stop/first-track entries and per-tick ordered sound-port and wave-RAM writes |
+| `drivers::sdk_driver` | Tick-level standard SDK driver model (including jump-table extended and inline-sweep variants): driver state as data-segment bytes, reset/play/voice-stop/first-track entries, banked/chained Channel 2 PCM voice notes, Channel 3 sweep readback, and per-tick ordered sound-port and wave-RAM writes |
+| `drivers::sdk_discover` | Static ROM scanner locating linked SDK driver tables and variant flags without title detection |
+| `drivers::cell_driver` | Tick-level four-byte-cell ADSR sound driver model: eight music/SFX slots, four-stage ADSR envelopes, 16x16 volume curve, waveform reloads, channel-4 noise control, and SFX masking/restoration |
 | `render::render` | Ordered frame events to 24 kHz signed stereo PCM |
 | `render::render_cycles` | Ordered CPU-cycle events to 24 kHz PCM, each applied at its own cycle, with an explicit counter-reload rule |
 | `drivers::sdk::render_sequence` | A bounded single-track preview of notes, rests, volume, wave selection, A7 waits and reserved cells |
@@ -76,18 +78,19 @@ edge differs from integer phase; the filter is not a hardware circuit model.
 
 `drivers::sdk_driver::SdkDriver` steps the standard tick (C035/C036/C042
 bodies), cell fetch (C016/C019), volume slide, channel-off helper, play
-cascade, reset and voice stop from the owner's reconstruction. Its state is a
-64 KiB data-segment image, so unchecked loop slots and other overlapping
-fields behave as stored bytes do. Every linked RAM and table location is a
-caller-supplied `SdkLink`; the crate does not locate drivers. Writes are
-recorded with the tick count, in program order; a word OUT records the low then
-the high port. Port readback follows WSdev Sound: 91h bit 7 reports the caller's
-headphone state and the other ports return their last write. Not modelled:
-sweep changes to the channel 3 divider as seen by the driver's 84h read (the
-model reads the last written value), voice notes (sample start and the IRQ
-pump; reaching one returns `Unsupported`) and sound DMA. The
-`sdk_oracle_diff` example replays a captured entry schedule through the model
-and diffs its writes and RAM against a captured register stream per tick.
+cascade, reset, voice stop, jump-table extended variants, and inline-sweep
+variants from the owner's reconstruction. Its state is a 64 KiB data-segment
+image, so unchecked loop slots and other overlapping fields behave as stored
+bytes do. Every linked RAM and table location is a caller-supplied `SdkLink`
+(which may be produced by `drivers::sdk_discover::discover_sdk_link`). Writes
+are recorded with the tick count, in program order; a word OUT records the low
+then the high port. Port readback follows WSdev Sound: 91h bit 7 reports the
+caller's headphone state, channel 3 divider readback reflects hardware sweep
+updates, and the other ports return their last write. Channel 2 voice notes
+resolve banked and chained voice descriptors; sound DMA remains unmodelled. The
+`sdk_oracle_diff` and `cell_oracle_diff` examples replay a captured entry
+schedule through the models and diff their writes and RAM against a captured
+register stream per tick.
 
 `render_cycles` applies each event at its own CPU cycle and samples the mix at
 the end of every 128-cycle frame. WSdev Sound gives the sample period but not

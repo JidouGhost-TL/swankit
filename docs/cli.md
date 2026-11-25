@@ -265,16 +265,25 @@ and a positive `sample_rate`; samples become signed 16-bit values using
 `(n - 128) * 256`. The rate is supplied by the caller, not detected from bytes.
 These operations export JSON; Python's `Pcm.s16le()` supplies raw PCM bytes.
 
-### SDK sound driver simulation and rendering
+### SDK and cell sound driver simulation and rendering
 
 ```sh
+swankit sound sdk-discover --rom cartridge.ws --out-json link.json --json
+swankit sound sdk-render --rom cartridge.ws --auto-link --song 1 --ticks 4800 \
+  --out-json meta.json --out-wav song.wav --out-events events.tsv --reload-mode next-period
 swankit sound sdk-render --rom cartridge.ws --link link.json --song 1 --ticks 4800 \
+  --out-json meta.json --out-wav song.wav --out-events events.tsv --reload-mode next-period
+swankit sound cell-render --rom cartridge.ws --link cell-link.json --song 1 --ticks 4800 \
   --out-json meta.json --out-wav song.wav --out-events events.tsv --reload-mode next-period
 ```
 
-`sound sdk-render` drives the tick-level standard SDK two-byte-cell sound model (`ws_sound::drivers::sdk_driver::SdkDriver`) using caller-supplied linked addresses from `--link` (`segment_file_offset`, `link`, optional `headphones`, `tracks_per_song`, `cycles_per_tick`, `song_count`, `songs`). It resets the driver, starts the selected song's tracks, and steps `--ticks` ticks (bounded at 100,000 ticks; WAV rendering also enforces `ws_sound::render::MAX_FRAMES`).
+`sound sdk-discover` scans ROM bytes for a linked standard SDK two-byte-cell sound driver (`ws_sound::drivers::sdk_discover::discover_sdk_link`, including jump-table extended and inline-sweep variants) and writes a `SdkLinkConfig` JSON document usable by `sdk-render --link`.
 
-Outputs are computed in memory before writing so any invalid ROM, missing link field, out-of-range song index, unsupported effect (such as voice notes), or pre-existing destination without `--force` exits non-zero with zero partial outputs. `--out-json` writes a `swankit-sdk-sound/1` summary; optional `--out-events` writes per-write register events (`.json` array or tab-separated `tick\tcycle\tkind\ttarget\tvalue`); optional `--out-wav` renders 24 kHz stereo PCM via `ws_sound::render::render_cycles` with `--reload-mode next-period` (default) or `immediate`. Optional `--tracks N` overrides the track count per song (1..=8), and `--initial-phase N` (0..=255) sets the initial vibrato phase counter.
+`sound sdk-render` drives the tick-level SDK two-byte-cell sound model (`ws_sound::drivers::sdk_driver::SdkDriver`) using either `--auto-link` or caller-supplied linked addresses from `--link` (`segment_file_offset`, `link`, optional `headphones`, `tracks_per_song`, `cycles_per_tick`, `song_count`, `songs`). It supports tone/noise channels, banked/chained Channel 2 PCM voice notes, and Channel 3 hardware sweep readback. It resets the driver, starts the selected song's tracks, and steps `--ticks` ticks (bounded at 100,000 ticks; WAV rendering also enforces `ws_sound::render::MAX_FRAMES`).
+
+`sound cell-render` drives the tick-level four-byte-cell ADSR sound model (`ws_sound::drivers::cell_driver::CellDriver`) using caller-supplied linked addresses from `--link` (`link`, optional `cycles_per_tick`), with eight music/SFX slots, four-stage ADSR envelopes, 16x16 volume curve, waveform reloads, channel-4 noise control, and SFX masking/restoration.
+
+Outputs are computed in memory before writing so any invalid ROM, missing link field, out-of-range song index, unsupported effect, or pre-existing destination without `--force` exits non-zero with zero partial outputs. `--out-json` writes a `swankit-sdk-sound/1` or `swankit-cell-sound/1` summary; optional `--out-events` writes per-write register events (`.json` array or tab-separated `tick\tcycle\tkind\ttarget\tvalue`); optional `--out-wav` renders 24 kHz stereo PCM via `ws_sound::render::render_cycles` with `--reload-mode next-period` (default) or `immediate`. For `sdk-render`, optional `--tracks N` overrides the track count per song (1..=8), and `--initial-phase N` (0..=255) sets the initial vibrato phase counter.
 
 ## IPS patches
 
