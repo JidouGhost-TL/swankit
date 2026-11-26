@@ -80,11 +80,12 @@ class ApprovalTests(unittest.TestCase):
         checksum = "a" * 64
         notices = {"synthetic-0.1.0/LICENSE": license_text}
         notice_tool = RELEASE.DEPENDENCY_LICENSES
-        pin = {**notice_tool.PATCH_ARCHIVES[registry_version], "patch_checksum": checksum,
-               "notices": {"LICENSE": RELEASE.digest(license_text)}}
-        patch_archives = patch.dict(notice_tool.PATCH_ARCHIVES, {registry_version: pin})
-        patch_archives.start()
-        self.addCleanup(patch_archives.stop)
+        if registry_version in notice_tool.PATCH_ARCHIVES:
+            pin = {**notice_tool.PATCH_ARCHIVES[registry_version], "patch_checksum": checksum,
+                   "notices": {"LICENSE": RELEASE.digest(license_text)}}
+            patch_archives = patch.dict(notice_tool.PATCH_ARCHIVES, {registry_version: pin})
+            patch_archives.start()
+            self.addCleanup(patch_archives.stop)
         for name in sorted(RELEASE.FORMATKIT):
             path = f"{name}-{registry_version}/LICENSE"
             notices[path] = license_text
@@ -92,7 +93,7 @@ class ApprovalTests(unittest.TestCase):
                        "source": registry_source, "registry_checksum": checksum,
                        "licenses": [{"source_path": "LICENSE", "bundle_path": path,
                                      "bytes": len(license_text), "sha256": RELEASE.digest(license_text)}]}
-            if name == "formatkit-patch":
+            if name == "formatkit-patch" and registry_version in notice_tool.PATCH_ARCHIVES:
                 package["notice_source"] = notice_tool.patch_notice_source(registry_version)
             inventory["packages"].append(package)
         inventory_raw = json.dumps(inventory).encode()

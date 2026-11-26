@@ -29,8 +29,8 @@ PRIVATE_PAYLOAD_SUFFIXES = (".ws", ".wsc", ".pc2", ".sav", ".bin", ".eep", ".eep
 LEGACY_FORMATKIT = {"formatkit-" + name for name in
              ("core", "layout", "catalog", "runtime", "pixel", "codec", "corpus", "corpus-test")}
 FORMATKIT = LEGACY_FORMATKIT | {"formatkit-patch"}
-FORMATKIT_VERSION = "0.1.6"
-PREVIOUS_FORMATKIT_VERSIONS = frozenset(("0.1.1", "0.1.4", "0.1.5"))
+FORMATKIT_VERSION = "0.1.14"
+PREVIOUS_FORMATKIT_VERSIONS = frozenset(("0.1.1", "0.1.4", "0.1.5", "0.1.6"))
 _LICENSE_SPEC = importlib.util.spec_from_file_location("dependency_licenses", Path(__file__).with_name("collect-dependency-licenses.py"))
 DEPENDENCY_LICENSES = importlib.util.module_from_spec(_LICENSE_SPEC)
 _LICENSE_SPEC.loader.exec_module(DEPENDENCY_LICENSES)
