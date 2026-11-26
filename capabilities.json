@@ -1,0 +1,422 @@
+{
+  "formatkit_version": "0.1.14",
+  "formats": [
+    {
+      "capabilities": [
+        "parse",
+        "decode"
+      ],
+      "category": "rom",
+      "id": "ws-rom",
+      "notes": "WonderSwan and WonderSwan Color cartridge footer, metadata, banked address mapping, and checksum verification",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-lz-rle-7f",
+      "notes": "Bounded LZ/RLE 0x7F stream decoder and deterministic encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-lz-bits-16",
+      "notes": "16-bit flag LZ stream decoder and deterministic encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-lzss-12",
+      "notes": "12-bit distance LZSS stream decoder and deterministic encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-lzss-u16-zero",
+      "notes": "Zero-terminated 16-bit flag LZSS stream decoder and deterministic encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-okumura-lzss",
+      "notes": "Okumura-style ring-buffer LZSS stream decoder and deterministic encoder",
+      "tier": 1
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-lz-u8-zero",
+      "notes": "Zero-terminated 8-bit flag LZ stream decoder and deterministic encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-lz-word16-msb",
+      "notes": "MSB 16-bit word-flag LZ stream decoder and deterministic encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-lz-word-counted",
+      "notes": "Word-counted LZ stream decoder and deterministic encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode"
+      ],
+      "category": "compression",
+      "id": "ws-lzss-12-ext",
+      "notes": "External-length 12-bit LZSS stream decoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode"
+      ],
+      "category": "compression",
+      "id": "ws-flag16-distance11",
+      "notes": "16-bit flag, 11-bit distance LZ stream decoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode"
+      ],
+      "category": "compression",
+      "id": "ws-mask16-fill",
+      "notes": "16-bit mask fill stream decoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode"
+      ],
+      "category": "compression",
+      "id": "ws-lz-command16-lsb",
+      "notes": "LSB 16-bit command LZ stream decoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode"
+      ],
+      "category": "compression",
+      "id": "ws-lzss-msb-distance12",
+      "notes": "MSB 12-bit distance LZSS stream decoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode"
+      ],
+      "category": "compression",
+      "id": "ws-lzss-be-units",
+      "notes": "Big-endian unit-framed LZSS stream decoder with provenance",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "edit"
+      ],
+      "category": "gfx",
+      "id": "ws-tile-2bpp",
+      "notes": "2bpp planar 8x8 tiles (monochrome and 4-color palettes)",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "edit"
+      ],
+      "category": "gfx",
+      "id": "ws-tile-4bpp-planar",
+      "notes": "4bpp planar 8x8 WonderSwan Color tiles",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "edit"
+      ],
+      "category": "gfx",
+      "id": "ws-tile-4bpp-packed",
+      "notes": "4bpp packed 8x8 WonderSwan Color tiles",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode"
+      ],
+      "category": "gfx",
+      "id": "ws-mono-palettes",
+      "notes": "Monochrome shade lookup tables and 8-palette register decoding",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode"
+      ],
+      "category": "gfx",
+      "id": "ws-color-palettes",
+      "notes": "12-bit BGR444 color palette tables (16 palettes x 16 colors)",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode"
+      ],
+      "category": "gfx",
+      "id": "ws-screen-map",
+      "notes": "32x32 16-bit background screen map entries",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode"
+      ],
+      "category": "gfx",
+      "id": "ws-sprite-table",
+      "notes": "32-bit OAM sprite table entries",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode"
+      ],
+      "category": "gfx",
+      "id": "ws-display-snapshot",
+      "notes": "64 KiB RAM + 256-byte I/O port display snapshot renderer (hardware and diagnostic profiles)",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "edit"
+      ],
+      "category": "text",
+      "id": "ws-character-map",
+      "notes": "Data-defined character maps (swankit-charmap/1) with control codes and shift pages",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "edit"
+      ],
+      "category": "text",
+      "id": "ws-text-table",
+      "notes": "Definition-driven fixed, delimited, and pointer-table string extraction and re-encoding",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode"
+      ],
+      "category": "text",
+      "id": "ws-font-strip",
+      "notes": "Bitmap tile font atlas extraction from ROM definitions",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode"
+      ],
+      "category": "audio",
+      "id": "ws-sound.wave",
+      "notes": "4-bit packed hardware wave RAM banks and channel waveforms",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode"
+      ],
+      "category": "audio",
+      "id": "ws-sound.unsigned-pcm",
+      "notes": "8-bit unsigned hardware PCM sample streams and 24 kHz WAV preview rendering",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode"
+      ],
+      "category": "audio",
+      "id": "ws-sound.byte-sequence",
+      "notes": "Byte-oriented sound driver sequence decoding and preview rendering",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode"
+      ],
+      "category": "audio",
+      "id": "ws-sound.cell-sequence",
+      "notes": "Cell-oriented sound driver sequence decoding and WAV/event rendering",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode"
+      ],
+      "category": "audio",
+      "id": "ws-sound.sdk-sequence",
+      "notes": "SDK sound driver bank discovery, sequence decoding, and hardware-matched WAV/event rendering",
+      "tier": 3
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "edit",
+        "author"
+      ],
+      "category": "patch",
+      "id": "ws-patch-ips",
+      "notes": "IPS binary patch creation, validation, and policy-checked application with RLE and EOF truncation",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "edit"
+      ],
+      "category": "save",
+      "id": "ws-save-image",
+      "notes": "Cartridge SRAM/EEPROM and internal EEPROM media geometry and checksum verification",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "edit"
+      ],
+      "category": "save",
+      "id": "ws-defined-save",
+      "notes": "Declarative save definitions (swankit-save-def/1, swankit-save-def/2) for field decode, checked edits, and transactional repair",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "edit"
+      ],
+      "category": "assets",
+      "id": "ws-asset-map",
+      "notes": "Per-ROM declarative asset maps for verification, extraction, checked replacement, relocation, and discovery",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce"
+      ],
+      "category": "link",
+      "id": "ws-link-relay",
+      "notes": "Unix serial byte-stream relay across TCP, stdio, exec, raw device, and WonderGate endpoints",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "wondergate",
+      "id": "ws-wondergate",
+      "notes": "WonderGate adapter framing, excomm adapter, wire tap decoder, and local HTTP/BPL service emulation",
+      "tier": 3
+    }
+  ],
+  "patch_formats": [
+    "ips"
+  ],
+  "save_engines": [
+    "swankit-save-def/1",
+    "swankit-save-def/2"
+  ],
+  "schema": "formatkit.capabilities.v1",
+  "tool": "swankit",
+  "version": "0.1.1"
+}

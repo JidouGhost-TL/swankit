@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 mod args;
 mod assets;
+mod contract;
 mod discover;
 mod io;
 #[cfg(unix)]
@@ -29,7 +30,8 @@ use swankit_cli::wg;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 const MAX_FILE: usize = 64 * 1024 * 1024;
 const HELP: &str = "swankit: WonderSwan format tools
-  --version, -V (show package version)
+  --version, -V [--json] (show package version or build identity JSON)
+  capabilities [--json]
   info ROM [--json]
   detect FILE... [--json]
   tiles FILE --format 2bpp|4bpp-planar|4bpp-packed --offset N --length N --output PNG
@@ -162,7 +164,8 @@ fn command_help(words: &[String]) -> Result<bool> {
         }
         ["wg-adapter"] => wg::ADAPTER_HELP.to_owned(),
         ["wg-decode"] => wg::DECODE_HELP.to_owned(),
-        ["info" | "detect" | "tiles" | "extract" | "patch" | "wg-server" | "interop"]
+        ["info" | "detect" | "capabilities" | "tiles" | "extract" | "patch" | "wg-server"
+        | "interop"]
         | ["extract", "text" | "font" | "sound" | "codec"]
         | ["patch", "apply" | "create"] => {
             let prefix = path.join(" ");
@@ -193,6 +196,20 @@ fn run(words: Vec<String>) -> Result<()> {
     }
     if words == ["--version"] || words == ["-V"] {
         println!("swankit {}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
+    if matches!(
+        words
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>()
+            .as_slice(),
+        ["--version", "--json"] | ["--json", "--version"] | ["-V", "--json"] | ["--json", "-V"]
+    ) {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&contract::build_identity())?
+        );
         return Ok(());
     }
     if words.first().is_some_and(|s| s == "wg-adapter") {
@@ -257,6 +274,18 @@ fn run(words: Vec<String>) -> Result<()> {
                 !server,
             )?;
             Ok(())
+        }
+        "capabilities" => {
+            a.finish(1)?;
+            let manifest = contract::capabilities_manifest();
+            let plain = contract::format_capabilities_table(&manifest);
+            emit(
+                &serde_json::to_value(&manifest)?,
+                &plain,
+                json_mode,
+                None,
+                false,
+            )
         }
         "info" => {
             a.finish(2)?;

@@ -8,8 +8,10 @@ configuration, EOF behavior and the lossless byte log.
 
 Download the CLI from [GitHub Releases](https://github.com/JidouGhost-TL/swankit/releases)
 or build it with `cargo build -p swankit-cli --locked`. See the [wiki CLI examples](https://github.com/JidouGhost-TL/ghidra-wonderswan/wiki/Swankit-Examples) for end-to-end walkthroughs. The
-examples assume the resulting `swankit` is on PATH. Use `--help` for syntax
-and `--version` (or `-V`) to print the package version.
+examples assume the resulting `swankit` is on PATH. Use `--help` for syntax,
+`--version` (or `-V`) to print the package version, `--version --json` to emit
+the `formatkit.build-identity.v1` JSON contract, and `capabilities [--json]` to
+list supported formats (`formatkit.capabilities.v1`).
 Hardware interpretation comes from the owner crates and
 [hardware sources](hardware.md); extraction definitions supply offsets and
 formats, never game detection from a filename.

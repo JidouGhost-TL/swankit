@@ -5,6 +5,7 @@ fn supported_command_help_and_invalid_requests() {
     for path in [
         vec!["info"],
         vec!["detect"],
+        vec!["capabilities"],
         vec!["tiles"],
         vec!["extract"],
         vec!["extract", "text"],
