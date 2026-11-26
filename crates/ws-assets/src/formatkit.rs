@@ -3,8 +3,9 @@
 //! reporting.
 use crate::data::decode_asset;
 use crate::map::{
-    Address, Asset, AssetMap, CharmapSource, Codec, CodecParams, Confidence, Evidence, Format,
-    InlinePalette, Kind, Num, Reference, Relations, RomIdentity, MAX_ASSETS, MAX_MAP_BYTES, SCHEMA,
+    Address, Anchor, Asset, AssetMap, CharmapSource, Codec, CodecParams, Confidence, Endian,
+    Evidence, Form, Format, FreeRange, InlinePalette, Kind, Num, Reference, Relations, RomIdentity,
+    Screen, Signed, TileRef, MAX_ASSETS, MAX_MAP_BYTES, SCHEMA,
 };
 use crate::text::Charmaps;
 use crate::verify::{verify, Finding, VerifyReport};
@@ -104,13 +105,122 @@ pub enum FormatkitOpaqueClass {
     Other,
 }
 
+/// A single non-empty string or a non-empty list of non-empty strings.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum StringOrVec {
+    One(String),
+    Many(Vec<String>),
+}
+
+impl StringOrVec {
+    pub fn from_vec(mut items: Vec<String>) -> Option<Self> {
+        match items.len() {
+            0 => None,
+            1 => Some(Self::One(items.pop().unwrap())),
+            _ => Some(Self::Many(items)),
+        }
+    }
+
+    pub fn first(&self) -> Option<&str> {
+        match self {
+            Self::One(s) => Some(s.as_str()),
+            Self::Many(v) => v.first().map(String::as_str),
+        }
+    }
+
+    pub fn as_vec(&self) -> Vec<&str> {
+        match self {
+            Self::One(s) => vec![s.as_str()],
+            Self::Many(v) => v.iter().map(String::as_str).collect(),
+        }
+    }
+
+    fn check(&self, field: &str) -> Result<()> {
+        match self {
+            Self::One(s) => {
+                if s.is_empty() {
+                    return Err(malformed(format!("{field} must not be empty")));
+                }
+            }
+            Self::Many(v) => {
+                if v.is_empty() {
+                    return Err(malformed(format!("{field} must not be an empty array")));
+                }
+                if v.iter().any(String::is_empty) {
+                    return Err(malformed(format!("{field} must not contain empty strings")));
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FormatkitFreeSpace {
+    pub offset: u64,
+    pub size: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bank: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct FormatkitShared {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub charmaps: Option<BTreeMap<String, CharmapSource>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub palettes: Option<BTreeMap<String, InlinePalette>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub screens: Option<Vec<Screen>>,
+    #[serde(flatten)]
+    pub extra: Map<String, Value>,
+}
+
+impl FormatkitShared {
+    pub fn is_empty(&self) -> bool {
+        self.charmaps.as_ref().is_none_or(BTreeMap::is_empty)
+            && self.palettes.as_ref().is_none_or(BTreeMap::is_empty)
+            && self.screens.as_ref().is_none_or(Vec::is_empty)
+            && self.extra.is_empty()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum FormatkitEndian {
+    Le,
+    Be,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FormatkitReference {
+    pub at: u64,
+    pub width: u8,
+    pub endian: FormatkitEndian,
+    pub form: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shift: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub add: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bank: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FormatkitMapping {
     pub kind: FormatkitMappingKind,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub params: Option<Map<String, Value>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub paired_with: Option<String>,
+    pub paired_with: Option<StringOrVec>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub relations: BTreeMap<String, StringOrVec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub inner_format: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -131,6 +241,8 @@ pub struct FormatkitEntry {
     pub lba: Option<u64>,
     pub size: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reserved_capacity: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sha256: Option<String>,
     pub status: FormatkitStatus,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -139,6 +251,8 @@ pub struct FormatkitEntry {
     pub entropy: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub code_refs: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub references: Vec<FormatkitReference>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mapping: Option<FormatkitMapping>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -152,6 +266,10 @@ pub struct FormatkitAssetMapV1 {
     pub schema_version: u32,
     pub kit: String,
     pub media: FormatkitMedia,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub free_space: Vec<FormatkitFreeSpace>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shared: Option<FormatkitShared>,
     pub entries: Vec<FormatkitEntry>,
 }
 
@@ -216,6 +334,28 @@ impl FormatkitAssetMapV1 {
                     )));
                 }
             }
+            for (idx, r) in entry.references.iter().enumerate() {
+                if r.width < 1 {
+                    return Err(malformed(format!(
+                        "entry {} references[{idx}] width must be >= 1",
+                        entry.id
+                    )));
+                }
+                if r.form.is_empty() {
+                    return Err(malformed(format!(
+                        "entry {} references[{idx}] form must not be empty",
+                        entry.id
+                    )));
+                }
+            }
+            if let Some(mapping) = &entry.mapping {
+                if let Some(paired) = &mapping.paired_with {
+                    paired.check(&format!("entry {} mapping.paired_with", entry.id))?;
+                }
+                for (rel_key, rel_val) in &mapping.relations {
+                    rel_val.check(&format!("entry {} mapping.relations.{rel_key}", entry.id))?;
+                }
+            }
         }
         Ok(())
     }
@@ -233,8 +373,45 @@ impl FormatkitAssetMapV1 {
             .total_bytes
             .ok_or_else(|| malformed("media.total_bytes is required for flat-rom"))?;
 
-        let mut charmaps: BTreeMap<String, CharmapSource> = BTreeMap::new();
-        let mut palettes: BTreeMap<String, InlinePalette> = BTreeMap::new();
+        let mut charmaps: BTreeMap<String, CharmapSource> = self
+            .shared
+            .as_ref()
+            .and_then(|s| s.charmaps.clone())
+            .unwrap_or_default();
+        let mut palettes: BTreeMap<String, InlinePalette> = self
+            .shared
+            .as_ref()
+            .and_then(|s| s.palettes.clone())
+            .unwrap_or_default();
+        let screens: Vec<Screen> = self
+            .shared
+            .as_ref()
+            .and_then(|s| s.screens.clone())
+            .unwrap_or_default();
+
+        let free_space_fills: Vec<Option<u64>> = self
+            .shared
+            .as_ref()
+            .and_then(|s| s.extra.get("free_space_fills"))
+            .map(|v| {
+                serde_json::from_value::<Vec<Option<u64>>>(v.clone())
+                    .map_err(|e| malformed(format!("invalid shared.free_space_fills: {e}")))
+            })
+            .transpose()?
+            .unwrap_or_default();
+
+        let free_space: Vec<FreeRange> = self
+            .free_space
+            .iter()
+            .enumerate()
+            .map(|(i, f)| FreeRange {
+                offset: Num(f.offset),
+                length: Num(f.size),
+                fill: free_space_fills.get(i).copied().flatten().map(Num),
+                note: f.note.clone(),
+            })
+            .collect();
+
         let mut assets = Vec::new();
 
         for entry in &self.entries {
@@ -260,10 +437,10 @@ impl FormatkitAssetMapV1 {
             },
             charmaps,
             palettes,
-            free_space: Vec::new(),
+            free_space,
             coverage: None,
             assets,
-            screens: Vec::new(),
+            screens,
         };
         map.check_structure()?;
         Ok(map)
@@ -593,14 +770,13 @@ pub fn to_formatkit_v1_with_charmaps(
         let slice = &rom[stored.offset..stored.offset + stored.length];
         let (mkind, opaque_class) = mapping_kind_for(asset);
 
-        let paired_with = asset
-            .relations
-            .palette
-            .clone()
-            .or_else(|| asset.relations.palettes.first().cloned())
-            .or_else(|| asset.relations.tiles.first().map(|t| t.id.clone()))
-            .or_else(|| asset.relations.font.clone())
-            .or_else(|| asset.relations.pointer_table.clone());
+        let paired_with = build_paired_with(&asset.relations);
+        let mapping_relations = build_mapping_relations(&asset.relations);
+        let fk_references: Vec<FormatkitReference> = asset
+            .references
+            .iter()
+            .map(reference_to_formatkit)
+            .collect();
 
         let mut params = Map::new();
         if asset.codec != Codec::Raw {
@@ -621,13 +797,13 @@ pub fn to_formatkit_v1_with_charmaps(
                 serde_json::to_value(&asset.format).map_err(|e| malformed(e.to_string()))?,
             );
         }
-        if asset.relations != Relations::default() {
+        if relations_need_params(&asset.relations) {
             params.insert(
                 "relations".into(),
                 serde_json::to_value(&asset.relations).map_err(|e| malformed(e.to_string()))?,
             );
         }
-        if !asset.references.is_empty() {
+        if asset.references.iter().any(reference_needs_params) {
             params.insert(
                 "references".into(),
                 serde_json::to_value(&asset.references).map_err(|e| malformed(e.to_string()))?,
@@ -640,12 +816,6 @@ pub fn to_formatkit_v1_with_charmaps(
             params.insert(
                 "overlaps".into(),
                 serde_json::to_value(&asset.overlaps).map_err(|e| malformed(e.to_string()))?,
-            );
-        }
-        if let Some(cap) = asset.reserved_capacity {
-            params.insert(
-                "reserved_capacity".into(),
-                serde_json::to_value(cap).map_err(|e| malformed(e.to_string()))?,
             );
         }
         if let Some(addr) = &asset.address {
@@ -666,31 +836,6 @@ pub fn to_formatkit_v1_with_charmaps(
                 serde_json::to_value(&asset.evidence).map_err(|e| malformed(e.to_string()))?,
             );
         }
-        if let Some(cm_name) = &asset.relations.charmap {
-            if let Some(cm_source) = map.charmaps.get(cm_name) {
-                params.insert(
-                    "charmap_source".into(),
-                    serde_json::to_value(cm_source).map_err(|e| malformed(e.to_string()))?,
-                );
-            }
-        }
-        let mut inline_pals = Map::new();
-        for pal_name in asset
-            .relations
-            .palette
-            .iter()
-            .chain(&asset.relations.palettes)
-        {
-            if let Some(inline_pal) = map.palettes.get(pal_name) {
-                inline_pals.insert(
-                    pal_name.clone(),
-                    serde_json::to_value(inline_pal).map_err(|e| malformed(e.to_string()))?,
-                );
-            }
-        }
-        if !inline_pals.is_empty() {
-            params.insert("inline_palettes".into(), Value::Object(inline_pals));
-        }
 
         let evidence_str = summarize_evidence(&asset.evidence);
         let code_refs = asset.evidence.loader.as_ref().map(|l| vec![l.clone()]);
@@ -701,11 +846,13 @@ pub fn to_formatkit_v1_with_charmaps(
             offset: Some(stored.offset as u64),
             lba: None,
             size: stored.length as u64,
+            reserved_capacity: asset.reserved_capacity.map(|n| n.0),
             sha256: Some(sha256_hex(slice)),
             status: FormatkitStatus::Mapped,
             format_id: Some(format_id_for(asset)),
             entropy: Some(shannon_entropy(slice)),
             code_refs,
+            references: fk_references,
             mapping: Some(FormatkitMapping {
                 kind: mkind,
                 params: if params.is_empty() {
@@ -714,12 +861,38 @@ pub fn to_formatkit_v1_with_charmaps(
                     Some(params)
                 },
                 paired_with,
+                relations: mapping_relations,
                 inner_format: Some(asset.kind.name().into()),
                 opaque_class,
                 evidence: evidence_str,
             }),
             verified: Some(true),
         });
+    }
+
+    let free_space: Vec<FormatkitFreeSpace> = map
+        .free_space
+        .iter()
+        .map(|f| FormatkitFreeSpace {
+            offset: f.offset.0,
+            size: f.length.0,
+            bank: None,
+            note: f.note.clone(),
+        })
+        .collect();
+
+    let mut shared = FormatkitShared {
+        charmaps: (!map.charmaps.is_empty()).then(|| map.charmaps.clone()),
+        palettes: (!map.palettes.is_empty()).then(|| map.palettes.clone()),
+        screens: (!map.screens.is_empty()).then(|| map.screens.clone()),
+        extra: Map::new(),
+    };
+    if map.free_space.iter().any(|f| f.fill.is_some()) {
+        let fills: Vec<Option<u64>> = map.free_space.iter().map(|f| f.fill.map(|n| n.0)).collect();
+        shared.extra.insert(
+            "free_space_fills".into(),
+            serde_json::to_value(fills).map_err(|e| malformed(e.to_string()))?,
+        );
     }
 
     let doc = FormatkitAssetMapV1 {
@@ -736,10 +909,147 @@ pub fn to_formatkit_v1_with_charmaps(
             total_bytes: Some(rom.len() as u64),
             file_count: None,
         },
+        free_space,
+        shared: (!shared.is_empty()).then_some(shared),
         entries,
     };
     doc.check_structure()?;
     Ok(doc)
+}
+
+fn build_paired_with(rel: &Relations) -> Option<StringOrVec> {
+    let mut ids = Vec::new();
+    let mut push_unique = |id: &str| {
+        if !id.is_empty() && !ids.iter().any(|existing: &String| existing == id) {
+            ids.push(id.to_owned());
+        }
+    };
+    if let Some(p) = &rel.palette {
+        push_unique(p);
+    }
+    for p in &rel.palettes {
+        push_unique(p);
+    }
+    for t in &rel.tiles {
+        push_unique(&t.id);
+    }
+    if let Some(f) = &rel.font {
+        push_unique(f);
+    }
+    if let Some(pt) = &rel.pointer_table {
+        push_unique(pt);
+    }
+    StringOrVec::from_vec(ids)
+}
+
+fn build_mapping_relations(rel: &Relations) -> BTreeMap<String, StringOrVec> {
+    let mut out = BTreeMap::new();
+    if let Some(v) = StringOrVec::from_vec(rel.tiles.iter().map(|t| t.id.clone()).collect()) {
+        out.insert("tiles".into(), v);
+    }
+    if let Some(p) = &rel.palette {
+        if !p.is_empty() {
+            out.insert("palette".into(), StringOrVec::One(p.clone()));
+        }
+    }
+    if let Some(v) = StringOrVec::from_vec(rel.palettes.clone()) {
+        out.insert("palettes".into(), v);
+    }
+    if let Some(cm) = &rel.charmap {
+        if !cm.is_empty() {
+            out.insert("charmap".into(), StringOrVec::One(cm.clone()));
+        }
+    }
+    if let Some(pt) = &rel.pointer_table {
+        if !pt.is_empty() {
+            out.insert("pointer_table".into(), StringOrVec::One(pt.clone()));
+        }
+    }
+    if let Some(f) = &rel.font {
+        if !f.is_empty() {
+            out.insert("font".into(), StringOrVec::One(f.clone()));
+        }
+    }
+    if let Some(v) = StringOrVec::from_vec(rel.targets.iter().flatten().cloned().collect()) {
+        out.insert("targets".into(), v);
+    }
+    out
+}
+
+fn relations_need_params(rel: &Relations) -> bool {
+    rel.tiles.iter().any(|t| t.at.0 != 0 || t.skip.0 != 0)
+        || rel.targets.iter().any(Option::is_none)
+}
+
+fn reference_to_formatkit(r: &Reference) -> FormatkitReference {
+    FormatkitReference {
+        at: r.at.0,
+        width: r.width,
+        endian: match r.endian {
+            Endian::Little => FormatkitEndian::Le,
+            Endian::Big => FormatkitEndian::Be,
+        },
+        form: match r.form {
+            Form::Linear => "linear".into(),
+            Form::Far => "far".into(),
+        },
+        shift: (r.shift != 0).then_some(i32::from(r.shift)),
+        add: (r.add.0 != 0).then_some(r.add.0),
+        bank: None,
+        note: r.note.clone(),
+    }
+}
+
+fn reference_needs_params(r: &Reference) -> bool {
+    r.anchor != Anchor::File
+        || r.align.is_some()
+        || r.below.is_some()
+        || r.companion
+        || r.form == Form::Far
+        || r.segment_base.is_some()
+        || r.window.is_some()
+        || r.normalize.is_some()
+        || r.kind != "other"
+}
+
+fn formatkit_to_reference(r: &FormatkitReference, entry_id: &str) -> Result<Reference> {
+    let shift = match r.shift {
+        Some(s) => u8::try_from(s).map_err(|_| {
+            malformed(format!(
+                "{entry_id}: reference shift {s} must be in 0..=255"
+            ))
+        })?,
+        None => 0,
+    };
+    let form = match r.form.as_str() {
+        "linear" => Form::Linear,
+        "far" => Form::Far,
+        other => {
+            return Err(malformed(format!(
+                "{entry_id}: unsupported reference form {other:?}"
+            )))
+        }
+    };
+    Ok(Reference {
+        at: Num(r.at),
+        width: r.width,
+        endian: match r.endian {
+            FormatkitEndian::Le => Endian::Little,
+            FormatkitEndian::Be => Endian::Big,
+        },
+        anchor: Anchor::File,
+        add: Signed(r.add.unwrap_or(0)),
+        shift,
+        align: None,
+        below: None,
+        companion: false,
+        form,
+        segment_base: None,
+        window: None,
+        normalize: None,
+        kind: "other".into(),
+        note: r.note.clone(),
+    })
 }
 
 fn summarize_evidence(e: &Evidence) -> Option<String> {
@@ -913,27 +1223,83 @@ fn entry_to_asset(
     let mut relations =
         parse_param::<Relations>(params, "relations", &entry.id)?.unwrap_or_default();
     if relations == Relations::default() {
-        if let Some(paired) = entry.mapping.as_ref().and_then(|m| m.paired_with.as_ref()) {
-            match kind {
-                Kind::Tiles | Kind::Font => relations.palette = Some(paired.clone()),
-                Kind::Tilemap | Kind::SpriteTable => {
-                    relations.tiles.push(crate::map::TileRef {
-                        id: paired.clone(),
+        if let Some(mrel) = entry
+            .mapping
+            .as_ref()
+            .map(|m| &m.relations)
+            .filter(|r| !r.is_empty())
+        {
+            if let Some(tiles) = mrel.get("tiles") {
+                for id in tiles.as_vec() {
+                    relations.tiles.push(TileRef {
+                        id: id.to_owned(),
                         at: Num(0),
                         skip: Num(0),
                     });
                 }
-                Kind::Text => relations.font = Some(paired.clone()),
+            }
+            if let Some(p) = mrel.get("palette").and_then(StringOrVec::first) {
+                relations.palette = Some(p.to_owned());
+            }
+            if let Some(pals) = mrel.get("palettes") {
+                relations.palettes = pals.as_vec().into_iter().map(str::to_owned).collect();
+            }
+            if let Some(cm) = mrel.get("charmap").and_then(StringOrVec::first) {
+                relations.charmap = Some(cm.to_owned());
+            }
+            if let Some(pt) = mrel.get("pointer_table").and_then(StringOrVec::first) {
+                relations.pointer_table = Some(pt.to_owned());
+            }
+            if let Some(f) = mrel.get("font").and_then(StringOrVec::first) {
+                relations.font = Some(f.to_owned());
+            }
+            if let Some(tgts) = mrel.get("targets") {
+                relations.targets = tgts
+                    .as_vec()
+                    .into_iter()
+                    .map(|s| Some(s.to_owned()))
+                    .collect();
+            }
+        } else if let Some(paired) = entry.mapping.as_ref().and_then(|m| m.paired_with.as_ref()) {
+            match kind {
+                Kind::Tiles | Kind::Font => {
+                    relations.palette = paired.first().map(str::to_owned);
+                }
+                Kind::Tilemap | Kind::SpriteTable => {
+                    for id in paired.as_vec() {
+                        relations.tiles.push(TileRef {
+                            id: id.to_owned(),
+                            at: Num(0),
+                            skip: Num(0),
+                        });
+                    }
+                }
+                Kind::Text => {
+                    relations.font = paired.first().map(str::to_owned);
+                }
                 _ => {}
             }
         }
     }
     let references =
-        parse_param::<Vec<Reference>>(params, "references", &entry.id)?.unwrap_or_default();
+        if let Some(refs) = parse_param::<Vec<Reference>>(params, "references", &entry.id)? {
+            refs
+        } else if !entry.references.is_empty() {
+            entry
+                .references
+                .iter()
+                .map(|r| formatkit_to_reference(r, &entry.id))
+                .collect::<Result<Vec<_>>>()?
+        } else {
+            Vec::new()
+        };
     let references_complete =
         parse_param::<bool>(params, "references_complete", &entry.id)?.unwrap_or(false);
     let overlaps = parse_param::<Vec<String>>(params, "overlaps", &entry.id)?.unwrap_or_default();
-    let reserved_capacity = parse_param::<Num>(params, "reserved_capacity", &entry.id)?;
+    let reserved_capacity = match entry.reserved_capacity {
+        Some(cap) => Some(Num(cap)),
+        None => parse_param::<Num>(params, "reserved_capacity", &entry.id)?,
+    };
     let address = parse_param::<Address>(params, "address", &entry.id)?;
     let confidence =
         parse_param::<Confidence>(params, "confidence", &entry.id)?.unwrap_or_default();

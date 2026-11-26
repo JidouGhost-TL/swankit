@@ -2,9 +2,9 @@ use serde_json::{json, Value};
 use std::collections::BTreeSet;
 use std::str::FromStr;
 use ws_assets::{
-    extract, sha256_hex, shannon_entropy, to_formatkit_v1, verify, AssetMap, Charmaps,
-    FormatkitAssetMapV1, FormatkitMappingKind, FormatkitOpaqueClass, FormatkitStatus,
-    LoadedAssetMap, FORMATKIT_SCHEMA,
+    extract, replace_with, sha256_hex, shannon_entropy, to_formatkit_v1, verify, AssetMap,
+    Charmaps, FormatkitAssetMapV1, FormatkitMappingKind, FormatkitOpaqueClass, FormatkitStatus,
+    LoadedAssetMap, ReplaceInput, ReplaceOptions, Replacement, StringOrVec, FORMATKIT_SCHEMA,
 };
 
 fn build_synthetic_rom_and_map() -> (Vec<u8>, AssetMap) {
@@ -151,17 +151,44 @@ fn build_synthetic_rom_and_map() -> (Vec<u8>, AssetMap) {
     (rom, map)
 }
 
+fn assert_string_or_vec(val: &Value, label: &str) {
+    match val {
+        Value::String(s) => assert!(!s.is_empty(), "{label} string must be non-empty"),
+        Value::Array(arr) => {
+            assert!(!arr.is_empty(), "{label} array must be non-empty");
+            for item in arr {
+                let s = item
+                    .as_str()
+                    .unwrap_or_else(|| panic!("{label} item must be string"));
+                assert!(!s.is_empty(), "{label} item must be non-empty");
+            }
+        }
+        other => panic!("{label} must be string or array, got {other}"),
+    }
+}
+
 /// Strictly validate a serialized `formatkit.asset-map.v1` JSON object against
 /// every constraint in `asset-map-schema.json`.
 fn assert_matches_asset_map_schema(val: &Value) {
     let root = val.as_object().expect("root must be object");
-    let allowed_root: BTreeSet<&str> = ["schema", "schema_version", "kit", "media", "entries"]
+    let required_root: BTreeSet<&str> = ["schema", "schema_version", "kit", "media", "entries"]
         .into_iter()
         .collect();
+    let allowed_root: BTreeSet<&str> = [
+        "schema",
+        "schema_version",
+        "kit",
+        "media",
+        "free_space",
+        "shared",
+        "entries",
+    ]
+    .into_iter()
+    .collect();
     for k in root.keys() {
         assert!(allowed_root.contains(k.as_str()), "unexpected root key {k}");
     }
-    for req in &allowed_root {
+    for req in &required_root {
         assert!(root.contains_key(*req), "missing required root key {req}");
     }
     assert_eq!(root["schema"].as_str(), Some("formatkit.asset-map.v1"));
@@ -196,19 +223,67 @@ fn assert_matches_asset_map_schema(val: &Value) {
         assert!(s.bytes().all(|b| b.is_ascii_hexdigit()));
     }
 
+    if let Some(fs) = root.get("free_space") {
+        let arr = fs.as_array().expect("free_space must be array");
+        let allowed_fs: BTreeSet<&str> = ["offset", "size", "bank", "note"].into_iter().collect();
+        for item in arr {
+            let obj = item.as_object().expect("free_space item must be object");
+            for k in obj.keys() {
+                assert!(
+                    allowed_fs.contains(k.as_str()),
+                    "unexpected free_space key {k}"
+                );
+            }
+            assert!(obj["offset"].as_u64().is_some());
+            assert!(obj["size"].as_u64().is_some());
+            if let Some(b) = obj.get("bank") {
+                assert!(b.as_u64().is_some());
+            }
+            if let Some(n) = obj.get("note") {
+                assert!(n.is_string());
+            }
+        }
+    }
+
+    if let Some(shared) = root.get("shared") {
+        let obj = shared.as_object().expect("shared must be object");
+        if let Some(cm) = obj.get("charmaps") {
+            assert!(cm.is_object(), "shared.charmaps must be object");
+        }
+        if let Some(pals) = obj.get("palettes") {
+            assert!(pals.is_object(), "shared.palettes must be object");
+        }
+        if let Some(screens) = obj.get("screens") {
+            assert!(
+                screens.is_object()
+                    || screens
+                        .as_array()
+                        .is_some_and(|a| a.iter().all(Value::is_object)),
+                "shared.screens must be object or array of objects"
+            );
+        }
+    }
+
     let allowed_entry: BTreeSet<&str> = [
         "id",
         "path",
         "offset",
         "lba",
         "size",
+        "reserved_capacity",
         "sha256",
         "status",
         "format_id",
         "entropy",
         "code_refs",
+        "references",
         "mapping",
         "verified",
+    ]
+    .into_iter()
+    .collect();
+    let allowed_ref: BTreeSet<&str> = [
+        "at", "width", "endian", "form", "shift", "add", "bank", "note",
     ]
     .into_iter()
     .collect();
@@ -223,6 +298,9 @@ fn assert_matches_asset_map_schema(val: &Value) {
         }
         assert!(!obj["id"].as_str().unwrap().is_empty());
         assert!(obj["size"].as_u64().is_some());
+        if let Some(rc) = obj.get("reserved_capacity") {
+            assert!(rc.as_u64().is_some());
+        }
         assert!(matches!(
             obj["status"].as_str(),
             Some("identified" | "mapped" | "opaque" | "unknown")
@@ -235,6 +313,22 @@ fn assert_matches_asset_map_schema(val: &Value) {
         if let Some(h) = obj.get("entropy") {
             let f = h.as_f64().unwrap();
             assert!((0.0..=8.0).contains(&f), "entropy out of range: {f}");
+        }
+        if let Some(refs) = obj.get("references") {
+            let arr = refs.as_array().expect("references must be array");
+            for r in arr {
+                let robj = r.as_object().expect("reference must be object");
+                for k in robj.keys() {
+                    assert!(
+                        allowed_ref.contains(k.as_str()),
+                        "unexpected reference key {k}"
+                    );
+                }
+                assert!(robj["at"].as_u64().is_some());
+                assert!(robj["width"].as_u64().is_some_and(|w| w >= 1));
+                assert!(matches!(robj["endian"].as_str(), Some("le" | "be")));
+                assert!(robj["form"].as_str().is_some_and(|s| !s.is_empty()));
+            }
         }
         if let Some(mapping) = obj.get("mapping") {
             let m = mapping.as_object().expect("mapping must be object");
@@ -249,6 +343,15 @@ fn assert_matches_asset_map_schema(val: &Value) {
                         | "opaque"
                 )
             ));
+            if let Some(pw) = m.get("paired_with") {
+                assert_string_or_vec(pw, "mapping.paired_with");
+            }
+            if let Some(rels) = m.get("relations") {
+                let robj = rels.as_object().expect("mapping.relations must be object");
+                for (rk, rv) in robj {
+                    assert_string_or_vec(rv, &format!("mapping.relations.{rk}"));
+                }
+            }
             if let Some(oc) = m.get("opaque_class") {
                 assert!(matches!(
                     oc.as_str(),
@@ -306,8 +409,12 @@ fn round_trip_v1_to_formatkit_and_back_is_lossless() {
             .as_ref()
             .unwrap()
             .paired_with
-            .as_deref(),
-        Some("pal0")
+            .as_ref(),
+        Some(&StringOrVec::One("pal0".into()))
+    );
+    assert_eq!(
+        by_id("map0").mapping.as_ref().unwrap().paired_with.as_ref(),
+        Some(&StringOrVec::Many(vec!["pal0".into(), "tiles0".into()]))
     );
 
     assert_eq!(
@@ -422,4 +529,203 @@ fn formatkit_v1_rejects_unknown_fields_and_tampered_sha256() {
     let all_bytes: Vec<u8> = (0..=255).collect();
     assert_eq!(shannon_entropy(&all_bytes), 8.0);
     assert_eq!(FormatkitStatus::Mapped.as_str(), "mapped");
+}
+
+#[test]
+fn editable_map_with_free_space_shared_references_and_relations_round_trips_and_replaces() {
+    let mut rom = vec![0u8; 65536];
+    // Fill free space region 0x8000..0x9000 with 0xff
+    rom[0x8000..0x9000].fill(0xff);
+
+    // 0x0040..0x0060: 16-color RGB444 palette
+    for i in 0..16u16 {
+        let word = (i << 8) | (i << 4) | i;
+        rom[0x40 + usize::from(i) * 2..0x40 + usize::from(i) * 2 + 2]
+            .copy_from_slice(&word.to_le_bytes());
+    }
+    // 0x0100..0x0140: 2 raw 4bpp-planar tiles
+    for i in 0..64usize {
+        rom[0x100 + i] = ((i * 3 + 1) & 0xff) as u8;
+    }
+    // 0x0180..0x0188: 2x2 tilemap
+    for (idx, word) in [0u16, 1u16, 1u16, 0u16].iter().enumerate() {
+        rom[0x180 + idx * 2..0x180 + idx * 2 + 2].copy_from_slice(&word.to_le_bytes());
+    }
+    // 0x0200..0x0203: text "AB\0" + 5 bytes reserved capacity (0x0200..0x0208)
+    rom[0x200..0x203].copy_from_slice(&[0x41, 0x42, 0x00]);
+    // 0x0020..0x0022: u16 little-endian file pointer to msg0 (0x0200)
+    rom[0x0020..0x0022].copy_from_slice(&(0x0200u16).to_le_bytes());
+
+    let sha = sha256_hex(&rom);
+    let doc = json!({
+        "schema": "swankit-asset-map/1",
+        "rom": { "sha256": sha, "size": rom.len() },
+        "charmaps": {
+            "ascii": {
+                "inline": {
+                    "schema": "swankit-charmap/1",
+                    "entries": [
+                        { "bytes": "41", "text": "A" },
+                        { "bytes": "42", "text": "B" }
+                    ],
+                    "controls": [
+                        { "code": 0, "ends": true }
+                    ]
+                }
+            }
+        },
+        "palettes": {
+            "mono_inline": {
+                "colors": ["#ffffff", "#aaaaaa", "#555555", "#000000"],
+                "evidence": "inline monochrome shades"
+            }
+        },
+        "free_space": [
+            { "offset": "0x8000", "length": "0x1000", "fill": "0xff", "note": "unused tail" }
+        ],
+        "screens": [
+            {
+                "id": "screen.title",
+                "layers": [{ "tilemap": "map0", "x": 0, "y": 0 }],
+                "back_color": "#000000"
+            }
+        ],
+        "assets": [
+            {
+                "id": "pal0",
+                "kind": "palette",
+                "offset": "0x40",
+                "length": "0x20",
+                "format": { "palette_format": "rgb444", "palette_index": 0 }
+            },
+            {
+                "id": "tiles0",
+                "kind": "tiles",
+                "offset": "0x100",
+                "length": "0x40",
+                "format": { "bpp": 4, "layout": "planar", "width": 2 },
+                "relations": { "palette": "pal0" }
+            },
+            {
+                "id": "map0",
+                "kind": "tilemap",
+                "offset": "0x180",
+                "length": "0x8",
+                "format": { "width": 2, "height": 2, "entry": "ws-word" },
+                "relations": {
+                    "tiles": [{ "id": "tiles0", "at": 0 }],
+                    "palettes": ["pal0", "mono_inline"]
+                }
+            },
+            {
+                "id": "msg0",
+                "kind": "text",
+                "offset": "0x200",
+                "reserved_capacity": "0x8",
+                "relations": { "charmap": "ascii" },
+                "references": [
+                    {
+                        "at": "0x20",
+                        "width": 2,
+                        "endian": "little",
+                        "anchor": "file",
+                        "kind": "pointer-table-entry",
+                        "note": "title string pointer"
+                    }
+                ],
+                "references_complete": true
+            }
+        ]
+    });
+
+    let v1_map = AssetMap::from_json(&serde_json::to_vec(&doc).unwrap()).unwrap();
+    let fk = to_formatkit_v1(&v1_map, &rom).unwrap();
+    let fk_bytes = fk.to_json().unwrap();
+    let fk_json: Value = serde_json::from_slice(&fk_bytes).unwrap();
+    assert_matches_asset_map_schema(&fk_json);
+
+    // Verify top-level free_space and shared fields are populated
+    assert_eq!(fk.free_space.len(), 1);
+    assert_eq!(fk.free_space[0].offset, 0x8000);
+    assert_eq!(fk.free_space[0].size, 0x1000);
+    assert_eq!(fk.free_space[0].note.as_deref(), Some("unused tail"));
+    let shared = fk.shared.as_ref().expect("shared must be present");
+    assert!(shared.charmaps.as_ref().unwrap().contains_key("ascii"));
+    assert!(shared
+        .palettes
+        .as_ref()
+        .unwrap()
+        .contains_key("mono_inline"));
+    assert_eq!(shared.screens.as_ref().unwrap().len(), 1);
+
+    // Verify per-entry reserved_capacity, references, multi-paired_with, and relations
+    let msg0 = fk.entries.iter().find(|e| e.id == "msg0").unwrap();
+    assert_eq!(msg0.reserved_capacity, Some(8));
+    assert_eq!(msg0.references.len(), 1);
+    assert_eq!(msg0.references[0].at, 0x20);
+    assert_eq!(msg0.references[0].width, 2);
+    assert_eq!(msg0.references[0].form, "linear");
+    let map0 = fk.entries.iter().find(|e| e.id == "map0").unwrap();
+    assert_eq!(
+        map0.mapping.as_ref().unwrap().paired_with.as_ref(),
+        Some(&StringOrVec::Many(vec![
+            "pal0".into(),
+            "mono_inline".into(),
+            "tiles0".into()
+        ]))
+    );
+    assert_eq!(
+        map0.mapping.as_ref().unwrap().relations.get("palettes"),
+        Some(&StringOrVec::Many(vec![
+            "pal0".into(),
+            "mono_inline".into()
+        ]))
+    );
+
+    // Round-trip back to AssetMap and verify 100% lossless preservation
+    let rt_map = AssetMap::from_json(&fk_bytes).unwrap();
+    assert_eq!(rt_map.free_space, v1_map.free_space);
+    assert_eq!(rt_map.charmaps, v1_map.charmaps);
+    assert_eq!(rt_map.palettes, v1_map.palettes);
+    assert_eq!(rt_map.screens, v1_map.screens);
+    assert_eq!(
+        rt_map.asset("msg0").unwrap().reserved_capacity,
+        v1_map.asset("msg0").unwrap().reserved_capacity
+    );
+    assert_eq!(
+        rt_map.asset("msg0").unwrap().references,
+        v1_map.asset("msg0").unwrap().references
+    );
+
+    // Verify, extract (including screen.title!), and replace with relocation into free_space!
+    let rt_charmaps = Charmaps::load(&rt_map, |_| unreachable!()).unwrap();
+    let report = verify(&rt_map, &rt_charmaps, &rom).unwrap();
+    assert!(report.ok(), "{:?}", report.errors);
+    assert_eq!(report.free_bytes, 0x1000);
+    assert_eq!(report.references, 1);
+
+    let extracted = extract(&rt_map, &rt_charmaps, &rom).unwrap();
+    assert_eq!(extracted.failures, 0);
+    assert!(extracted
+        .files
+        .iter()
+        .any(|(name, _)| name == "screen.title.png"));
+
+    // Grow msg0 beyond reserved_capacity (8 bytes) -> relocates into 0x8000 free_space and patches 0x20!
+    let outcome = replace_with(
+        &rt_map,
+        &rt_charmaps,
+        &rom,
+        &Replacement {
+            id: "msg0".into(),
+            input: ReplaceInput::Text("AABBAABBAABB".into()),
+        },
+        &ReplaceOptions::default(),
+    )
+    .unwrap();
+    assert_eq!(outcome.map.asset("msg0").unwrap().offset.0, 0x8000);
+    assert_eq!(
+        u16::from_le_bytes([outcome.rom[0x20], outcome.rom[0x21]]),
+        0x8000
+    );
 }

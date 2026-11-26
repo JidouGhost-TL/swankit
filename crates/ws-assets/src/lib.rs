@@ -27,9 +27,10 @@ pub use data::{decode_asset, encode_payload, stored_range, Stored};
 pub use extract::{extract, ExtractedFile, Extraction};
 pub use formatkit::{
     shannon_entropy, to_formatkit_v1, to_formatkit_v1_with_charmaps, FormatkitAssetMapV1,
-    FormatkitEntry, FormatkitFingerprint, FormatkitMapping, FormatkitMappingKind, FormatkitMedia,
-    FormatkitMediaKind, FormatkitOpaqueClass, FormatkitStatus, LoadedAssetMap, FORMATKIT_SCHEMA,
-    FORMATKIT_SCHEMA_VERSION,
+    FormatkitEndian, FormatkitEntry, FormatkitFingerprint, FormatkitFreeSpace, FormatkitMapping,
+    FormatkitMappingKind, FormatkitMedia, FormatkitMediaKind, FormatkitOpaqueClass,
+    FormatkitReference, FormatkitShared, FormatkitStatus, LoadedAssetMap, StringOrVec,
+    FORMATKIT_SCHEMA, FORMATKIT_SCHEMA_VERSION,
 };
 pub use gfx::{
     palette_colors, render_screen, render_sprites, render_tilemap, render_tiles, unrender_tilemap,
