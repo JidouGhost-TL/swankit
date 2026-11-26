@@ -2,7 +2,7 @@
 
 Generated from `swankit capabilities --json` (`formatkit.capabilities.v1`).
 
-- **Tool:** `swankit` `0.1.1`
+- **Tool:** `swankit` `0.1.2`
 - **FormatKit:** `0.1.14`
 - **Save engines:** `swankit-save-def/1`, `swankit-save-def/2`
 - **Patch formats:** `ips`

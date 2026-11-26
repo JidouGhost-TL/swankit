@@ -13,7 +13,7 @@ readme = "README.md"
 formatkit-core.workspace = true
 formatkit-layout.workspace = true
 formatkit-catalog.workspace = true
-ws-gfx = { path = "../ws-gfx", version = "=0.1.1" }
+ws-gfx = { path = "../ws-gfx", version = "=0.1.2" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 unicode-normalization = "=0.1.24"

@@ -418,5 +418,5 @@
   ],
   "schema": "formatkit.capabilities.v1",
   "tool": "swankit",
-  "version": "0.1.1"
+  "version": "0.1.2"
 }

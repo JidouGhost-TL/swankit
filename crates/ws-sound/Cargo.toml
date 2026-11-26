@@ -14,7 +14,7 @@ serde = { version = "1", features = ["derive"] }
 formatkit-core.workspace = true
 formatkit-layout.workspace = true
 formatkit-catalog.workspace = true
-ws-rom = { path = "../ws-rom", version = "=0.1.1" }
+ws-rom = { path = "../ws-rom", version = "=0.1.2" }
 
 [dev-dependencies]
 formatkit-corpus-test.workspace = true

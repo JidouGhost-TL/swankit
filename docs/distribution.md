@@ -13,7 +13,7 @@ those notices. Packaging refuses missing, changed or mismatched notice files.
 The project and upstream license terms still apply.
 
 Download the offline packet or individual files from [GitHub Releases](https://github.com/JidouGhost-TL/swankit/releases).
-[Version 0.1.1](https://github.com/JidouGhost-TL/swankit/releases/tag/v0.1.1) provides CLI archives for
+[Version 0.1.2](https://github.com/JidouGhost-TL/swankit/releases/tag/v0.1.2) provides CLI archives for
 Linux x86-64, Windows x86-64, macOS Apple Silicon and macOS Intel, and a
 Linux x86-64 abi3 wheel for Python 3.11 and newer. The candidate manifest
 records which platforms executed each archive.
@@ -41,7 +41,7 @@ Extract the CLI archive and run its executable directly. Installing the
 existing wheel into your chosen environment uses no registry or Rust compiler:
 
 ```sh
-python3 -m pip install --no-index --no-deps ./swankit-0.1.1-cp311-abi3-manylinux_2_34_x86_64.whl
+python3 -m pip install --no-index --no-deps ./swankit-0.1.2-cp311-abi3-manylinux_2_34_x86_64.whl
 ```
 
 The optional `swankit.to_pil` helper needs a separately supplied Pillow package.
