@@ -475,7 +475,7 @@ dependencies = [
 
 [[package]]
 name = "swankit"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "formatkit-catalog",
  "formatkit-core",
@@ -498,7 +498,7 @@ dependencies = [
 
 [[package]]
 name = "swankit-cli"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "crc",
  "formatkit-catalog",
@@ -522,7 +522,7 @@ dependencies = [
 
 [[package]]
 name = "swankit-ffi"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "formatkit-core",
  "formatkit-corpus-test",
@@ -535,7 +535,7 @@ dependencies = [
 
 [[package]]
 name = "swankit-py"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "formatkit-core",
  "formatkit-corpus-test",
@@ -649,7 +649,7 @@ dependencies = [
 
 [[package]]
 name = "ws-assets"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "formatkit-core",
  "formatkit-corpus-test",
@@ -668,7 +668,7 @@ dependencies = [
 
 [[package]]
 name = "ws-compress"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "formatkit-catalog",
  "formatkit-codec",
@@ -680,7 +680,7 @@ dependencies = [
 
 [[package]]
 name = "ws-discover"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "formatkit-core",
  "formatkit-corpus-test",
@@ -693,7 +693,7 @@ dependencies = [
 
 [[package]]
 name = "ws-gfx"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "formatkit-catalog",
  "formatkit-core",
@@ -705,7 +705,7 @@ dependencies = [
 
 [[package]]
 name = "ws-link"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "formatkit-core",
  "formatkit-corpus-test",
@@ -716,7 +716,7 @@ dependencies = [
 
 [[package]]
 name = "ws-patch"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "formatkit-catalog",
  "formatkit-core",
@@ -727,14 +727,14 @@ dependencies = [
 
 [[package]]
 name = "ws-platform"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "windows-sys",
 ]
 
 [[package]]
 name = "ws-rom"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "formatkit-catalog",
  "formatkit-core",
@@ -745,7 +745,7 @@ dependencies = [
 
 [[package]]
 name = "ws-save"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "formatkit-catalog",
  "formatkit-core",
@@ -754,7 +754,7 @@ dependencies = [
 
 [[package]]
 name = "ws-saves"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "encoding_rs",
  "formatkit-catalog",
@@ -773,7 +773,7 @@ dependencies = [
 
 [[package]]
 name = "ws-sound"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "formatkit-catalog",
  "formatkit-core",
@@ -786,7 +786,7 @@ dependencies = [
 
 [[package]]
 name = "ws-text"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "formatkit-catalog",
  "formatkit-core",
@@ -800,7 +800,7 @@ dependencies = [
 
 [[package]]
 name = "ws-wondergate"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "formatkit-core",
  "formatkit-corpus-test",
@@ -809,7 +809,7 @@ dependencies = [
 
 [[package]]
 name = "ws-wondergate-server"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "formatkit-core",
  "formatkit-corpus-test",

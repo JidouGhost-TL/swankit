@@ -18,7 +18,7 @@ The Rust release includes the library and its required support crates.
 ## Quick start
 
 Download the CLI archive for your platform from [GitHub Releases](https://github.com/JidouGhost-TL/swankit/releases).
-[Version 0.1.2](https://github.com/JidouGhost-TL/swankit/releases/tag/v0.1.2) provides CLI builds for Linux x86-64, Windows x86-64, macOS Apple Silicon and macOS Intel.
+[Version 0.1.3](https://github.com/JidouGhost-TL/swankit/releases/tag/v0.1.3) provides CLI builds for Linux x86-64, Windows x86-64, macOS Apple Silicon and macOS Intel.
 Extract the archive and run the executable directly.
 
 ```text

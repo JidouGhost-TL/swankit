@@ -13,7 +13,7 @@ serde = { version = "1", features = ["derive"] }
 formatkit-catalog.workspace = true
 formatkit-core.workspace = true
 formatkit-layout.workspace = true
-ws-save = { path = "../ws-save", version = "=0.1.2" }
+ws-save = { path = "../ws-save", version = "=0.1.3" }
 serde_json = "1"
 encoding_rs = "0.8"
 unicode-normalization = "0.1"
