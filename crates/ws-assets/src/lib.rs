@@ -14,6 +14,7 @@ mod data;
 mod extract;
 pub mod fixed_table;
 mod font;
+pub mod formatkit;
 mod gfx;
 pub mod map;
 pub mod parameters;
@@ -24,6 +25,12 @@ mod verify;
 
 pub use data::{decode_asset, encode_payload, stored_range, Stored};
 pub use extract::{extract, ExtractedFile, Extraction};
+pub use formatkit::{
+    shannon_entropy, to_formatkit_v1, to_formatkit_v1_with_charmaps, FormatkitAssetMapV1,
+    FormatkitEntry, FormatkitFingerprint, FormatkitMapping, FormatkitMappingKind, FormatkitMedia,
+    FormatkitMediaKind, FormatkitOpaqueClass, FormatkitStatus, LoadedAssetMap, FORMATKIT_SCHEMA,
+    FORMATKIT_SCHEMA_VERSION,
+};
 pub use gfx::{
     palette_colors, render_screen, render_sprites, render_tilemap, render_tiles, unrender_tilemap,
     unrender_tiles, TileSheet,

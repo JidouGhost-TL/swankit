@@ -124,12 +124,23 @@ little-endian sum of all preceding bytes modulo 65,536. It does not validate eve
 field or require a correct input checksum.
 
 ```sh
+swankit map verify cartridge.wsc assets.json --json
+swankit map markdown assets.json
+swankit assets export cartridge.wsc --asset-map assets.json -o extracted
 swankit assets verify cartridge.wsc assets.json --json
 swankit assets extract cartridge.wsc assets.json extracted
 swankit assets replace cartridge.wsc assets.json --id message \
   --from extracted/message.txt --text-framing lf \
   -o edited.wsc --map-out edited-assets.json
 ```
+
+All `map` and `assets` commands accept both `formatkit.asset-map.v1` and
+`swankit-asset-map/1` documents. `map verify` checks ROM identity (`rom_sha256`
+and `total_bytes`), per-entry slice bounds and `sha256` when present, and
+test-decodes every `mapped` entry, reporting mapped bytes and ROM coverage.
+`map markdown` prints a Markdown summary table of the map's entries.
+`assets export ROM --asset-map MAP -o DIR` exports all mapped assets to `DIR`
+with the same output safety and `--force` / `--json` semantics as `assets extract`.
 
 Each mapped text `.txt` is one decoded string plus one framing LF, including
 empty strings and strings containing CR or LF. Default `.txt` replacement

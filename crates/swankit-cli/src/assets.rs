@@ -7,14 +7,15 @@ use crate::{args::Args, io, png, png_read, Result};
 use serde_json::json;
 use std::path::{Path, PathBuf};
 use ws_assets::{
-    extract, replace_with, verify, AssetMap, Charmaps, ExtractedFile, ReplaceInput, ReplaceOptions,
-    Replacement,
+    extract, replace_with, AssetMap, Charmaps, ExtractedFile, LoadedAssetMap, ReplaceInput,
+    ReplaceOptions, Replacement,
 };
 
-pub const HELP: &str = "swankit assets: per-ROM asset maps (swankit-asset-map/1)
+pub const HELP: &str = "swankit assets: per-ROM asset maps (formatkit.asset-map.v1 / swankit-asset-map/1)
   assets search ROM [--config JSON] [--output JSON] [--json]
   assets search-corpus MANIFEST --output DIR [--config JSON] [--jobs N] [--resume] [--json]
   assets resolve-table ROM DEFINITION --output RECEIPT [--map-out MAP] [--force] [--json]
+  assets export ROM --asset-map MAP -o OUTDIR [--force] [--json]
   assets extract ROM MAP OUTDIR [--force] [--json]
   assets replace ROM MAP --id ID --from FILE -o PATCHED [--text-framing lf] [--ips PATCH] [--map-out MAP] [--allocate] [--force] [--json]
   assets verify ROM MAP [--json]
@@ -64,6 +65,52 @@ fn input_paths(rom: &str, map_path: &str, map: &AssetMap) -> Vec<PathBuf> {
             .map(|file| base.join(file)),
     );
     inputs
+}
+
+fn run_extract(
+    rom_path: &str,
+    map_path: &str,
+    out_dir: &str,
+    force: bool,
+    json_mode: bool,
+) -> Result<()> {
+    let (rom, map, charmaps) = load(rom_path, map_path)?;
+    let out = Path::new(out_dir);
+    std::fs::create_dir_all(out).map_err(|e| format!("create {}: {e}", out.display()))?;
+    let result = extract(&map, &charmaps, &rom)?;
+    let mut files = Vec::new();
+    for (name, file) in &result.files {
+        let bytes = match file {
+            ExtractedFile::Image(image) => png::encode(image)?,
+            ExtractedFile::Bytes(bytes) => bytes.clone(),
+        };
+        files.push((out.join(name), bytes));
+    }
+    files.push((
+        out.join("index.json"),
+        serde_json::to_vec_pretty(&result.index)?,
+    ));
+    output::write(files, &input_paths(rom_path, map_path, &map), force)?;
+    let summary = json!({"files": result.files.len(), "failures": result.failures});
+    if json_mode {
+        println!("{summary}");
+    } else {
+        println!(
+            "Extracted {} assets and {} screens into {} files ({} failures)",
+            map.assets.len(),
+            map.screens.len(),
+            result.files.len() + 1,
+            result.failures
+        );
+    }
+    if result.failures > 0 {
+        return Err(format!(
+            "{} assets or screens failed; see index.json",
+            result.failures
+        )
+        .into());
+    }
+    Ok(())
 }
 
 pub fn run(words: Vec<String>) -> Result<()> {
@@ -133,49 +180,21 @@ pub fn run(words: Vec<String>) -> Result<()> {
             println!("{message}");
             Ok(())
         }
+        "export" => {
+            let map_path = a.require("--asset-map")?;
+            let out_dir = a.require("--output")?;
+            a.finish(3)?;
+            run_extract(&a.positional[2], &map_path, &out_dir, force, json_mode)
+        }
         "extract" => {
             a.finish(5)?;
-            let (rom, map, charmaps) = load(&a.positional[2], &a.positional[3])?;
-            let out = Path::new(&a.positional[4]);
-            std::fs::create_dir_all(out).map_err(|e| format!("create {}: {e}", out.display()))?;
-            let result = extract(&map, &charmaps, &rom)?;
-            let mut files = Vec::new();
-            for (name, file) in &result.files {
-                let bytes = match file {
-                    ExtractedFile::Image(image) => png::encode(image)?,
-                    ExtractedFile::Bytes(bytes) => bytes.clone(),
-                };
-                files.push((out.join(name), bytes));
-            }
-            files.push((
-                out.join("index.json"),
-                serde_json::to_vec_pretty(&result.index)?,
-            ));
-            output::write(
-                files,
-                &input_paths(&a.positional[2], &a.positional[3], &map),
+            run_extract(
+                &a.positional[2],
+                &a.positional[3],
+                &a.positional[4],
                 force,
-            )?;
-            let summary = json!({"files": result.files.len(), "failures": result.failures});
-            if json_mode {
-                println!("{summary}");
-            } else {
-                println!(
-                    "Extracted {} assets and {} screens into {} files ({} failures)",
-                    map.assets.len(),
-                    map.screens.len(),
-                    result.files.len() + 1,
-                    result.failures
-                );
-            }
-            if result.failures > 0 {
-                return Err(format!(
-                    "{} assets or screens failed; see index.json",
-                    result.failures
-                )
-                .into());
-            }
-            Ok(())
+                json_mode,
+            )
         }
         "replace" => {
             let id = a.require("--id")?;
@@ -255,8 +274,25 @@ pub fn run(words: Vec<String>) -> Result<()> {
         }
         "verify" => {
             a.finish(4)?;
-            let (rom, map, charmaps) = load(&a.positional[2], &a.positional[3])?;
-            let report = verify(&map, &charmaps, &rom)?;
+            let rom = io::read(&a.positional[2], MAX_ROM)?;
+            let map_bytes = io::read(&a.positional[3], ws_assets::map::MAX_MAP_BYTES)?;
+            let loaded = LoadedAssetMap::from_json(&map_bytes)?;
+            let map = loaded.to_asset_map()?;
+            let base: PathBuf = Path::new(&a.positional[3])
+                .parent()
+                .map(Path::to_path_buf)
+                .unwrap_or_default();
+            let charmaps = Charmaps::load(&map, |name| {
+                if Path::new(name).is_absolute() || name.split('/').any(|c| c == "..") {
+                    return Err(formatkit_core::Error::Malformed(format!(
+                        "charmap path {name:?} must be relative and stay beside the map"
+                    )));
+                }
+                let path = base.join(name);
+                io::read(&path.to_string_lossy(), 8 * 1024 * 1024)
+                    .map_err(|e| formatkit_core::Error::Malformed(e.to_string()))
+            })?;
+            let report = loaded.verify(&charmaps, &rom)?;
             if json_mode {
                 let mut value = serde_json::to_value(&report)?;
                 value["coverage"] = json!(report.coverage());

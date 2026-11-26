@@ -722,13 +722,30 @@ pub struct AssetMap {
 
 impl AssetMap {
     /// Parse and check structure that does not need the ROM.
+    /// Accepts both `swankit-asset-map/1` and `formatkit.asset-map.v1`.
     pub fn from_json(bytes: &[u8]) -> Result<Self> {
         if bytes.len() > MAX_MAP_BYTES {
             return Err(malformed("asset map exceeds 64 MiB"));
         }
-        let map: Self = serde_json::from_slice(bytes).map_err(|e| malformed(e.to_string()))?;
-        map.check_structure()?;
-        Ok(map)
+        let peek: serde_json::Value =
+            serde_json::from_slice(bytes).map_err(|e| malformed(e.to_string()))?;
+        let schema = peek
+            .get("schema")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| malformed("asset map missing string \"schema\" field"))?;
+        match schema {
+            SCHEMA => {
+                let map: Self =
+                    serde_json::from_slice(bytes).map_err(|e| malformed(e.to_string()))?;
+                map.check_structure()?;
+                Ok(map)
+            }
+            crate::formatkit::FORMATKIT_SCHEMA => {
+                let doc = crate::formatkit::FormatkitAssetMapV1::from_json(bytes)?;
+                doc.to_asset_map()
+            }
+            other => Err(malformed(format!("unsupported schema {other:?}"))),
+        }
     }
 
     pub fn to_json(&self) -> Result<Vec<u8>> {
@@ -744,7 +761,7 @@ impl AssetMap {
             .ok_or_else(|| malformed(format!("unknown asset id {id:?}")))
     }
 
-    fn check_structure(&self) -> Result<()> {
+    pub(crate) fn check_structure(&self) -> Result<()> {
         if self.schema != SCHEMA {
             return Err(malformed(format!("unsupported schema {:?}", self.schema)));
         }
@@ -878,6 +895,14 @@ impl AssetMap {
             }
         }
         Ok(())
+    }
+}
+
+impl std::str::FromStr for AssetMap {
+    type Err = formatkit_core::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        Self::from_json(s.as_bytes())
     }
 }
 

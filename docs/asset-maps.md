@@ -1,9 +1,11 @@
 # Asset maps
 
-An asset map (`swankit-asset-map/1`, JSON Schema in
-[asset-map.schema.json](asset-map.schema.json)) lists the located assets of one
-ROM image: where each asset is stored, how it is encoded, how it relates to
-other assets, every known place that points at it, and the evidence for it.
+`ws-assets` and the `swankit` CLI accept both the universal
+`formatkit.asset-map.v1` schema and the legacy `swankit-asset-map/1` schema
+(JSON Schema in [asset-map.schema.json](asset-map.schema.json)). An asset map
+lists the located assets of one ROM image: where each asset is stored, how it
+is encoded, how it relates to other assets, every known place that points at
+it, and the evidence for it.
 Put the ROM and the map together and every listed asset can be extracted;
 reference an asset by its id and it can be replaced.
 
@@ -170,6 +172,9 @@ Replacement recomputes the sum of all bytes except the final two, modulo
 footer field or require the original checksum to be correct.
 
 ```text
+swankit map verify ROM MAP [--json]
+swankit map markdown MAP
+swankit assets export ROM --asset-map MAP -o OUTDIR [--force] [--json]
 swankit assets extract ROM MAP OUTDIR [--force] [--json]
 swankit assets replace ROM MAP --id ID --from FILE -o PATCHED [--text-framing lf] [--ips PATCH] [--map-out MAP] [--force] [--json]
 swankit assets verify ROM MAP [--json]

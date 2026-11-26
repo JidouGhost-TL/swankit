@@ -16,6 +16,7 @@ mod link {
         Err(HELP.into())
     }
 }
+mod map;
 mod png;
 mod png_read;
 #[cfg(feature = "saves")]
@@ -44,11 +45,13 @@ const HELP: &str = "swankit: WonderSwan format tools
   sound sdk-render --rom ROM (--link LINK.json | --auto-link) --song N --ticks N --out-json JSON [--out-wav WAV] [--out-events FILE] [--reload-mode next-period|immediate] [--tracks N] [--initial-phase N] [--force] [--json]
   sound cell-render --rom ROM --link LINK.json --song N --ticks N --out-json JSON [--out-wav WAV] [--out-events FILE] [--reload-mode next-period|immediate] [--force] [--json]
   save decode DEF_OR_AUTO SAVE [--context JSON] [--json]
-  save set DEF_OR_AUTO SAVE --field INDEX --value JSON --output SAVE [--all-copies] [--skip-validation] [--no-repair] [--context JSON]
-  save fix DEF_OR_AUTO SAVE --output SAVE [--context JSON]
-  patch apply PATCH BASE --output FILE [--overlap reject|last-write-wins] [--growth reject|zero-fill]
-  patch create BASE TARGET --output IPS
-  assets search|search-corpus|discover|resolve-table|extract|replace|verify ... (see swankit assets --help)
+  save set DEF_OR_AUTO SAVE --field INDEX --value JSON --output SAVE [--all-copies] [--skip-validation] [--no-repair] [--context JSON] [--json]
+  save fix DEF_OR_AUTO SAVE --output SAVE [--context JSON] [--json]
+  patch apply PATCH BASE --output FILE [--overlap reject|last-write-wins] [--growth reject|zero-fill] [--json]
+  patch create BASE TARGET --output IPS [--json]
+  map verify ROM MAP [--json]
+  map markdown MAP
+  assets search|search-corpus|discover|resolve-table|export|extract|replace|verify ... (see swankit assets --help)
 Options: --json where listed; output-writing commands accept --force to replace files.
 Integers accept decimal or 0x hexadecimal.
 For save set, the input must already hold a usable record under the definition.
@@ -155,9 +158,10 @@ fn command_help(words: &[String]) -> Result<bool> {
         ["assets", "search" | "search-corpus"] => {
             return assets::search_command(words.to_vec()).map(|()| true)
         }
-        ["assets"] | ["assets", "extract" | "replace" | "verify" | "resolve-table"] => {
+        ["assets"] | ["assets", "export" | "extract" | "replace" | "verify" | "resolve-table"] => {
             assets::HELP.to_owned()
         }
+        ["map"] | ["map", "verify" | "markdown"] => map::HELP.to_owned(),
         ["link"] => link::HELP.to_owned(),
         ["sound"] | ["sound", "sdk-discover" | "sdk-render" | "cell-render"] => {
             sound::HELP.to_owned()
@@ -214,6 +218,9 @@ fn run(words: Vec<String>) -> Result<()> {
     }
     if words.first().is_some_and(|s| s == "wg-adapter") {
         return wg::adapter(words.into_iter().skip(1).collect());
+    }
+    if words.first().is_some_and(|s| s == "map") {
+        return map::run(words);
     }
     if words.first().is_some_and(|s| s == "assets") {
         if words
