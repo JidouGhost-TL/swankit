@@ -67,7 +67,7 @@ fn input_paths(rom: &str, map_path: &str, map: &AssetMap) -> Vec<PathBuf> {
     inputs
 }
 
-fn run_extract(
+pub(crate) fn run_extract(
     rom_path: &str,
     map_path: &str,
     out_dir: &str,

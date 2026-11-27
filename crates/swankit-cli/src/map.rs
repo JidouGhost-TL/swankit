@@ -7,6 +7,7 @@ use ws_assets::{Charmaps, LoadedAssetMap};
 pub const HELP: &str =
     "swankit map: declarative asset maps (formatkit.asset-map.v1 / swankit-asset-map/1)
   map verify ROM MAP [--json]
+  map extract ROM MAP OUTDIR [--force] [--json]
   map markdown MAP
 Accepts both formatkit.asset-map.v1 and swankit-asset-map/1 JSON documents.";
 
@@ -37,8 +38,12 @@ pub fn run(words: Vec<String>) -> Result<()> {
     }
     let mut a = Args::parse(words)?;
     let json_mode = a.flag("--json");
+    let force = a.flag("--force");
     match a.positional[1].as_str() {
         "verify" => {
+            if force {
+                return Err("map verify does not accept --force".into());
+            }
             a.finish(4)?;
             let rom = io::read(&a.positional[2], MAX_ROM)?;
             let map_bytes = io::read(&a.positional[3], ws_assets::map::MAX_MAP_BYTES)?;
@@ -77,9 +82,22 @@ pub fn run(words: Vec<String>) -> Result<()> {
             }
             Ok(())
         }
+        "extract" => {
+            a.finish(5)?;
+            crate::assets::run_extract(
+                &a.positional[2],
+                &a.positional[3],
+                &a.positional[4],
+                force,
+                json_mode,
+            )
+        }
         "markdown" => {
             if json_mode {
                 return Err("map markdown does not accept --json".into());
+            }
+            if force {
+                return Err("map markdown does not accept --force".into());
             }
             a.finish(3)?;
             let map_bytes = io::read(&a.positional[2], ws_assets::map::MAX_MAP_BYTES)?;

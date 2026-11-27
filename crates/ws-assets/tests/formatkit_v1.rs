@@ -729,3 +729,152 @@ fn editable_map_with_free_space_shared_references_and_relations_round_trips_and_
         0x8000
     );
 }
+
+#[test]
+fn new_pcm_s8_rle_77ee_and_rle_pcm_00_round_trip() {
+    let mut rom = vec![0u8; 65_536];
+    let pcm_s8_raw: Vec<u8> = vec![0x80, 0xc0, 0xff, 0x00, 0x01, 0x40, 0x7f, 0x00];
+    rom[0x100..0x100 + pcm_s8_raw.len()].copy_from_slice(&pcm_s8_raw);
+
+    let rle77_raw: Vec<u8> = vec![
+        0x00, 0x00, 0x00, 0x00, 0x77, 0xee, 0x12, 0x34, 0x12, 0x34, 0x10, 0x00, 0x11, 0x00, 0x12,
+        0x00,
+    ];
+    let rle77_enc = ws_compress::rle_77ee::encode(&rle77_raw).unwrap();
+    rom[0x200..0x200 + rle77_enc.len()].copy_from_slice(&rle77_enc);
+
+    let rle_pcm_raw: Vec<u8> = vec![
+        0x80, 0x80, 0x80, 0x80, 0x80, 0x00, 0x7f, 0x81, 0x82, 0x00, 0x00,
+    ];
+    let rle_pcm_enc = ws_compress::rle_pcm_00::encode(&rle_pcm_raw).unwrap();
+    rom[0x300..0x300 + rle_pcm_enc.len()].copy_from_slice(&rle_pcm_enc);
+
+    let sha = sha256_hex(&rom);
+    let fk_doc = json!({
+        "schema": FORMATKIT_SCHEMA,
+        "schema_version": 1,
+        "kit": "swankit",
+        "media": {
+            "kind": "flat-rom",
+            "fingerprint": { "rom_sha256": sha },
+            "total_bytes": rom.len()
+        },
+        "entries": [
+            {
+                "id": "voice_s8",
+                "offset": 0x100,
+                "size": pcm_s8_raw.len(),
+                "sha256": sha256_hex(&pcm_s8_raw),
+                "status": "mapped",
+                "format_id": "ws.pcm.s8",
+                "mapping": {
+                    "kind": "raw-audio",
+                    "params": { "format": { "sample_rate": 12000 } },
+                    "inner_format": "pcm"
+                },
+                "verified": true
+            },
+            {
+                "id": "blob_rle77",
+                "offset": 0x200,
+                "size": rle77_enc.len(),
+                "sha256": sha256_hex(&rle77_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.rle-77ee",
+                "mapping": {
+                    "kind": "compressed",
+                    "inner_format": "other"
+                },
+                "verified": true
+            },
+            {
+                "id": "voice_rle_pcm",
+                "offset": 0x300,
+                "size": rle_pcm_enc.len(),
+                "sha256": sha256_hex(&rle_pcm_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.rle-pcm-00",
+                "mapping": {
+                    "kind": "compressed",
+                    "params": { "format": { "sample_rate": 6000 } },
+                    "inner_format": "pcm"
+                },
+                "verified": true
+            }
+        ]
+    });
+
+    let fk_bytes = serde_json::to_vec(&fk_doc).unwrap();
+    let loaded = LoadedAssetMap::from_json(&fk_bytes).unwrap();
+    let asset_map = loaded.to_asset_map().unwrap();
+    let charmaps = Charmaps::load(&asset_map, |_| unreachable!()).unwrap();
+
+    let report = loaded.verify(&charmaps, &rom).unwrap();
+    assert!(report.ok(), "{:?}", report.errors);
+
+    // Format IDs round-trip cleanly through to_formatkit_v1.
+    let roundtripped = to_formatkit_v1(&asset_map, &rom).unwrap();
+    let fid = |id: &str| {
+        roundtripped
+            .entries
+            .iter()
+            .find(|e| e.id == id)
+            .unwrap()
+            .format_id
+            .as_deref()
+    };
+    assert_eq!(fid("voice_s8"), Some("ws.pcm.s8"));
+    assert_eq!(fid("blob_rle77"), Some("ws.codec.rle-77ee"));
+    assert_eq!(fid("voice_rle_pcm"), Some("ws.codec.rle-pcm-00"));
+
+    // Extract checks WAV output for s8 PCM and decoded bytes for both codecs.
+    let extracted = extract(&asset_map, &charmaps, &rom).unwrap();
+    assert_eq!(extracted.failures, 0);
+    let expected_s8_wav = ws_sound::render::signed_pcm(&pcm_s8_raw, 12_000, pcm_s8_raw.len())
+        .unwrap()
+        .to_wav_bytes()
+        .unwrap();
+    let expected_rle_pcm_wav =
+        ws_sound::render::unsigned_pcm(&rle_pcm_raw, 6_000, rle_pcm_raw.len())
+            .unwrap()
+            .to_wav_bytes()
+            .unwrap();
+    let file_bytes = |name: &str| -> &[u8] {
+        extracted
+            .files
+            .iter()
+            .find_map(|(n, f)| match (n == name, f) {
+                (true, ws_assets::ExtractedFile::Bytes(b)) => Some(b.as_slice()),
+                _ => None,
+            })
+            .unwrap()
+    };
+    assert_eq!(file_bytes("voice_s8.wav"), expected_s8_wav.as_slice());
+    assert_eq!(file_bytes("blob_rle77.bin"), rle77_raw.as_slice());
+    assert_eq!(
+        file_bytes("voice_rle_pcm.wav"),
+        expected_rle_pcm_wav.as_slice()
+    );
+
+    // In-place replacement re-encodes with rle-77ee and rle-pcm-00.
+    let new_blob = vec![0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00];
+    let replaced = replace_with(
+        &asset_map,
+        &charmaps,
+        &rom,
+        &Replacement {
+            id: "blob_rle77".into(),
+            input: ReplaceInput::Bytes(new_blob.clone()),
+        },
+        &ReplaceOptions::default(),
+    )
+    .unwrap();
+    let decoded_after = ws_assets::decode_asset(
+        &replaced.map,
+        &charmaps,
+        &replaced.rom,
+        "blob_rle77",
+    )
+    .unwrap();
+    assert_eq!(decoded_after.decoded, new_blob);
+}

@@ -26,6 +26,8 @@ Generated from `swankit capabilities --json` (`formatkit.capabilities.v1`).
 | `ws-lz-command16-lsb` | `compression` | 2 | `parse`, `decode` | LSB 16-bit command LZ stream decoder |
 | `ws-lzss-msb-distance12` | `compression` | 2 | `parse`, `decode` | MSB 12-bit distance LZSS stream decoder |
 | `ws-lzss-be-units` | `compression` | 2 | `parse`, `decode` | Big-endian unit-framed LZSS stream decoder with provenance |
+| `ws-rle-77ee` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | Escape-byte word and byte RLE stream decoder and deterministic encoder |
+| `ws-rle-pcm-00` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | Zero-escaped byte RLE stream decoder and deterministic encoder for 8-bit PCM |
 | `ws-tile-2bpp` | `gfx` | 2 | `parse`, `decode`, `reproduce`, `edit` | 2bpp planar 8x8 tiles (monochrome and 4-color palettes) |
 | `ws-tile-4bpp-planar` | `gfx` | 2 | `parse`, `decode`, `reproduce`, `edit` | 4bpp planar 8x8 WonderSwan Color tiles |
 | `ws-tile-4bpp-packed` | `gfx` | 2 | `parse`, `decode`, `reproduce`, `edit` | 4bpp packed 8x8 WonderSwan Color tiles |
@@ -39,6 +41,7 @@ Generated from `swankit capabilities --json` (`formatkit.capabilities.v1`).
 | `ws-font-strip` | `text` | 2 | `parse`, `decode` | Bitmap tile font atlas extraction from ROM definitions |
 | `ws-sound.wave` | `audio` | 2 | `parse`, `decode` | 4-bit packed hardware wave RAM banks and channel waveforms |
 | `ws-sound.unsigned-pcm` | `audio` | 2 | `parse`, `decode` | 8-bit unsigned hardware PCM sample streams and 24 kHz WAV preview rendering |
+| `ws-sound.signed-pcm` | `audio` | 2 | `parse`, `decode` | 8-bit signed PCM sample streams and WAV rendering |
 | `ws-sound.byte-sequence` | `audio` | 2 | `parse`, `decode` | Byte-oriented sound driver sequence decoding and preview rendering |
 | `ws-sound.cell-sequence` | `audio` | 2 | `parse`, `decode` | Cell-oriented sound driver sequence decoding and WAV/event rendering |
 | `ws-sound.sdk-sequence` | `audio` | 3 | `parse`, `decode` | SDK sound driver bank discovery, sequence decoding, and hardware-matched WAV/event rendering |

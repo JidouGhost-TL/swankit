@@ -216,3 +216,136 @@ fn map_verify_markdown_and_assets_export_cli() {
 
     std::fs::remove_dir_all(dir).unwrap();
 }
+
+#[test]
+fn map_verify_and_extract_new_pcm_s8_and_rle_codecs() {
+    let dir = temp_dir("map-cli-new-formats");
+    let mut rom = vec![0u8; 4096];
+    let s8_pcm = [0x80u8, 0xc0, 0x00, 0x40, 0x7f, 0xff];
+    rom[0x100..0x100 + s8_pcm.len()].copy_from_slice(&s8_pcm);
+
+    let rle77_raw = [0x00u8, 0x00, 0x00, 0x00, 0x77, 0xaa, 0xee, 0x12, 0x34, 0x12, 0x34];
+    let rle77_enc = swankit::compress::rle_77ee::encode(&rle77_raw).unwrap();
+    rom[0x200..0x200 + rle77_enc.len()].copy_from_slice(&rle77_enc);
+
+    let rle_pcm_raw = [0x80u8, 0x80, 0x80, 0x80, 0x80, 0x00, 0x7f];
+    let rle_pcm_enc = swankit::compress::rle_pcm_00::encode(&rle_pcm_raw).unwrap();
+    rom[0x300..0x300 + rle_pcm_enc.len()].copy_from_slice(&rle_pcm_enc);
+
+    let rom_path = dir.join("sample.wsc");
+    let map_path = dir.join("sample.map.json");
+    let out_dir = dir.join("extracted");
+    std::fs::write(&rom_path, &rom).unwrap();
+    let map_doc = json!({
+        "schema": "formatkit.asset-map.v1",
+        "schema_version": 1,
+        "kit": "swankit",
+        "media": {
+            "kind": "flat-rom",
+            "fingerprint": { "rom_sha256": sha256_hex(&rom) },
+            "total_bytes": rom.len()
+        },
+        "entries": [
+            {
+                "id": "s8_clip",
+                "offset": 0x100,
+                "size": s8_pcm.len(),
+                "sha256": sha256_hex(&s8_pcm),
+                "status": "mapped",
+                "format_id": "ws.pcm.s8",
+                "mapping": {
+                    "kind": "raw-audio",
+                    "params": { "format": { "sample_rate": 12000 } },
+                    "inner_format": "pcm"
+                },
+                "verified": true
+            },
+            {
+                "id": "rle77_blob",
+                "offset": 0x200,
+                "size": rle77_enc.len(),
+                "sha256": sha256_hex(&rle77_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.rle-77ee",
+                "mapping": {
+                    "kind": "compressed",
+                    "inner_format": "other"
+                },
+                "verified": true
+            },
+            {
+                "id": "rle_pcm_clip",
+                "offset": 0x300,
+                "size": rle_pcm_enc.len(),
+                "sha256": sha256_hex(&rle_pcm_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.rle-pcm-00",
+                "mapping": {
+                    "kind": "compressed",
+                    "params": { "format": { "sample_rate": 6000 } },
+                    "inner_format": "pcm"
+                },
+                "verified": true
+            }
+        ]
+    });
+    std::fs::write(&map_path, serde_json::to_vec_pretty(&map_doc).unwrap()).unwrap();
+
+    let verify_out = Command::new(env!("CARGO_BIN_EXE_swankit"))
+        .args([
+            "map",
+            "verify",
+            rom_path.to_str().unwrap(),
+            map_path.to_str().unwrap(),
+            "--json",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        verify_out.status.success(),
+        "map verify failed: {}",
+        String::from_utf8_lossy(&verify_out.stderr)
+    );
+    let vjson: Value = serde_json::from_slice(&verify_out.stdout).unwrap();
+    assert_eq!(vjson["ok"].as_bool(), Some(true));
+
+    let extract_out = Command::new(env!("CARGO_BIN_EXE_swankit"))
+        .args([
+            "map",
+            "extract",
+            rom_path.to_str().unwrap(),
+            map_path.to_str().unwrap(),
+            out_dir.to_str().unwrap(),
+            "--json",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        extract_out.status.success(),
+        "map extract failed: {}",
+        String::from_utf8_lossy(&extract_out.stderr)
+    );
+    let ejson: Value = serde_json::from_slice(&extract_out.stdout).unwrap();
+    assert_eq!(ejson["failures"].as_u64(), Some(0));
+    assert_eq!(ejson["files"].as_u64(), Some(3));
+    assert_eq!(
+        std::fs::read(out_dir.join("rle77_blob.bin")).unwrap(),
+        rle77_raw
+    );
+    assert_eq!(
+        std::fs::read(out_dir.join("s8_clip.wav")).unwrap(),
+        swankit::sound::render::signed_pcm(&s8_pcm, 12_000, s8_pcm.len())
+            .unwrap()
+            .to_wav_bytes()
+            .unwrap()
+    );
+    assert_eq!(
+        std::fs::read(out_dir.join("rle_pcm_clip.wav")).unwrap(),
+        swankit::sound::render::unsigned_pcm(&rle_pcm_raw, 6_000, rle_pcm_raw.len())
+            .unwrap()
+            .to_wav_bytes()
+            .unwrap()
+    );
+
+    std::fs::remove_dir_all(dir).unwrap();
+}

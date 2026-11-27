@@ -290,6 +290,28 @@ pub fn unsigned_pcm(bytes: &[u8], sample_rate: u32, max_samples: usize) -> Resul
     ))
 }
 
+/// Signed 8-bit sample extraction; the driver supplies the actual rate.
+pub fn signed_pcm(bytes: &[u8], sample_rate: u32, max_samples: usize) -> Result<Pcm> {
+    if sample_rate == 0 {
+        return Err(Error::InvalidField {
+            what: "PCM sample rate",
+            value: 0,
+        });
+    }
+    let limit = max_samples.min(MAX_FRAMES);
+    if bytes.len() > limit {
+        return Err(Error::ResourceLimit {
+            resource: "PCM samples",
+            requested: bytes.len() as u64,
+            limit: limit as u64,
+        });
+    }
+    Ok(Pcm::new(
+        sample_rate,
+        bytes.iter().map(|&s| i16::from(s as i8) * 256).collect(),
+    ))
+}
+
 /// Cycle-timed rendering: each event is applied at its own CPU cycle and the
 /// output is sampled at the end of every 128-cycle frame (24 kHz).
 pub fn render_cycles(events: &[CycleEvent], frames: usize, reload: CounterReload) -> Result<Pcm> {

@@ -5,7 +5,7 @@ use crate::{malformed, AssetMap};
 use formatkit_core::{bytes_at, Result};
 use ws_compress::{
     lz_bits_16, lz_rle_7f, lz_u8_zero, lz_word16_msb, lz_word_counted, lzs2, lzss_12,
-    lzss_u16_zero, okumura, BitOrder, MAX_DECODED,
+    lzss_u16_zero, okumura, rle_77ee, rle_pcm_00, BitOrder, MAX_DECODED,
 };
 
 /// Upper bound on the decoded bytes of one asset.
@@ -130,7 +130,9 @@ pub fn decode_asset(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -
         | Codec::LzWordCounted
         | Codec::LzssU16Zero
         | Codec::Lzss12
-        | Codec::Lzs2 => {
+        | Codec::Lzs2
+        | Codec::Rle77ee
+        | Codec::RlePcm00 => {
             let outcome = match asset.codec {
                 Codec::Lzs2 => lzs2::decode(window, MAX_DECODED)?,
                 Codec::LzRle7f => lz_rle_7f::decode(window, MAX_DECODED)?,
@@ -145,6 +147,15 @@ pub fn decode_asset(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -
                 Codec::Lzss12 => {
                     let (size, history) = lzss12_params(asset)?;
                     lzss_12::decode_with_history(window, history, size, MAX_ASSET_BYTES)?
+                }
+                Codec::Rle77ee => rle_77ee::decode(window, MAX_DECODED)?,
+                Codec::RlePcm00 => {
+                    if declared.is_none() {
+                        return Err(malformed(format!(
+                            "{id}: ws-rle-pcm-00 asset needs a length"
+                        )));
+                    }
+                    rle_pcm_00::decode(window, MAX_DECODED)?
                 }
                 _ => unreachable!(),
             };
@@ -406,5 +417,7 @@ pub fn encode_payload(asset: &Asset, decoded: &[u8]) -> Result<Vec<u8>> {
             }
             Ok(okumura::encode(decoded, order, fill))
         }
+        Codec::Rle77ee => rle_77ee::encode(decoded),
+        Codec::RlePcm00 => rle_pcm_00::encode(decoded),
     }
 }

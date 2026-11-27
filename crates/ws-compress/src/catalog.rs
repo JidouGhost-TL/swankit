@@ -15,6 +15,8 @@ pub const MASK16_FILL_ID: FormatId = FormatId::new("ws-mask16-fill");
 pub const LZ_COMMAND16_LSB_ID: FormatId = FormatId::new("ws-lz-command16-lsb");
 pub const LZSS_BE_UNITS_ID: FormatId = FormatId::new("ws-lzss-be-units");
 pub const LZSS_MSB_DISTANCE12_ID: FormatId = FormatId::new("ws-lzss-msb-distance12");
+pub const RLE_77EE_ID: FormatId = FormatId::new("ws-rle-77ee");
+pub const RLE_PCM_00_ID: FormatId = FormatId::new("ws-rle-pcm-00");
 
 /// Explicit decode-only grammar; no recognition probe or encoder.
 pub const LZSS_12_EXT_FORMAT: FormatDescriptor = {
@@ -132,6 +134,8 @@ pub const FORMATS: &[FormatDescriptor] = &[
     LZ_COMMAND16_LSB_FORMAT,
     LZSS_MSB_DISTANCE12_FORMAT,
     LZSS_BE_UNITS_FORMAT,
+    descriptor(RLE_77EE_ID, "ws-rle-77ee", Confidence::CorpusBacked),
+    descriptor(RLE_PCM_00_ID, "ws-rle-pcm-00", Confidence::CorpusBacked),
 ];
 
 /// Decode-only external-length support, with separately scoped corpus evidence.
@@ -418,6 +422,54 @@ pub const EMBEDDED: &[EmbeddedFormatSupport] = &[
         capabilities: LZSS_BE_UNITS_FORMAT.capabilities,
         corpus_evidence: Some(CorpusEvidence {
             handler: "ws-compress-lzss-be-units",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: RLE_77EE_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "rle-77ee",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-rle-77ee",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: RLE_PCM_00_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "rle-pcm-00",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-rle-pcm-00",
             sample_floor: 1,
         }),
     },

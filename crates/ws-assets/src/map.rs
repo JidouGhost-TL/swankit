@@ -184,6 +184,10 @@ pub enum Codec {
     Lzss12,
     #[serde(rename = "ws-lzs2")]
     Lzs2,
+    #[serde(rename = "ws-rle-77ee")]
+    Rle77ee,
+    #[serde(rename = "ws-rle-pcm-00")]
+    RlePcm00,
 }
 
 impl Codec {
@@ -198,6 +202,7 @@ impl Codec {
                 | Codec::LzWordCounted
                 | Codec::LzssU16Zero
                 | Codec::Lzs2
+                | Codec::Rle77ee
         )
     }
 }
@@ -483,9 +488,12 @@ pub struct Format {
     /// Pointer table: byte offset of the pointer inside each record.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pointer_offset: Option<Num>,
-    /// PCM: sample rate in hertz (unsigned 8-bit samples).
+    /// PCM: sample rate in hertz (8-bit samples).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sample_rate: Option<u32>,
+    /// PCM: sample encoding (`u8` default, or `s8` for signed 8-bit).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sample_format: Option<String>,
     /// In-place replacement padding byte for the unused tail of the slot.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pad: Option<Num>,

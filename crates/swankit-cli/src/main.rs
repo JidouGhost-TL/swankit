@@ -161,7 +161,7 @@ fn command_help(words: &[String]) -> Result<bool> {
         ["assets"] | ["assets", "export" | "extract" | "replace" | "verify" | "resolve-table"] => {
             assets::HELP.to_owned()
         }
-        ["map"] | ["map", "verify" | "markdown"] => map::HELP.to_owned(),
+        ["map"] | ["map", "verify" | "extract" | "markdown"] => map::HELP.to_owned(),
         ["link"] => link::HELP.to_owned(),
         ["sound"] | ["sound", "sdk-discover" | "sdk-render" | "cell-render"] => {
             sound::HELP.to_owned()

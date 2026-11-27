@@ -172,6 +172,30 @@
         "parse",
         "decode",
         "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-rle-77ee",
+      "notes": "Escape-byte word and byte RLE stream decoder and deterministic encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-rle-pcm-00",
+      "notes": "Zero-escaped byte RLE stream decoder and deterministic encoder for 8-bit PCM",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
         "edit"
       ],
       "category": "gfx",
@@ -305,6 +329,16 @@
       "category": "audio",
       "id": "ws-sound.unsigned-pcm",
       "notes": "8-bit unsigned hardware PCM sample streams and 24 kHz WAV preview rendering",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode"
+      ],
+      "category": "audio",
+      "id": "ws-sound.signed-pcm",
+      "notes": "8-bit signed PCM sample streams and WAV rendering",
       "tier": 2
     },
     {

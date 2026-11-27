@@ -80,6 +80,8 @@ impl Toolkit {
             extract::Codec::Mask16Fill => compress::catalog::MASK16_FILL_ID,
             extract::Codec::LzCommand16Lsb => compress::catalog::LZ_COMMAND16_LSB_ID,
             extract::Codec::LzssMsbDistance12 => compress::catalog::LZSS_MSB_DISTANCE12_ID,
+            extract::Codec::Rle77ee => compress::catalog::RLE_77EE_ID,
+            extract::Codec::RlePcm00 => compress::catalog::RLE_PCM_00_ID,
         })?;
         definition.decode(bytes)
     }
@@ -99,6 +101,7 @@ impl Toolkit {
     ) -> Result<Value> {
         self.available(match definition.format {
             extract::SoundFormat::UnsignedPcm => crate::sound::catalog::UNSIGNED_PCM,
+            extract::SoundFormat::SignedPcm => crate::sound::catalog::SIGNED_PCM,
             extract::SoundFormat::Wave => crate::sound::catalog::WAVE,
             extract::SoundFormat::SdkSequence => crate::sound::catalog::SDK_SEQUENCE,
             extract::SoundFormat::CellSequence => crate::sound::catalog::CELL_SEQUENCE,

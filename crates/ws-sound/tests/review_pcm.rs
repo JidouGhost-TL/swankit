@@ -24,3 +24,21 @@ fn pcm_full_control_operand_drives_additive_dma_flags() {
         assert_eq!(decoded["control_operand"], operand);
     }
 }
+
+#[test]
+fn signed_pcm_converts_two_complement_samples_and_enforces_bounds() {
+    let raw = [0x80u8, 0xff, 0x00, 0x01, 0x7f];
+    let signed = ws_sound::render::signed_pcm(&raw, 12_000, 16).unwrap();
+    assert_eq!(signed.sample_rate(), 12_000);
+    assert_eq!(signed.channels(), 1);
+    assert_eq!(signed.samples(), &[-32768, -256, 0, 256, 32512]);
+    let shifted: Vec<u8> = raw.iter().map(|b| b.wrapping_add(0x80)).collect();
+    let unsigned = ws_sound::render::unsigned_pcm(&shifted, 12_000, 16).unwrap();
+    assert_eq!(signed.samples(), unsigned.samples());
+    assert_eq!(
+        signed.to_wav_bytes().unwrap(),
+        unsigned.to_wav_bytes().unwrap()
+    );
+    assert!(ws_sound::render::signed_pcm(&raw, 0, 16).is_err());
+    assert!(ws_sound::render::signed_pcm(&raw, 12_000, 4).is_err());
+}

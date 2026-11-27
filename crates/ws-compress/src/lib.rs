@@ -18,6 +18,8 @@ pub mod lzss_msb_distance12;
 pub mod lzss_u16_zero;
 pub mod mask16_fill;
 pub mod okumura;
+pub mod rle_77ee;
+pub mod rle_pcm_00;
 
 use formatkit_codec::sliding_window::{append_match, MatchError};
 pub use formatkit_codec::{BitOrder, DecodeOutcome};

@@ -42,6 +42,10 @@ pub enum Codec {
     LzCommand16Lsb,
     #[serde(rename = "lzss-msb-distance12")]
     LzssMsbDistance12,
+    #[serde(rename = "rle-77ee")]
+    Rle77ee,
+    #[serde(rename = "rle-pcm-00")]
+    RlePcm00,
     #[serde(skip_deserializing)]
     LzssBeUnits(TokenParameters),
 }
@@ -372,6 +376,18 @@ impl CodecDefinition {
                     .ok_or_else(|| bad("external-length LZSS requires decoded_size"))?,
                 self.max_output,
             ),
+            Codec::Rle77ee => {
+                if !self.history.is_empty() {
+                    return Err(bad("rle-77ee has no history input"));
+                }
+                compress::rle_77ee::decode(source, self.max_output)
+            }
+            Codec::RlePcm00 => {
+                if !self.history.is_empty() {
+                    return Err(bad("rle-pcm-00 has no history input"));
+                }
+                compress::rle_pcm_00::decode(source, self.max_output)
+            }
         }
     }
 }
@@ -480,6 +496,7 @@ pub fn font_atlas(
 pub enum SoundFormat {
     Wave,
     UnsignedPcm,
+    SignedPcm,
     SdkSequence,
     CellSequence,
     ByteSequence,
@@ -543,6 +560,20 @@ impl SoundDefinition {
                 )?;
                 return Ok(
                     json!({"format": "unsigned-pcm", "sample_rate": pcm.sample_rate(), "channels": pcm.channels(), "samples": pcm.samples()}),
+                );
+            }
+            SoundFormat::SignedPcm => {
+                if source.len() > sound::render::MAX_FRAMES {
+                    return Err(bad("PCM sample limit exceeded"));
+                }
+                let pcm = sound::render::signed_pcm(
+                    source,
+                    self.sample_rate
+                        .ok_or_else(|| bad("signed PCM requires sample_rate"))?,
+                    sound::render::MAX_FRAMES,
+                )?;
+                return Ok(
+                    json!({"format": "signed-pcm", "sample_rate": pcm.sample_rate(), "channels": pcm.channels(), "samples": pcm.samples()}),
                 );
             }
             _ => {}

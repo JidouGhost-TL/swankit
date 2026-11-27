@@ -164,6 +164,20 @@ static FORMATS: &[FormatCapability] = &[
         tier: 2,
         notes: "Big-endian unit-framed LZSS stream decoder with provenance",
     },
+    FormatCapability {
+        id: "ws-rle-77ee",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "Escape-byte word and byte RLE stream decoder and deterministic encoder",
+    },
+    FormatCapability {
+        id: "ws-rle-pcm-00",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "Zero-escaped byte RLE stream decoder and deterministic encoder for 8-bit PCM",
+    },
     // Graphics (ws-gfx)
     FormatCapability {
         id: "ws-tile-2bpp",
@@ -257,6 +271,13 @@ static FORMATS: &[FormatCapability] = &[
         capabilities: &["parse", "decode"],
         tier: 2,
         notes: "8-bit unsigned hardware PCM sample streams and 24 kHz WAV preview rendering",
+    },
+    FormatCapability {
+        id: "ws-sound.signed-pcm",
+        category: "audio",
+        capabilities: &["parse", "decode"],
+        tier: 2,
+        notes: "8-bit signed PCM sample streams and WAV rendering",
     },
     FormatCapability {
         id: "ws-sound.byte-sequence",

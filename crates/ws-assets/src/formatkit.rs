@@ -690,7 +690,10 @@ pub fn format_id_for(asset: &Asset) -> String {
             }
             Kind::Text => "ws.text.charmap".into(),
             Kind::PointerTable => "ws.pointer-table".into(),
-            Kind::Pcm => "ws.pcm.u8".into(),
+            Kind::Pcm => match asset.format.sample_format.as_deref().unwrap_or("u8") {
+                "s8" => "ws.pcm.s8".into(),
+                _ => "ws.pcm.u8".into(),
+            },
             Kind::Music => "ws.audio.music".into(),
             Kind::SoundEffect => "ws.audio.sfx".into(),
             Kind::DataTable => "ws.data.table".into(),
@@ -705,6 +708,8 @@ pub fn format_id_for(asset: &Asset) -> String {
         Codec::LzssU16Zero => "ws.codec.lzss-u16-zero".into(),
         Codec::Lzss12 => "ws.codec.lzss-12".into(),
         Codec::Lzs2 => "ws.codec.lzs2".into(),
+        Codec::Rle77ee => "ws.codec.rle-77ee".into(),
+        Codec::RlePcm00 => "ws.codec.rle-pcm-00".into(),
     }
 }
 
@@ -1162,6 +1167,8 @@ fn infer_codec(entry: &FormatkitEntry) -> Codec {
         "ws.codec.lzss-u16-zero" => Codec::LzssU16Zero,
         "ws.codec.lzss-12" => Codec::Lzss12,
         "ws.codec.lzs2" => Codec::Lzs2,
+        "ws.codec.rle-77ee" => Codec::Rle77ee,
+        "ws.codec.rle-pcm-00" => Codec::RlePcm00,
         _ => Codec::Raw,
     }
 }
@@ -1188,6 +1195,10 @@ fn infer_format(entry: &FormatkitEntry) -> Format {
             }
         } else if let Some(entry_fmt) = fid.strip_prefix("ws.sprite-table.") {
             format.entry = Some(entry_fmt.to_owned());
+        } else if let Some(sf) = fid.strip_prefix("ws.pcm.") {
+            if sf == "s8" {
+                format.sample_format = Some("s8".to_owned());
+            }
         }
     }
     format
@@ -1218,8 +1229,11 @@ fn entry_to_asset(
         parse_param::<Codec>(params, "codec", &entry.id)?.unwrap_or_else(|| infer_codec(entry));
     let codec_params =
         parse_param::<CodecParams>(params, "codec_params", &entry.id)?.unwrap_or_default();
-    let format =
+    let mut format =
         parse_param::<Format>(params, "format", &entry.id)?.unwrap_or_else(|| infer_format(entry));
+    if format.sample_format.is_none() && entry.format_id.as_deref() == Some("ws.pcm.s8") {
+        format.sample_format = Some("s8".to_owned());
+    }
     let mut relations =
         parse_param::<Relations>(params, "relations", &entry.id)?.unwrap_or_default();
     if relations == Relations::default() {

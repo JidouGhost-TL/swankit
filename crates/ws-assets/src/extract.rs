@@ -287,7 +287,15 @@ pub(crate) fn extract_one(
                 .format
                 .sample_rate
                 .ok_or_else(|| malformed(format!("{id}: pcm sample_rate")))?;
-            let pcm = ws_sound::render::unsigned_pcm(&stored.decoded, rate, stored.decoded.len())?;
+            let pcm = match asset.format.sample_format.as_deref().unwrap_or("u8") {
+                "u8" => ws_sound::render::unsigned_pcm(&stored.decoded, rate, stored.decoded.len())?,
+                "s8" => ws_sound::render::signed_pcm(&stored.decoded, rate, stored.decoded.len())?,
+                other => {
+                    return Err(malformed(format!(
+                        "{id}: unsupported pcm sample_format {other:?}"
+                    )))
+                }
+            };
             add(
                 format!("{id}.wav"),
                 ExtractedFile::Bytes(pcm.to_wav_bytes()?),
