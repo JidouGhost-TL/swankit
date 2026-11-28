@@ -8,7 +8,7 @@ rendering and IPS operations dispatch through the composed module identities
 and call the existing owner APIs. File I/O, text presentation and PNG writing
 belong to the CLI.
 
-The [Swankit wiki guide](https://github.com/JidouGhost-TL/ghidra-wonderswan/wiki/Swankit)
+The [Swankit wiki guide](https://jidoughost-tl.github.io/wonderswan-wiki/guides/swankit)
 covers setup, save editing and asset workflows.
 
 ```rust

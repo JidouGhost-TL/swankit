@@ -7,7 +7,7 @@ excomm use and tap inspection. The matching `swankit wg-adapter` and
 configuration, EOF behavior and the lossless byte log.
 
 Download the CLI from [GitHub Releases](https://github.com/JidouGhost-TL/swankit/releases)
-or build it with `cargo build -p swankit-cli --locked`. See the [wiki CLI examples](https://github.com/JidouGhost-TL/ghidra-wonderswan/wiki/Swankit-Examples) for end-to-end walkthroughs. The
+or build it with `cargo build -p swankit-cli --locked`. See the [wiki CLI examples](https://jidoughost-tl.github.io/wonderswan-wiki/guides/swankit-examples) for end-to-end walkthroughs. The
 examples assume the resulting `swankit` is on PATH. Use `--help` for syntax,
 `--version` (or `-V`) to print the package version, `--version --json` to emit
 the `formatkit.build-identity.v1` JSON contract, and `capabilities [--json]` to

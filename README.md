@@ -5,7 +5,7 @@ bindings, built on Formatkit mechanisms. Version 0.1 reads supported formats
 and provides checked save and mapped-asset editing. ROMs, save images and
 per-ROM asset maps are not included.
 
-Read the [Swankit guide on the WonderSwan wiki](https://github.com/JidouGhost-TL/ghidra-wonderswan/wiki/Swankit) for setup, save editing and asset workflows, and [Swankit examples](https://github.com/JidouGhost-TL/ghidra-wonderswan/wiki/Swankit-Examples) for end-to-end CLI walkthroughs.
+Read the [Swankit guide on the WonderSwan wiki](https://jidoughost-tl.github.io/wonderswan-wiki/guides/swankit) for setup, save editing and asset workflows, and [Swankit examples](https://jidoughost-tl.github.io/wonderswan-wiki/guides/swankit-examples) for end-to-end CLI walkthroughs.
 
 **Community & Support:** Come discuss the wonders of WonderSwan RE, modding, etc... also the best way to report issues or bugs, or ask for help on your own project: [Join our Discord](https://discord.gg/VswKtaKyhv) (`https://discord.gg/VswKtaKyhv`).
 
