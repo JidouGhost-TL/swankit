@@ -4,12 +4,13 @@ use crate::text::Charmaps;
 use crate::{malformed, AssetMap};
 use formatkit_core::{bytes_at, Result};
 use ws_compress::{
-    byte_lzss_ring8, counted_word_lz, dpcm_4bit_nibble, dpcm_6bit, flag16_distance11,
-    huffman_static, lz_bits_16, lz_command16_lsb, lz_rle_7f, lz_rle_pat, lz_tile_7b, lz_u8_zero,
-    lz_word16_msb, lz_word_counted, lzs2, lzss_11_5, lzss_11_5_direct, lzss_12, lzss_12_ext,
-    lzss_bandai_g, lzss_be_units, lzss_msb_distance12, lzss_token_be, lzss_u16_zero, mask16_fill,
-    nibble_lzss_ring8, okumura, planar_rle, rle16_bit15, rle_77ee, rle_lz4_cmd, rle_pcm_00,
-    tile_xor_pack, word_rle_00, zero_rle16, BitOrder, MAX_DECODED,
+    byte_lzss_ring8, counted_word_lz, dict16_rle, dpcm_4bit_nibble, dpcm_4bit_sm, dpcm_6bit,
+    flag16_distance11, huffman_static, lz44, lz_bits_16, lz_command16_lsb, lz_rle_7f, lz_rle_pat,
+    lz_tile_7b, lz_u8_zero, lz_word16_msb, lz_word_counted, lzs2, lzss_11_5, lzss_11_5_direct,
+    lzss_12, lzss_12_4_msb, lzss_12_ext, lzss_bandai_g, lzss_be_units, lzss_msb_distance12,
+    lzss_token_be, lzss_u16_zero, mask16_fill, nibble_lzss_ring8, okumura, planar_rle,
+    rle16_bit15, rle_77ee, rle_lz4_cmd, rle_pcm_00, strided_rle, tile_xor_pack, tilemap_2bit,
+    wave_4bit_packed, word_rle_00, zero_rle16, BitOrder, MAX_DECODED,
 };
 
 /// Upper bound on the decoded bytes of one asset.
@@ -88,7 +89,7 @@ fn lzss12_ext_params(asset: &Asset) -> Result<(usize, &[u8])> {
     Ok((size, history))
 }
 
-fn lzss_be_units_params(asset: &Asset) -> Result<(u8, u8)> {
+fn lzss_be_units_params(asset: &Asset) -> Result<(u8, u8, bool)> {
     let p = &asset.codec_params;
     let unit_size = match p.unit_size {
         Some(n) => u8::try_from(n.0)
@@ -104,7 +105,8 @@ fn lzss_be_units_params(asset: &Asset) -> Result<(u8, u8)> {
             .ok_or_else(|| malformed(format!("{}: source_width must be 16 or 32", asset.id)))?,
         None => 16,
     };
-    Ok((unit_size, source_width))
+    let clamp_output = p.clamp_output.unwrap_or(false);
+    Ok((unit_size, source_width, clamp_output))
 }
 
 fn lz_command16_lsb_params(asset: &Asset) -> Result<&[u8]> {
@@ -223,6 +225,29 @@ fn word_rle_00_params(asset: &Asset) -> Result<Option<usize>> {
     }
 }
 
+fn strided_rle_params(asset: &Asset) -> Result<u8> {
+    match asset.codec_params.planes {
+        Some(n) => u8::try_from(n.0)
+            .ok()
+            .filter(|&v| (1..=8).contains(&v))
+            .ok_or_else(|| malformed(format!("{}: planes must be 1..=8", asset.id))),
+        None => Ok(4),
+    }
+}
+
+fn lz44_params(asset: &Asset) -> Result<Option<usize>> {
+    match asset.codec_params.decoded_length {
+        Some(n) => {
+            let sz = n.usize()?;
+            if sz > MAX_DECODED {
+                return Err(malformed(format!("{}: decoded asset too large", asset.id)));
+            }
+            Ok(Some(sz))
+        }
+        None => Ok(None),
+    }
+}
+
 pub(crate) fn validate_codec_params(asset: &Asset) -> Result<()> {
     match asset.codec {
         Codec::LzssU16Zero => {
@@ -251,6 +276,12 @@ pub(crate) fn validate_codec_params(asset: &Asset) -> Result<()> {
         }
         Codec::WordRle00 => {
             word_rle_00_params(asset)?;
+        }
+        Codec::StridedRle => {
+            strided_rle_params(asset)?;
+        }
+        Codec::Lz44 => {
+            lz44_params(asset)?;
         }
         Codec::Lzs2 if asset.codec_params != Default::default() => {
             return Err(malformed(format!(
@@ -335,7 +366,14 @@ pub fn decode_asset(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -
         | Codec::Lzss11_5Direct
         | Codec::HuffmanStatic
         | Codec::RleLz4Cmd
-        | Codec::WordRle00 => {
+        | Codec::WordRle00
+        | Codec::Dpcm4bitSm
+        | Codec::Wave4bitPacked
+        | Codec::Tilemap2bit
+        | Codec::Lzss12_4Msb
+        | Codec::StridedRle
+        | Codec::Dict16Rle
+        | Codec::Lz44 => {
             let outcome = match asset.codec {
                 Codec::Lzs2 => lzs2::decode(window, MAX_DECODED)?,
                 Codec::LzRle7f => lz_rle_7f::decode(window, MAX_DECODED)?,
@@ -356,8 +394,14 @@ pub fn decode_asset(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -
                     lzss_12_ext::decode_with_history(window, history, size, MAX_ASSET_BYTES)?
                 }
                 Codec::LzssBeUnits => {
-                    let (unit_size, source_width) = lzss_be_units_params(asset)?;
-                    lzss_be_units::decode(window, unit_size, source_width, MAX_DECODED)?
+                    let (unit_size, source_width, clamp_output) = lzss_be_units_params(asset)?;
+                    lzss_be_units::decode_with_clamp(
+                        window,
+                        unit_size,
+                        source_width,
+                        clamp_output,
+                        MAX_DECODED,
+                    )?
                 }
                 Codec::Rle77ee => rle_77ee::decode(window, MAX_ASSET_BYTES)?,
                 Codec::RlePcm00 => {
@@ -469,6 +513,38 @@ pub fn decode_asset(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -
                         )));
                     }
                     word_rle_00::decode(window, decoded_length, MAX_ASSET_BYTES)?
+                }
+                Codec::Dpcm4bitSm => {
+                    if declared.is_none() {
+                        return Err(malformed(format!(
+                            "{id}: ws-dpcm-4bit-sm asset needs a length"
+                        )));
+                    }
+                    dpcm_4bit_sm::decode(window, MAX_ASSET_BYTES)?
+                }
+                Codec::Wave4bitPacked => {
+                    if declared.is_none() {
+                        return Err(malformed(format!(
+                            "{id}: ws-wave-4bit-packed asset needs a length"
+                        )));
+                    }
+                    wave_4bit_packed::decode(window, MAX_ASSET_BYTES)?
+                }
+                Codec::Tilemap2bit => tilemap_2bit::decode(window, MAX_DECODED)?,
+                Codec::Lzss12_4Msb => lzss_12_4_msb::decode(window, MAX_DECODED)?,
+                Codec::StridedRle => {
+                    let planes = strided_rle_params(asset)?;
+                    strided_rle::decode(window, planes, MAX_DECODED)?
+                }
+                Codec::Dict16Rle => dict16_rle::decode(window, MAX_DECODED)?,
+                Codec::Lz44 => {
+                    let decoded_length = lz44_params(asset)?;
+                    if decoded_length.is_none() && declared.is_none() {
+                        return Err(malformed(format!(
+                            "{id}: ws-lz44 asset needs a length or decoded_length"
+                        )));
+                    }
+                    lz44::decode(window, decoded_length, MAX_DECODED)?
                 }
                 _ => unreachable!(),
             };
@@ -807,5 +883,37 @@ pub fn encode_payload(asset: &Asset, decoded: &[u8]) -> Result<Vec<u8>> {
         }
         Codec::RleLz4Cmd => rle_lz4_cmd::encode(decoded),
         Codec::WordRle00 => word_rle_00::encode(decoded),
+        Codec::Dpcm4bitSm => dpcm_4bit_sm::encode(decoded),
+        Codec::Wave4bitPacked => wave_4bit_packed::encode(decoded),
+        Codec::Tilemap2bit => {
+            let width = asset
+                .format
+                .width
+                .and_then(|n| u8::try_from(n.0).ok())
+                .ok_or_else(|| {
+                    malformed(format!(
+                        "{}: ws-tilemap-2bit encode requires format.width (1..=64)",
+                        asset.id
+                    ))
+                })?;
+            let height = asset
+                .format
+                .height
+                .and_then(|n| u8::try_from(n.0).ok())
+                .ok_or_else(|| {
+                    malformed(format!(
+                        "{}: ws-tilemap-2bit encode requires format.height (1..=64)",
+                        asset.id
+                    ))
+                })?;
+            tilemap_2bit::encode(width, height, decoded)
+        }
+        Codec::Lzss12_4Msb => lzss_12_4_msb::encode(decoded),
+        Codec::StridedRle => {
+            let planes = strided_rle_params(asset)?;
+            strided_rle::encode(decoded, planes)
+        }
+        Codec::Dict16Rle => dict16_rle::encode(decoded),
+        Codec::Lz44 => lz44::encode(decoded),
     }
 }

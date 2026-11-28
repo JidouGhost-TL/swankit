@@ -734,6 +734,13 @@ pub fn format_id_for(asset: &Asset) -> String {
         Codec::HuffmanStatic => "ws.codec.huffman-static".into(),
         Codec::RleLz4Cmd => "ws.codec.rle-lz4-cmd".into(),
         Codec::WordRle00 => "ws.codec.word-rle-00".into(),
+        Codec::Dpcm4bitSm => "ws.codec.dpcm-4bit-sm".into(),
+        Codec::Wave4bitPacked => "ws.codec.wave-4bit-packed".into(),
+        Codec::Tilemap2bit => "ws.codec.tilemap-2bit".into(),
+        Codec::Lzss12_4Msb => "ws.codec.lzss-12-4-msb".into(),
+        Codec::StridedRle => "ws.codec.strided-rle".into(),
+        Codec::Dict16Rle => "ws.codec.dict16-rle".into(),
+        Codec::Lz44 => "ws.codec.lz44".into(),
     }
 }
 
@@ -1217,6 +1224,13 @@ fn infer_codec(entry: &FormatkitEntry) -> Codec {
         "ws.codec.huffman-static" => Codec::HuffmanStatic,
         "ws.codec.rle-lz4-cmd" => Codec::RleLz4Cmd,
         "ws.codec.word-rle-00" => Codec::WordRle00,
+        "ws.codec.dpcm-4bit-sm" => Codec::Dpcm4bitSm,
+        "ws.codec.wave-4bit-packed" => Codec::Wave4bitPacked,
+        "ws.codec.tilemap-2bit" => Codec::Tilemap2bit,
+        "ws.codec.lzss-12-4-msb" => Codec::Lzss12_4Msb,
+        "ws.codec.strided-rle" => Codec::StridedRle,
+        "ws.codec.dict16-rle" => Codec::Dict16Rle,
+        "ws.codec.lz44" => Codec::Lz44,
         _ => Codec::Raw,
     }
 }

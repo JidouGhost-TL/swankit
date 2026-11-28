@@ -1,6 +1,6 @@
 //! Explicit BE unit-count carrier and LSB literal flags with direct BE distance.
 //! Conversion is bounded and feeds the existing externally sized decoder.
-use crate::{grow, lzss_12, DecodeOutcome, MAX_DECODED};
+use crate::{copy_match, grow, lzss_12, DecodeOutcome, MAX_DECODED};
 use formatkit_core::{Error, Reader, Result};
 
 pub struct Normalized {
@@ -79,13 +79,83 @@ pub fn decode(
     source_width: u8,
     max_output: usize,
 ) -> Result<DecodeOutcome> {
-    let n = normalize(src, unit_size, source_width, max_output)?;
-    let mut decoded = lzss_12::decode(&n.bytes, n.decoded_size, max_output)?;
-    if decoded.consumed != n.bytes.len() {
-        return Err(invalid("normalized-extent"));
+    decode_with_clamp(src, unit_size, source_width, false, max_output)
+}
+
+/// Decode a BE unit-count LZSS stream, optionally clamping the final match
+/// length to the remaining output bytes instead of rejecting overshoot.
+pub fn decode_with_clamp(
+    src: &[u8],
+    unit_size: u8,
+    source_width: u8,
+    clamp_output: bool,
+    max_output: usize,
+) -> Result<DecodeOutcome> {
+    if !clamp_output {
+        let n = normalize(src, unit_size, source_width, max_output)?;
+        let mut decoded = lzss_12::decode(&n.bytes, n.decoded_size, max_output)?;
+        if decoded.consumed != n.bytes.len() {
+            return Err(invalid("normalized-extent"));
+        }
+        decoded.consumed = n.stored_consumed;
+        return Ok(decoded);
     }
-    decoded.consumed = n.stored_consumed;
-    Ok(decoded)
+
+    if !matches!(unit_size, 16 | 32) {
+        return Err(invalid("invalid-unit"));
+    }
+    if !matches!(source_width, 16 | 32) {
+        return Err(invalid("invalid-width"));
+    }
+    let mut r = Reader::new(src);
+    let header_count = r.u16_be()?;
+    if header_count == 0 {
+        return Err(invalid("zero-header"));
+    }
+    let size = usize::from(header_count) * usize::from(unit_size);
+    if source_width == 16 && size > 65535 {
+        return Err(invalid("source-width-overflow"));
+    }
+    let limit = max_output.min(MAX_DECODED);
+    grow(&[], size, limit)?;
+
+    let mut out = Vec::with_capacity(size);
+    while out.len() < size {
+        let flags = r.u8()?;
+        for bit in 0..8 {
+            if out.len() >= size {
+                break;
+            }
+            if flags & (1 << bit) != 0 {
+                out.push(r.u8()?);
+            } else {
+                let first = usize::from(r.u8()?);
+                let second = usize::from(r.u8()?);
+                let distance = (first << 4) | (second >> 4);
+                let mut count = (second & 15) + 3;
+                if distance == 0 {
+                    return Err(invalid("zero-distance"));
+                }
+                if distance > out.len() {
+                    return Err(invalid("unknown-history"));
+                }
+                let remaining = size - out.len();
+                let clamped = count > remaining;
+                if clamped {
+                    count = remaining;
+                }
+                copy_match(&mut out, &[], distance, count, limit)?;
+                if clamped {
+                    break;
+                }
+            }
+        }
+    }
+
+    Ok(DecodeOutcome {
+        bytes: out,
+        consumed: r.pos(),
+    })
 }
 
 #[cfg(test)]
@@ -139,5 +209,27 @@ mod tests {
             65520
         );
         assert!(decode(&[0x10, 1], 16, 32, usize::MAX).is_err());
+    }
+
+    #[test]
+    fn clamp_output_allows_final_match_overshoot() {
+        // 1 unit of 16 bytes: literal 'A', then distance=1, count=16 -> 17 > 16
+        let b = vec![0, 1, 1, b'A', 0, 29];
+        assert!(decode(&b, 16, 16, 16).is_err());
+        let clamped = decode_with_clamp(&b, 16, 16, true, 16).unwrap();
+        assert_eq!(clamped.bytes, vec![b'A'; 16]);
+        assert_eq!(clamped.consumed, 6);
+
+        // Clamping when only 1 byte remains (count 3 -> clamped to 1)
+        let mut s = vec![0, 1, 0xff];
+        s.extend_from_slice(&[b'X'; 8]);
+        s.push(0x7f); // 7 literals + 1 backref
+        s.extend_from_slice(&[b'Y'; 7]);
+        s.extend_from_slice(&[0x00, 0x10]); // dist=1, count=3, remaining=1
+        assert!(decode(&s, 16, 16, 16).is_err());
+        let clamped1 = decode_with_clamp(&s, 16, 16, true, 16).unwrap();
+        assert_eq!(clamped1.bytes.len(), 16);
+        assert_eq!(clamped1.bytes[15], b'Y');
+        assert_eq!(clamped1.consumed, s.len());
     }
 }

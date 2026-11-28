@@ -236,6 +236,20 @@ pub enum Codec {
     RleLz4Cmd,
     #[serde(rename = "ws-word-rle-00")]
     WordRle00,
+    #[serde(rename = "ws-dpcm-4bit-sm")]
+    Dpcm4bitSm,
+    #[serde(rename = "ws-wave-4bit-packed")]
+    Wave4bitPacked,
+    #[serde(rename = "ws-tilemap-2bit")]
+    Tilemap2bit,
+    #[serde(rename = "ws-lzss-12-4-msb")]
+    Lzss12_4Msb,
+    #[serde(rename = "ws-strided-rle")]
+    StridedRle,
+    #[serde(rename = "ws-dict16-rle")]
+    Dict16Rle,
+    #[serde(rename = "ws-lz44")]
+    Lz44,
 }
 
 impl Codec {
@@ -265,6 +279,10 @@ impl Codec {
                 | Codec::LzssBandaiG
                 | Codec::TileXorPack
                 | Codec::Lzss11_5Direct
+                | Codec::Tilemap2bit
+                | Codec::Lzss12_4Msb
+                | Codec::StridedRle
+                | Codec::Dict16Rle
         )
     }
 }
@@ -297,6 +315,9 @@ pub struct CodecParams {
     /// Source address width in bits for unit-framed codecs (`16` or `32`, default `16`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_width: Option<Num>,
+    /// Whether unit-framed LZSS clamps a final match that would overshoot `header_count * unit_size`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub clamp_output: Option<bool>,
     /// Plane count for planar-interleaved LZSS codecs (`1` or `2`, default `1`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub planes: Option<Num>,

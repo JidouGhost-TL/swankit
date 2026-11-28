@@ -100,6 +100,13 @@ impl Toolkit {
             extract::Codec::HuffmanStatic => compress::catalog::HUFFMAN_STATIC_ID,
             extract::Codec::RleLz4Cmd => compress::catalog::RLE_LZ4_CMD_ID,
             extract::Codec::WordRle00 => compress::catalog::WORD_RLE_00_ID,
+            extract::Codec::Dpcm4bitSm => compress::catalog::DPCM_4BIT_SM_ID,
+            extract::Codec::Wave4bitPacked => compress::catalog::WAVE_4BIT_PACKED_ID,
+            extract::Codec::Tilemap2bit => compress::catalog::TILEMAP_2BIT_ID,
+            extract::Codec::Lzss12_4Msb => compress::catalog::LZSS_12_4_MSB_ID,
+            extract::Codec::StridedRle => compress::catalog::STRIDED_RLE_ID,
+            extract::Codec::Dict16Rle => compress::catalog::DICT16_RLE_ID,
+            extract::Codec::Lz44 => compress::catalog::LZ44_ID,
         })?;
         definition.decode(bytes)
     }

@@ -1570,3 +1570,228 @@ fn round5_to_7_codecs_round_trip() {
     assert_eq!(file_bytes("wrle_carrier.bin"), wrle_raw.as_slice());
     assert_eq!(file_bytes("wrle_sized.bin"), wrle_raw.as_slice());
 }
+
+#[test]
+fn round10_codecs_and_clamped_lzss_round_trip_through_formatkit_v1() {
+    let mut rom = vec![0u8; 65536];
+
+    // 1. ws.codec.dpcm-4bit-sm (6 kHz, scale 2, WAV export without explicit sample_rate)
+    let dpcm_sm_pcm: Vec<u8> = vec![128, 130, 134, 132, 126, 128, 130];
+    let dpcm_sm_enc = ws_compress::dpcm_4bit_sm::encode_with_params(&dpcm_sm_pcm, 2, 2).unwrap();
+    rom[0x100..0x100 + dpcm_sm_enc.len()].copy_from_slice(&dpcm_sm_enc);
+
+    // 2. ws.codec.wave-4bit-packed (12 kHz, WAV export without explicit sample_rate)
+    let wave4_pcm: Vec<u8> = vec![0x40, 0x80, 0xc0, 0x80, 0x00, 0xf0];
+    let wave4_enc = ws_compress::wave_4bit_packed::encode_with_rate(&wave4_pcm, 1).unwrap();
+    rom[0x200..0x200 + wave4_enc.len()].copy_from_slice(&wave4_enc);
+
+    // 3. ws.codec.lzss-be-units with clamp_output: true (overshoot 17 > 16 clamped to 16)
+    let beu_clamped = [0u8, 1, 1, b'A', 0, 29];
+    rom[0x300..0x300 + beu_clamped.len()].copy_from_slice(&beu_clamped);
+
+    // 4. ws.codec.tilemap-2bit (3x2 = 6 words)
+    let tm_words: [u16; 6] = [0x0000, 0x0001, 0x0123, 0x0124, 0x0124, 0x0500];
+    let mut tm_raw = Vec::new();
+    for w in tm_words {
+        tm_raw.extend_from_slice(&w.to_le_bytes());
+    }
+    let tm_enc = ws_compress::tilemap_2bit::encode(3, 2, &tm_raw).unwrap();
+    rom[0x400..0x400 + tm_enc.len()].copy_from_slice(&tm_enc);
+
+    // 5. ws.codec.lzss-12-4-msb
+    let msb_raw: Vec<u8> = (0..128).map(|i| ((i / 4 + i % 7) & 0xff) as u8).collect();
+    let msb_enc = ws_compress::lzss_12_4_msb::encode(&msb_raw).unwrap();
+    rom[0x500..0x500 + msb_enc.len()].copy_from_slice(&msb_enc);
+
+    // 6. ws.codec.strided-rle (4 planes and 2 planes)
+    let srle4_raw: Vec<u8> = (0..64).map(|i| ((i / 4 + (i % 4) * 17) & 0xff) as u8).collect();
+    let srle4_enc = ws_compress::strided_rle::encode(&srle4_raw, 4).unwrap();
+    rom[0x700..0x700 + srle4_enc.len()].copy_from_slice(&srle4_enc);
+
+    let srle2_raw: Vec<u8> = (0..32).map(|i| if i % 2 == 0 { 0xaa } else { i as u8 }).collect();
+    let srle2_enc = ws_compress::strided_rle::encode(&srle2_raw, 2).unwrap();
+    rom[0x800..0x800 + srle2_enc.len()].copy_from_slice(&srle2_enc);
+
+    // 7. ws.codec.dict16-rle
+    let dict_raw: Vec<u8> = (0..96).map(|i| ((i / 3 + i % 11) & 0xff) as u8).collect();
+    let dict_enc = ws_compress::dict16_rle::encode(&dict_raw).unwrap();
+    rom[0x900..0x900 + dict_enc.len()].copy_from_slice(&dict_enc);
+
+    // 8. ws.codec.lz44
+    let lz44_raw: Vec<u8> = (0..96).map(|i| ((i / 5 + i % 4) & 0xff) as u8).collect();
+    let lz44_enc = ws_compress::lz44::encode(&lz44_raw).unwrap();
+    rom[0xb00..0xb00 + lz44_enc.len()].copy_from_slice(&lz44_enc);
+
+    let sha = sha256_hex(&rom);
+    let fk_doc = json!({
+        "schema": FORMATKIT_SCHEMA,
+        "schema_version": 1,
+        "kit": "swankit",
+        "media": {
+            "kind": "flat-rom",
+            "fingerprint": { "rom_sha256": sha },
+            "total_bytes": rom.len()
+        },
+        "entries": [
+            {
+                "id": "dpcm_sm0",
+                "offset": 0x100,
+                "size": dpcm_sm_enc.len(),
+                "sha256": sha256_hex(&dpcm_sm_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.dpcm-4bit-sm",
+                "mapping": { "kind": "compressed", "inner_format": "pcm" },
+                "verified": true
+            },
+            {
+                "id": "wave4_0",
+                "offset": 0x200,
+                "size": wave4_enc.len(),
+                "sha256": sha256_hex(&wave4_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.wave-4bit-packed",
+                "mapping": { "kind": "compressed", "inner_format": "pcm" },
+                "verified": true
+            },
+            {
+                "id": "beu_clamp",
+                "offset": 0x300,
+                "size": beu_clamped.len(),
+                "sha256": sha256_hex(&beu_clamped),
+                "status": "mapped",
+                "format_id": "ws.codec.lzss-be-units",
+                "mapping": {
+                    "kind": "compressed",
+                    "params": {
+                        "codec_params": {
+                            "unit_size": 16,
+                            "source_width": 16,
+                            "clamp_output": true
+                        }
+                    },
+                    "inner_format": "other"
+                },
+                "verified": true
+            },
+            {
+                "id": "tm2b",
+                "offset": 0x400,
+                "size": tm_enc.len(),
+                "sha256": sha256_hex(&tm_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.tilemap-2bit",
+                "mapping": {
+                    "kind": "compressed",
+                    "params": { "format": { "width": 3, "height": 2 } },
+                    "inner_format": "other"
+                },
+                "verified": true
+            },
+            {
+                "id": "lz_msb",
+                "offset": 0x500,
+                "size": msb_enc.len(),
+                "sha256": sha256_hex(&msb_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.lzss-12-4-msb",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            },
+            {
+                "id": "srle4",
+                "offset": 0x700,
+                "size": srle4_enc.len(),
+                "sha256": sha256_hex(&srle4_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.strided-rle",
+                "mapping": {
+                    "kind": "compressed",
+                    "params": { "codec_params": { "planes": 4 } },
+                    "inner_format": "other"
+                },
+                "verified": true
+            },
+            {
+                "id": "srle2",
+                "offset": 0x800,
+                "size": srle2_enc.len(),
+                "sha256": sha256_hex(&srle2_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.strided-rle",
+                "mapping": {
+                    "kind": "compressed",
+                    "params": { "codec_params": { "planes": 2 } },
+                    "inner_format": "other"
+                },
+                "verified": true
+            },
+            {
+                "id": "dict16",
+                "offset": 0x900,
+                "size": dict_enc.len(),
+                "sha256": sha256_hex(&dict_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.dict16-rle",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            },
+            {
+                "id": "lz44_0",
+                "offset": 0xb00,
+                "size": lz44_enc.len(),
+                "sha256": sha256_hex(&lz44_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.lz44",
+                "mapping": {
+                    "kind": "compressed",
+                    "params": { "codec_params": { "decoded_length": lz44_raw.len() } },
+                    "inner_format": "other"
+                },
+                "verified": true
+            }
+        ]
+    });
+
+    let fk_bytes = serde_json::to_vec(&fk_doc).unwrap();
+    let loaded = LoadedAssetMap::from_json(&fk_bytes).unwrap();
+    let asset_map = loaded.to_asset_map().unwrap();
+    let charmaps = Charmaps::load(&asset_map, |_| unreachable!()).unwrap();
+
+    let report = loaded.verify(&charmaps, &rom).unwrap();
+    assert!(report.ok(), "{:?}", report.errors);
+
+    let extracted = extract(&asset_map, &charmaps, &rom).unwrap();
+    assert_eq!(extracted.failures, 0);
+    let file_bytes = |name: &str| -> &[u8] {
+        extracted
+            .files
+            .iter()
+            .find_map(|(n, f)| match (n == name, f) {
+                (true, ws_assets::ExtractedFile::Bytes(b)) => Some(b.as_slice()),
+                _ => None,
+            })
+            .unwrap()
+    };
+
+    let expected_dpcm_wav =
+        ws_sound::render::unsigned_pcm(&dpcm_sm_pcm, 6_000, dpcm_sm_pcm.len())
+            .unwrap()
+            .to_wav_bytes()
+            .unwrap();
+    assert_eq!(file_bytes("dpcm_sm0.wav"), expected_dpcm_wav.as_slice());
+
+    let expected_wave4_wav =
+        ws_sound::render::unsigned_pcm(&wave4_pcm, 12_000, wave4_pcm.len())
+            .unwrap()
+            .to_wav_bytes()
+            .unwrap();
+    assert_eq!(file_bytes("wave4_0.wav"), expected_wave4_wav.as_slice());
+
+    assert_eq!(file_bytes("beu_clamp.bin"), vec![b'A'; 16].as_slice());
+    assert_eq!(file_bytes("tm2b.bin"), tm_raw.as_slice());
+    assert_eq!(file_bytes("lz_msb.bin"), msb_raw.as_slice());
+    assert_eq!(file_bytes("srle4.bin"), srle4_raw.as_slice());
+    assert_eq!(file_bytes("srle2.bin"), srle2_raw.as_slice());
+    assert_eq!(file_bytes("dict16.bin"), dict_raw.as_slice());
+    assert_eq!(file_bytes("lz44_0.bin"), lz44_raw.as_slice());
+}

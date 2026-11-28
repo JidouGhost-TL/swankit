@@ -46,6 +46,13 @@ Generated from `swankit capabilities --json` (`formatkit.capabilities.v1`).
 | `ws-huffman-static` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | Static binary Huffman stream decoder and deterministic encoder with external tree table |
 | `ws-rle-lz4-cmd` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | 4-mode byte-command literal, RLE, and 8/16-bit LZ stream decoder and deterministic encoder |
 | `ws-word-rle-00` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | 16-bit little-endian word RLE (bit 15 literal) stream decoder and deterministic encoder |
+| `ws-dpcm-4bit-sm` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | 4-bit sign-magnitude scaled DPCM audio stream decoder and deterministic encoder |
+| `ws-wave-4bit-packed` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | 4-bit packed unsigned wavetable-streamed PCM audio decoder and deterministic encoder |
+| `ws-tilemap-2bit` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | 2-bit MSB-first delta/repeat/literal 16-bit tilemap stream decoder and deterministic encoder |
+| `ws-lzss-12-4-msb` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | MSB-first bitstream 12-bit ring position and 4-bit length LZSS decoder and deterministic encoder |
+| `ws-strided-rle` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | Plane-strided RLE stream decoder and deterministic encoder with per-plane zero terminators |
+| `ws-dict16-rle` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | 16-byte FIFO dictionary and repeat-last-byte MSB-first bitstream decoder and deterministic encoder |
+| `ws-lz44` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | 1-byte-token 4-bit distance and 4-bit length LSB-flag LZ77 decoder and deterministic encoder |
 | `ws-tile-2bpp` | `gfx` | 2 | `parse`, `decode`, `reproduce`, `edit` | 2bpp planar 8x8 tiles (monochrome and 4-color palettes) |
 | `ws-tile-4bpp-planar` | `gfx` | 2 | `parse`, `decode`, `reproduce`, `edit` | 4bpp planar 8x8 WonderSwan Color tiles |
 | `ws-tile-4bpp-packed` | `gfx` | 2 | `parse`, `decode`, `reproduce`, `edit` | 4bpp packed 8x8 WonderSwan Color tiles |

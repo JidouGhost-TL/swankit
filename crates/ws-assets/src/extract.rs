@@ -283,9 +283,16 @@ pub(crate) fn extract_one(
             );
         }
         Kind::Pcm => {
+            let raw_header = rom.get(stored.offset..stored.offset.saturating_add(2)).unwrap_or(&[]);
+            let header_rate = match asset.codec {
+                Codec::Dpcm4bitSm => ws_compress::dpcm_4bit_sm::header_sample_rate(raw_header),
+                Codec::Wave4bitPacked => ws_compress::wave_4bit_packed::header_sample_rate(raw_header),
+                _ => None,
+            };
             let rate = asset
                 .format
                 .sample_rate
+                .or(header_rate)
                 .ok_or_else(|| malformed(format!("{id}: pcm sample_rate")))?;
             let pcm = match asset.format.sample_format.as_deref().unwrap_or("u8") {
                 "u8" => ws_sound::render::unsigned_pcm(&stored.decoded, rate, stored.decoded.len())?,

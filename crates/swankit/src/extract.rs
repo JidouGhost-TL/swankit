@@ -82,6 +82,20 @@ pub enum Codec {
     RleLz4Cmd,
     #[serde(rename = "word-rle-00")]
     WordRle00,
+    #[serde(rename = "dpcm-4bit-sm")]
+    Dpcm4bitSm,
+    #[serde(rename = "wave-4bit-packed")]
+    Wave4bitPacked,
+    #[serde(rename = "tilemap-2bit")]
+    Tilemap2bit,
+    #[serde(rename = "lzss-12-4-msb")]
+    Lzss12_4Msb,
+    #[serde(rename = "strided-rle")]
+    StridedRle,
+    #[serde(rename = "dict16-rle")]
+    Dict16Rle,
+    #[serde(rename = "lz44")]
+    Lz44,
     #[serde(skip_deserializing)]
     LzssBeUnits(TokenParameters),
 }
@@ -127,6 +141,7 @@ pub struct CodecDefinition {
     pub tree: Vec<u8>,
     pub tree_offset: Option<usize>,
     pub tree_length: Option<usize>,
+    pub planes: Option<u8>,
 }
 
 /// Parameters are carried by the new codec variant to preserve legacy Rust literals.
@@ -134,6 +149,7 @@ pub struct CodecDefinition {
 pub struct TokenParameters {
     pub unit_size: u8,
     pub source_width: u8,
+    pub clamp_output: bool,
     pub original_sha256: [u8; 32],
 }
 #[derive(Default)]
@@ -177,9 +193,13 @@ struct CodecWire {
     #[serde(default)]
     tree_length: Option<usize>,
     #[serde(default)]
+    planes: Option<u8>,
+    #[serde(default)]
     unit_size: Parameter<u8>,
     #[serde(default)]
     source_width: Parameter<u8>,
+    #[serde(default)]
+    clamp_output: Parameter<bool>,
     #[serde(default)]
     original_sha256: Parameter<String>,
 }
@@ -189,8 +209,10 @@ impl<'de> Deserialize<'de> for CodecDefinition {
     ) -> std::result::Result<Self, D::Error> {
         use serde::de::Error as _;
         let w = CodecWire::deserialize(deserializer)?;
-        let has_parameters =
-            w.unit_size.present || w.source_width.present || w.original_sha256.present;
+        let has_parameters = w.unit_size.present
+            || w.source_width.present
+            || w.clamp_output.present
+            || w.original_sha256.present;
         let codec = if w.codec == "lzss-be-units" {
             let unit_size = w
                 .unit_size
@@ -221,6 +243,7 @@ impl<'de> Deserialize<'de> for CodecDefinition {
             Codec::LzssBeUnits(TokenParameters {
                 unit_size,
                 source_width,
+                clamp_output: w.clamp_output.value.unwrap_or(false),
                 original_sha256,
             })
         } else {
@@ -244,6 +267,7 @@ impl<'de> Deserialize<'de> for CodecDefinition {
             tree: w.tree,
             tree_offset: w.tree_offset,
             tree_length: w.tree_length,
+            planes: w.planes,
         })
     }
 }
@@ -283,7 +307,9 @@ impl CodecDefinition {
             | Codec::Dpcm4bitNibble
             | Codec::Rle16Bit15
             | Codec::RleLz4Cmd
-            | Codec::WordRle00 => compress::MAX_STREAM_DECODED,
+            | Codec::WordRle00
+            | Codec::Dpcm4bitSm
+            | Codec::Wave4bitPacked => compress::MAX_STREAM_DECODED,
             _ => compress::MAX_DECODED,
         };
         if self.max_output > output_limit || self.history.len() > compress::MAX_DECODED {
@@ -308,10 +334,11 @@ impl CodecDefinition {
                 if ws_assets::sha256_hex(bytes) != expected {
                     return Err(bad("token.identity-mismatch"));
                 }
-                let got = compress::lzss_be_units::decode(
+                let got = compress::lzss_be_units::decode_with_clamp(
                     source,
                     p.unit_size,
                     p.source_width,
+                    p.clamp_output,
                     self.max_output,
                 )?;
                 if self.decoded_size.is_some_and(|n| n != got.bytes.len()) {
@@ -577,6 +604,48 @@ impl CodecDefinition {
                 }
                 compress::word_rle_00::decode(source, self.decoded_size, self.max_output)
             }
+            Codec::Dpcm4bitSm => {
+                if !self.history.is_empty() {
+                    return Err(bad("dpcm-4bit-sm has no history input"));
+                }
+                compress::dpcm_4bit_sm::decode(source, self.max_output)
+            }
+            Codec::Wave4bitPacked => {
+                if !self.history.is_empty() {
+                    return Err(bad("wave-4bit-packed has no history input"));
+                }
+                compress::wave_4bit_packed::decode(source, self.max_output)
+            }
+            Codec::Tilemap2bit => {
+                if !self.history.is_empty() {
+                    return Err(bad("tilemap-2bit has no history input"));
+                }
+                compress::tilemap_2bit::decode(source, self.max_output)
+            }
+            Codec::Lzss12_4Msb => {
+                if !self.history.is_empty() {
+                    return Err(bad("lzss-12-4-msb has no history input"));
+                }
+                compress::lzss_12_4_msb::decode(source, self.max_output)
+            }
+            Codec::StridedRle => {
+                if !self.history.is_empty() {
+                    return Err(bad("strided-rle has no history input"));
+                }
+                compress::strided_rle::decode(source, self.planes.unwrap_or(4), self.max_output)
+            }
+            Codec::Dict16Rle => {
+                if !self.history.is_empty() {
+                    return Err(bad("dict16-rle has no history input"));
+                }
+                compress::dict16_rle::decode(source, self.max_output)
+            }
+            Codec::Lz44 => {
+                if !self.history.is_empty() {
+                    return Err(bad("lz44 has no history input"));
+                }
+                compress::lz44::decode(source, self.decoded_size, self.max_output)
+            }
         }
     }
 }
@@ -591,6 +660,12 @@ impl CodecDefinition {
             return Ok(None);
         };
         let source = bytes_at(bytes, self.offset, self.length)?;
+        if p.clamp_output {
+            let header_count = u16::from_be_bytes([source[0], source[1]]);
+            return Ok(Some(
+                json!({"schema":"swankit-codec-extraction/1","status":"decoded","stored_grammar":"lzss-be-units","original":{"bytes":bytes.len(),"sha256":ws_assets::sha256_hex(bytes)},"parameters":{"offset":self.offset,"input_cap":self.length,"unit_size":p.unit_size,"source_width":p.source_width,"max_output":self.max_output,"history":"empty","final_token":"clamp-output"},"header_count":header_count,"stored":{"consumed":decoded.consumed,"sha256":ws_assets::sha256_hex(&source[..decoded.consumed])},"decoded":{"bytes":decoded.bytes.len(),"sha256":ws_assets::sha256_hex(&decoded.bytes)}}),
+            ));
+        }
         let n = compress::lzss_be_units::normalize(
             source,
             p.unit_size,

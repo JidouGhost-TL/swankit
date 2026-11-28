@@ -35,6 +35,13 @@ pub const LZSS_11_5_DIRECT_ID: FormatId = FormatId::new("ws-lzss-11-5-direct");
 pub const HUFFMAN_STATIC_ID: FormatId = FormatId::new("ws-huffman-static");
 pub const RLE_LZ4_CMD_ID: FormatId = FormatId::new("ws-rle-lz4-cmd");
 pub const WORD_RLE_00_ID: FormatId = FormatId::new("ws-word-rle-00");
+pub const DPCM_4BIT_SM_ID: FormatId = FormatId::new("ws-dpcm-4bit-sm");
+pub const WAVE_4BIT_PACKED_ID: FormatId = FormatId::new("ws-wave-4bit-packed");
+pub const TILEMAP_2BIT_ID: FormatId = FormatId::new("ws-tilemap-2bit");
+pub const LZSS_12_4_MSB_ID: FormatId = FormatId::new("ws-lzss-12-4-msb");
+pub const STRIDED_RLE_ID: FormatId = FormatId::new("ws-strided-rle");
+pub const DICT16_RLE_ID: FormatId = FormatId::new("ws-dict16-rle");
+pub const LZ44_ID: FormatId = FormatId::new("ws-lz44");
 
 /// Explicit decode-only grammar; no recognition probe or encoder.
 pub const LZSS_12_EXT_FORMAT: FormatDescriptor = {
@@ -974,6 +981,174 @@ pub const EMBEDDED: &[EmbeddedFormatSupport] = &[
         },
         corpus_evidence: Some(CorpusEvidence {
             handler: "ws-compress-word-rle-00",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: DPCM_4BIT_SM_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "dpcm-4bit-sm",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-dpcm-4bit-sm",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: WAVE_4BIT_PACKED_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "wave-4bit-packed",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-wave-4bit-packed",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: TILEMAP_2BIT_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "tilemap-2bit",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-tilemap-2bit",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: LZSS_12_4_MSB_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "lzss-12-4-msb",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-lzss-12-4-msb",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: STRIDED_RLE_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "strided-rle",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-strided-rle",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: DICT16_RLE_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "dict16-rle",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-dict16-rle",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: LZ44_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "lz44",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-lz44",
             sample_floor: 1,
         }),
     },

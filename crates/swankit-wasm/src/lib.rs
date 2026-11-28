@@ -531,12 +531,25 @@ pub fn preview_asset_impl(
     if asset.kind == Kind::Pcm
         || matches!(
             asset.codec,
-            Codec::RlePcm00 | Codec::Dpcm6bit | Codec::Dpcm4bitNibble
+            Codec::RlePcm00
+                | Codec::Dpcm6bit
+                | Codec::Dpcm4bitNibble
+                | Codec::Dpcm4bitSm
+                | Codec::Wave4bitPacked
         )
     {
+        let raw_header = rom
+            .get(stored.offset..stored.offset.saturating_add(2))
+            .unwrap_or(&[]);
+        let header_rate = match asset.codec {
+            Codec::Dpcm4bitSm => ws_compress::dpcm_4bit_sm::header_sample_rate(raw_header),
+            Codec::Wave4bitPacked => ws_compress::wave_4bit_packed::header_sample_rate(raw_header),
+            _ => None,
+        };
         let rate = sample_rate
             .filter(|&r| r > 0)
             .or(asset.format.sample_rate)
+            .or(header_rate)
             .unwrap_or(DEFAULT_PCM_SAMPLE_RATE);
         let pcm = match asset.format.sample_format.as_deref().unwrap_or("u8") {
             "s8" => signed_pcm(&stored.decoded, rate, stored.decoded.len()),
@@ -1408,6 +1421,64 @@ mod tests {
                 assert_eq!(&wav[0..4], b"RIFF");
             }
             other => panic!("expected wav for dpcm-4bit-nibble, got {other:?}"),
+        }
+
+        // Verify dpcm-4bit-sm and wave-4bit-packed preview as WAV with header-inferred sample rates
+        let mut rom3 = vec![0u8; 256];
+        let dpcm_sm_enc =
+            ws_compress::dpcm_4bit_sm::encode_with_params(&[128, 130, 134, 132, 126], 2, 2)
+                .expect("encode dpcm-4bit-sm");
+        let wave4_enc =
+            ws_compress::wave_4bit_packed::encode_with_rate(&[0x40, 0x80, 0xc0, 0x80], 1)
+                .expect("encode wave-4bit-packed");
+        rom3[0..dpcm_sm_enc.len()].copy_from_slice(&dpcm_sm_enc);
+        rom3[64..64 + wave4_enc.len()].copy_from_slice(&wave4_enc);
+        let fk_r10_audio = json!({
+            "schema": "formatkit.asset-map.v1",
+            "schema_version": 1,
+            "kit": "swankit",
+            "media": {
+                "kind": "flat-rom",
+                "fingerprint": { "rom_sha256": sha256_hex(&rom3) },
+                "total_bytes": rom3.len()
+            },
+            "entries": [
+                {
+                    "id": "voice.dpcm_sm",
+                    "offset": 0,
+                    "size": dpcm_sm_enc.len(),
+                    "status": "mapped",
+                    "format_id": "ws.codec.dpcm-4bit-sm",
+                    "mapping": { "kind": "compressed" }
+                },
+                {
+                    "id": "voice.wave4",
+                    "offset": 64,
+                    "size": wave4_enc.len(),
+                    "status": "mapped",
+                    "format_id": "ws.codec.wave-4bit-packed",
+                    "mapping": { "kind": "compressed" }
+                }
+            ]
+        })
+        .to_string();
+        match preview_asset_impl(&rom3, &fk_r10_audio, "voice.dpcm_sm", None, None, None)
+            .expect("dpcm-4bit-sm")
+        {
+            PreviewOutput::Wav { sample_rate, wav } => {
+                assert_eq!(sample_rate, 6_000);
+                assert_eq!(&wav[0..4], b"RIFF");
+            }
+            other => panic!("expected wav for dpcm-4bit-sm, got {other:?}"),
+        }
+        match preview_asset_impl(&rom3, &fk_r10_audio, "voice.wave4", None, None, None)
+            .expect("wave-4bit-packed")
+        {
+            PreviewOutput::Wav { sample_rate, wav } => {
+                assert_eq!(sample_rate, 12_000);
+                assert_eq!(&wav[0..4], b"RIFF");
+            }
+            other => panic!("expected wav for wave-4bit-packed, got {other:?}"),
         }
     }
 
