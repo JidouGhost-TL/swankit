@@ -2,7 +2,7 @@
 //! Opcodes: 0x77 literal escape, 0x88 word repeat, 0x99 word pair,
 //! 0xAA incrementing word run, 0xBB zero run, 0xCC 0xFF run,
 //! 0xDD byte repeat, 0xEE end of stream.
-use crate::{grow, input_size, DecodeOutcome, MAX_DECODED};
+use crate::{grow, DecodeOutcome, MAX_STREAM_DECODED};
 use formatkit_core::{Error, Reader, Result, Writer};
 
 fn is_escape(byte: u8) -> bool {
@@ -11,7 +11,7 @@ fn is_escape(byte: u8) -> bool {
 
 /// Decode through the 0xEE terminator, leaving trailing carrier bytes unconsumed.
 pub fn decode(src: &[u8], max_output: usize) -> Result<DecodeOutcome> {
-    let limit = max_output.min(MAX_DECODED);
+    let limit = max_output.min(MAX_STREAM_DECODED);
     let mut r = Reader::new(src);
     let mut out = Vec::new();
     loop {
@@ -109,7 +109,7 @@ pub fn decode(src: &[u8], max_output: usize) -> Result<DecodeOutcome> {
 
 /// Deterministic encoder for escape-byte word/byte RLE streams.
 pub fn encode(src: &[u8]) -> Result<Vec<u8>> {
-    input_size(src)?;
+    grow(&[], src.len(), MAX_STREAM_DECODED)?;
     let mut w = Writer::new();
     let n = src.len();
     let mut i = 0;
@@ -247,7 +247,7 @@ mod tests {
         }
         assert!(decode(&[0xbb, 5, 0xee], 4).is_err());
         assert!(decode(&[0x99, 1, 2, 0xee], 3).is_err());
-        assert!(encode(&vec![0; MAX_DECODED + 1]).is_err());
+        assert!(encode(&vec![0; MAX_STREAM_DECODED + 1]).is_err());
     }
 
     #[test]
@@ -262,7 +262,7 @@ mod tests {
         assert_eq!(dec.bytes, escapes);
         assert_eq!(dec.consumed, enc.len());
 
-        for n in [0, 1, 2, 3, 4, 255, 256, 1024, MAX_DECODED] {
+        for n in [0, 1, 2, 3, 4, 255, 256, 1024, 0x10000, 0x18000] {
             let raw: Vec<u8> = (0..n).map(|i| ((i / 5 + i % 13) & 0xff) as u8).collect();
             let encoded = encode(&raw).unwrap();
             let got = decode(&encoded, n).unwrap();

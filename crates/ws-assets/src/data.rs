@@ -4,8 +4,9 @@ use crate::text::Charmaps;
 use crate::{malformed, AssetMap};
 use formatkit_core::{bytes_at, Result};
 use ws_compress::{
-    lz_bits_16, lz_rle_7f, lz_u8_zero, lz_word16_msb, lz_word_counted, lzs2, lzss_12,
-    lzss_u16_zero, okumura, rle_77ee, rle_pcm_00, BitOrder, MAX_DECODED,
+    counted_word_lz, dpcm_6bit, flag16_distance11, lz_bits_16, lz_rle_7f, lz_u8_zero,
+    lz_word16_msb, lz_word_counted, lzs2, lzss_11_5, lzss_12, lzss_token_be, lzss_u16_zero,
+    okumura, planar_rle, rle_77ee, rle_pcm_00, BitOrder, MAX_DECODED,
 };
 
 /// Upper bound on the decoded bytes of one asset.
@@ -132,7 +133,13 @@ pub fn decode_asset(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -
         | Codec::Lzss12
         | Codec::Lzs2
         | Codec::Rle77ee
-        | Codec::RlePcm00 => {
+        | Codec::RlePcm00
+        | Codec::CountedWordLz
+        | Codec::Dpcm6bit
+        | Codec::Lzss11_5
+        | Codec::Flag16Distance11
+        | Codec::PlanarRle
+        | Codec::LzssTokenBe => {
             let outcome = match asset.codec {
                 Codec::Lzs2 => lzs2::decode(window, MAX_DECODED)?,
                 Codec::LzRle7f => lz_rle_7f::decode(window, MAX_DECODED)?,
@@ -148,15 +155,28 @@ pub fn decode_asset(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -
                     let (size, history) = lzss12_params(asset)?;
                     lzss_12::decode_with_history(window, history, size, MAX_ASSET_BYTES)?
                 }
-                Codec::Rle77ee => rle_77ee::decode(window, MAX_DECODED)?,
+                Codec::Rle77ee => rle_77ee::decode(window, MAX_ASSET_BYTES)?,
                 Codec::RlePcm00 => {
                     if declared.is_none() {
                         return Err(malformed(format!(
                             "{id}: ws-rle-pcm-00 asset needs a length"
                         )));
                     }
-                    rle_pcm_00::decode(window, MAX_DECODED)?
+                    rle_pcm_00::decode(window, MAX_ASSET_BYTES)?
                 }
+                Codec::CountedWordLz => counted_word_lz::decode(window, MAX_DECODED)?,
+                Codec::Dpcm6bit => {
+                    if declared.is_none() {
+                        return Err(malformed(format!(
+                            "{id}: ws-dpcm-6bit asset needs a length"
+                        )));
+                    }
+                    dpcm_6bit::decode(window, MAX_ASSET_BYTES)?
+                }
+                Codec::Lzss11_5 => lzss_11_5::decode(window, MAX_DECODED)?,
+                Codec::Flag16Distance11 => flag16_distance11::decode(window, MAX_DECODED)?,
+                Codec::PlanarRle => planar_rle::decode(window, MAX_DECODED)?,
+                Codec::LzssTokenBe => lzss_token_be::decode(window, MAX_DECODED)?,
                 _ => unreachable!(),
             };
             if let Some(n) = declared {
@@ -419,5 +439,17 @@ pub fn encode_payload(asset: &Asset, decoded: &[u8]) -> Result<Vec<u8>> {
         }
         Codec::Rle77ee => rle_77ee::encode(decoded),
         Codec::RlePcm00 => rle_pcm_00::encode(decoded),
+        Codec::CountedWordLz => counted_word_lz::encode(decoded),
+        Codec::Dpcm6bit => dpcm_6bit::encode(decoded),
+        Codec::Lzss11_5 => lzss_11_5::encode(decoded),
+        Codec::Flag16Distance11 => Err(malformed(format!(
+            "{}: ws-flag16-distance11 assets are decode-only",
+            asset.id
+        ))),
+        Codec::PlanarRle => Err(malformed(format!(
+            "{}: ws-planar-rle assets require explicit header geometry for encoding",
+            asset.id
+        ))),
+        Codec::LzssTokenBe => lzss_token_be::encode(decoded),
     }
 }

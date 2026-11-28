@@ -878,3 +878,170 @@ fn new_pcm_s8_rle_77ee_and_rle_pcm_00_round_trip() {
     .unwrap();
     assert_eq!(decoded_after.decoded, new_blob);
 }
+
+#[test]
+fn round2_codecs_and_oversize_rle_round_trip_through_formatkit_v1() {
+    let mut rom = vec![0u8; 65536];
+
+    let cw_raw: Vec<u8> = (0..64).map(|i| ((i / 4 + i % 7) & 0xff) as u8).collect();
+    let cw_enc = ws_compress::counted_word_lz::encode(&cw_raw).unwrap();
+    rom[0x100..0x100 + cw_enc.len()].copy_from_slice(&cw_enc);
+
+    let dpcm_raw: Vec<u8> = (0..80_000)
+        .map(|i| (128i32 + ((i as i32 % 30) - 15)) as u8)
+        .collect();
+    let dpcm_enc = ws_compress::dpcm_6bit::encode(&dpcm_raw).unwrap();
+    // Use a small clip inside the 64 KiB synthetic ROM and test oversize with a separate ROM below.
+    let dpcm_small_raw: Vec<u8> = (0..128)
+        .map(|i| (128i32 + ((i as i32 % 20) - 10)) as u8)
+        .collect();
+    let dpcm_small_enc = ws_compress::dpcm_6bit::encode(&dpcm_small_raw).unwrap();
+    rom[0x200..0x200 + dpcm_small_enc.len()].copy_from_slice(&dpcm_small_enc);
+
+    let lz11_raw: Vec<u8> = (0..96).map(|i| ((i / 5 + i % 9) & 0xff) as u8).collect();
+    let lz11_enc = ws_compress::lzss_11_5::encode(&lz11_raw).unwrap();
+    rom[0x400..0x400 + lz11_enc.len()].copy_from_slice(&lz11_enc);
+
+    // ws.codec.flag16-distance11: mode=1, len=5, flags=0x0002, literal 'A', match(dist=1, len=4)
+    let f16_enc = [1u8, 5, 0, 2, 0, b'A', 0, 8];
+    rom[0x600..0x600 + f16_enc.len()].copy_from_slice(&f16_enc);
+
+    let prle_raw: Vec<u8> = (0..64).map(|i| ((i * 5) & 0xff) as u8).collect();
+    let prle_enc = ws_compress::planar_rle::encode(&prle_raw, 0, 2, 2, 2).unwrap();
+    rom[0x700..0x700 + prle_enc.len()].copy_from_slice(&prle_enc);
+
+    let tok_raw: Vec<u8> = (0..96).map(|i| ((i / 3 + i % 11) & 0xff) as u8).collect();
+    let tok_enc = ws_compress::lzss_token_be::encode(&tok_raw).unwrap();
+    rom[0x800..0x800 + tok_enc.len()].copy_from_slice(&tok_enc);
+
+    // Oversize > 64 KiB RLE-77EE stream (96 KiB of repeated bytes compresses to ~1 KiB)
+    let big_rle_raw = vec![0x5au8; 96 * 1024];
+    let big_rle_enc = ws_compress::rle_77ee::encode(&big_rle_raw).unwrap();
+    assert!(big_rle_enc.len() < 4096);
+    rom[0x1000..0x1000 + big_rle_enc.len()].copy_from_slice(&big_rle_enc);
+
+    let sha = sha256_hex(&rom);
+    let fk_doc = json!({
+        "schema": FORMATKIT_SCHEMA,
+        "schema_version": 1,
+        "kit": "swankit",
+        "media": {
+            "kind": "flat-rom",
+            "fingerprint": { "rom_sha256": sha },
+            "total_bytes": rom.len()
+        },
+        "entries": [
+            {
+                "id": "cw0",
+                "offset": 0x100,
+                "size": cw_enc.len(),
+                "sha256": sha256_hex(&cw_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.counted-word-lz",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            },
+            {
+                "id": "dpcm0",
+                "offset": 0x200,
+                "size": dpcm_small_enc.len(),
+                "sha256": sha256_hex(&dpcm_small_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.dpcm-6bit",
+                "mapping": {
+                    "kind": "compressed",
+                    "params": { "format": { "sample_rate": 6000 } },
+                    "inner_format": "pcm"
+                },
+                "verified": true
+            },
+            {
+                "id": "lz11",
+                "offset": 0x400,
+                "size": lz11_enc.len(),
+                "sha256": sha256_hex(&lz11_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.lzss-11-5",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            },
+            {
+                "id": "f16",
+                "offset": 0x600,
+                "size": f16_enc.len(),
+                "sha256": sha256_hex(&f16_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.flag16-distance11",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            },
+            {
+                "id": "prle0",
+                "offset": 0x700,
+                "size": prle_enc.len(),
+                "sha256": sha256_hex(&prle_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.planar-rle",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            },
+            {
+                "id": "tok0",
+                "offset": 0x800,
+                "size": tok_enc.len(),
+                "sha256": sha256_hex(&tok_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.lzss-token-be",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            },
+            {
+                "id": "rle_big",
+                "offset": 0x1000,
+                "size": big_rle_enc.len(),
+                "sha256": sha256_hex(&big_rle_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.rle-77ee",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            }
+        ]
+    });
+
+    let fk_bytes = serde_json::to_vec(&fk_doc).unwrap();
+    let loaded = LoadedAssetMap::from_json(&fk_bytes).unwrap();
+    let asset_map = loaded.to_asset_map().unwrap();
+    let charmaps = Charmaps::load(&asset_map, |_| unreachable!()).unwrap();
+
+    let report = loaded.verify(&charmaps, &rom).unwrap();
+    assert!(report.ok(), "{:?}", report.errors);
+
+    let extracted = extract(&asset_map, &charmaps, &rom).unwrap();
+    assert_eq!(extracted.failures, 0);
+    let file_bytes = |name: &str| -> &[u8] {
+        extracted
+            .files
+            .iter()
+            .find_map(|(n, f)| match (n == name, f) {
+                (true, ws_assets::ExtractedFile::Bytes(b)) => Some(b.as_slice()),
+                _ => None,
+            })
+            .unwrap()
+    };
+    assert_eq!(file_bytes("cw0.bin"), cw_raw.as_slice());
+    assert_eq!(file_bytes("lz11.bin"), lz11_raw.as_slice());
+    assert_eq!(file_bytes("f16.bin"), b"AAAAA");
+    assert_eq!(file_bytes("prle0.bin"), prle_raw.as_slice());
+    assert_eq!(file_bytes("tok0.bin"), tok_raw.as_slice());
+    assert_eq!(file_bytes("rle_big.bin"), big_rle_raw.as_slice());
+
+    let expected_wav = ws_sound::render::unsigned_pcm(&dpcm_small_raw, 6_000, dpcm_small_raw.len())
+        .unwrap()
+        .to_wav_bytes()
+        .unwrap();
+    assert_eq!(file_bytes("dpcm0.wav"), expected_wav.as_slice());
+
+    // Also verify > 64 KiB dpcm-6bit directly.
+    let big_dec = ws_compress::dpcm_6bit::decode(&dpcm_enc, dpcm_raw.len()).unwrap();
+    assert_eq!(big_dec.bytes, dpcm_raw);
+}

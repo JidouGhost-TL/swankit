@@ -188,6 +188,18 @@ pub enum Codec {
     Rle77ee,
     #[serde(rename = "ws-rle-pcm-00")]
     RlePcm00,
+    #[serde(rename = "ws-counted-word-lz")]
+    CountedWordLz,
+    #[serde(rename = "ws-dpcm-6bit")]
+    Dpcm6bit,
+    #[serde(rename = "ws-lzss-11-5")]
+    Lzss11_5,
+    #[serde(rename = "ws-flag16-distance11")]
+    Flag16Distance11,
+    #[serde(rename = "ws-planar-rle")]
+    PlanarRle,
+    #[serde(rename = "ws-lzss-token-be")]
+    LzssTokenBe,
 }
 
 impl Codec {
@@ -203,6 +215,11 @@ impl Codec {
                 | Codec::LzssU16Zero
                 | Codec::Lzs2
                 | Codec::Rle77ee
+                | Codec::CountedWordLz
+                | Codec::Lzss11_5
+                | Codec::Flag16Distance11
+                | Codec::PlanarRle
+                | Codec::LzssTokenBe
         )
     }
 }

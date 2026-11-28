@@ -28,6 +28,11 @@ Generated from `swankit capabilities --json` (`formatkit.capabilities.v1`).
 | `ws-lzss-be-units` | `compression` | 2 | `parse`, `decode` | Big-endian unit-framed LZSS stream decoder with provenance |
 | `ws-rle-77ee` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | Escape-byte word and byte RLE stream decoder and deterministic encoder |
 | `ws-rle-pcm-00` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | Zero-escaped byte RLE stream decoder and deterministic encoder for 8-bit PCM |
+| `ws-counted-word-lz` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | Word-aligned counted-command LZ stream decoder and deterministic encoder |
+| `ws-dpcm-6bit` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | 6-bit packed signed DPCM audio stream decoder and deterministic encoder |
+| `ws-lzss-11-5` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | 2 KiB ring-buffer 11-bit position and 5-bit length LZSS stream decoder and encoder |
+| `ws-planar-rle` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | Bitplane-split 0xFFFF-terminated tile RLE stream decoder and deterministic encoder |
+| `ws-lzss-token-be` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | Big-endian token-counted bit-flag LZSS stream decoder and deterministic encoder |
 | `ws-tile-2bpp` | `gfx` | 2 | `parse`, `decode`, `reproduce`, `edit` | 2bpp planar 8x8 tiles (monochrome and 4-color palettes) |
 | `ws-tile-4bpp-planar` | `gfx` | 2 | `parse`, `decode`, `reproduce`, `edit` | 4bpp planar 8x8 WonderSwan Color tiles |
 | `ws-tile-4bpp-packed` | `gfx` | 2 | `parse`, `decode`, `reproduce`, `edit` | 4bpp packed 8x8 WonderSwan Color tiles |

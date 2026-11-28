@@ -3,6 +3,8 @@
 #![forbid(unsafe_code)]
 
 pub mod catalog;
+pub mod counted_word_lz;
+pub mod dpcm_6bit;
 pub mod flag16_distance11;
 pub mod lz_bits_16;
 pub mod lz_command16_lsb;
@@ -11,13 +13,16 @@ pub mod lz_u8_zero;
 pub mod lz_word16_msb;
 pub mod lz_word_counted;
 pub mod lzs2;
+pub mod lzss_11_5;
 pub mod lzss_12;
 pub mod lzss_12_ext;
 pub mod lzss_be_units;
 pub mod lzss_msb_distance12;
+pub mod lzss_token_be;
 pub mod lzss_u16_zero;
 pub mod mask16_fill;
 pub mod okumura;
+pub mod planar_rle;
 pub mod rle_77ee;
 pub mod rle_pcm_00;
 
@@ -25,8 +30,11 @@ use formatkit_codec::sliding_window::{append_match, MatchError};
 pub use formatkit_codec::{BitOrder, DecodeOutcome};
 use formatkit_core::{Error, Result};
 
-/// Maximum decoded size supported by the stream grammars.
+/// Maximum decoded size supported by 64 KiB RAM-bounded stream grammars.
 pub const MAX_DECODED: usize = 0x10000;
+
+/// Maximum decoded size supported by streaming RLE and audio codecs (> 64 KiB).
+pub const MAX_STREAM_DECODED: usize = 4 * 1024 * 1024;
 
 /// Check growth before allocating or copying an entire token.
 fn grow(out: &[u8], count: usize, limit: usize) -> Result<()> {

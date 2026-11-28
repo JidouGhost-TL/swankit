@@ -178,6 +178,41 @@ static FORMATS: &[FormatCapability] = &[
         tier: 2,
         notes: "Zero-escaped byte RLE stream decoder and deterministic encoder for 8-bit PCM",
     },
+    FormatCapability {
+        id: "ws-counted-word-lz",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "Word-aligned counted-command LZ stream decoder and deterministic encoder",
+    },
+    FormatCapability {
+        id: "ws-dpcm-6bit",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "6-bit packed signed DPCM audio stream decoder and deterministic encoder",
+    },
+    FormatCapability {
+        id: "ws-lzss-11-5",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "2 KiB ring-buffer 11-bit position and 5-bit length LZSS stream decoder and encoder",
+    },
+    FormatCapability {
+        id: "ws-planar-rle",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "Bitplane-split 0xFFFF-terminated tile RLE stream decoder and deterministic encoder",
+    },
+    FormatCapability {
+        id: "ws-lzss-token-be",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "Big-endian token-counted bit-flag LZSS stream decoder and deterministic encoder",
+    },
     // Graphics (ws-gfx)
     FormatCapability {
         id: "ws-tile-2bpp",

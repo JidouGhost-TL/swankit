@@ -528,7 +528,9 @@ pub fn preview_asset_impl(
         decode_asset(&asset_map, &charmaps, rom, entry_id).map_err(|e| e.to_string())?;
     let format_id = format_id_for(asset);
 
-    if asset.kind == Kind::Pcm || asset.codec == Codec::RlePcm00 {
+    if asset.kind == Kind::Pcm
+        || matches!(asset.codec, Codec::RlePcm00 | Codec::Dpcm6bit)
+    {
         let rate = sample_rate
             .filter(|&r| r > 0)
             .or(asset.format.sample_rate)

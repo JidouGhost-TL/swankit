@@ -710,6 +710,12 @@ pub fn format_id_for(asset: &Asset) -> String {
         Codec::Lzs2 => "ws.codec.lzs2".into(),
         Codec::Rle77ee => "ws.codec.rle-77ee".into(),
         Codec::RlePcm00 => "ws.codec.rle-pcm-00".into(),
+        Codec::CountedWordLz => "ws.codec.counted-word-lz".into(),
+        Codec::Dpcm6bit => "ws.codec.dpcm-6bit".into(),
+        Codec::Lzss11_5 => "ws.codec.lzss-11-5".into(),
+        Codec::Flag16Distance11 => "ws.codec.flag16-distance11".into(),
+        Codec::PlanarRle => "ws.codec.planar-rle".into(),
+        Codec::LzssTokenBe => "ws.codec.lzss-token-be".into(),
     }
 }
 
@@ -1169,6 +1175,12 @@ fn infer_codec(entry: &FormatkitEntry) -> Codec {
         "ws.codec.lzs2" => Codec::Lzs2,
         "ws.codec.rle-77ee" => Codec::Rle77ee,
         "ws.codec.rle-pcm-00" => Codec::RlePcm00,
+        "ws.codec.counted-word-lz" => Codec::CountedWordLz,
+        "ws.codec.dpcm-6bit" => Codec::Dpcm6bit,
+        "ws.codec.lzss-11-5" => Codec::Lzss11_5,
+        "ws.codec.flag16-distance11" => Codec::Flag16Distance11,
+        "ws.codec.planar-rle" => Codec::PlanarRle,
+        "ws.codec.lzss-token-be" => Codec::LzssTokenBe,
         _ => Codec::Raw,
     }
 }

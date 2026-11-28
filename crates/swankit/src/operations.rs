@@ -82,6 +82,11 @@ impl Toolkit {
             extract::Codec::LzssMsbDistance12 => compress::catalog::LZSS_MSB_DISTANCE12_ID,
             extract::Codec::Rle77ee => compress::catalog::RLE_77EE_ID,
             extract::Codec::RlePcm00 => compress::catalog::RLE_PCM_00_ID,
+            extract::Codec::CountedWordLz => compress::catalog::COUNTED_WORD_LZ_ID,
+            extract::Codec::Dpcm6bit => compress::catalog::DPCM_6BIT_ID,
+            extract::Codec::Lzss11_5 => compress::catalog::LZSS_11_5_ID,
+            extract::Codec::PlanarRle => compress::catalog::PLANAR_RLE_ID,
+            extract::Codec::LzssTokenBe => compress::catalog::LZSS_TOKEN_BE_ID,
         })?;
         definition.decode(bytes)
     }

@@ -46,6 +46,16 @@ pub enum Codec {
     Rle77ee,
     #[serde(rename = "rle-pcm-00")]
     RlePcm00,
+    #[serde(rename = "counted-word-lz")]
+    CountedWordLz,
+    #[serde(rename = "dpcm-6bit")]
+    Dpcm6bit,
+    #[serde(rename = "lzss-11-5")]
+    Lzss11_5,
+    #[serde(rename = "planar-rle")]
+    PlanarRle,
+    #[serde(rename = "lzss-token-be")]
+    LzssTokenBe,
     #[serde(skip_deserializing)]
     LzssBeUnits(TokenParameters),
 }
@@ -227,8 +237,12 @@ impl CodecDefinition {
         if self.schema != "swankit-codec-def/1" {
             return Err(bad("unknown codec definition schema"));
         }
-        if self.max_output > compress::MAX_DECODED || self.history.len() > compress::MAX_DECODED {
-            return Err(bad("codec output/history exceeds 65536 bytes"));
+        let output_limit = match self.codec {
+            Codec::Rle77ee | Codec::RlePcm00 | Codec::Dpcm6bit => compress::MAX_STREAM_DECODED,
+            _ => compress::MAX_DECODED,
+        };
+        if self.max_output > output_limit || self.history.len() > compress::MAX_DECODED {
+            return Err(bad("codec output/history exceeds limit"));
         }
         let source = bytes_at(bytes, self.offset, self.length)?;
         match self.codec {
@@ -387,6 +401,36 @@ impl CodecDefinition {
                     return Err(bad("rle-pcm-00 has no history input"));
                 }
                 compress::rle_pcm_00::decode(source, self.max_output)
+            }
+            Codec::CountedWordLz => {
+                if !self.history.is_empty() {
+                    return Err(bad("counted-word-lz has no history input"));
+                }
+                compress::counted_word_lz::decode(source, self.max_output)
+            }
+            Codec::Dpcm6bit => {
+                if !self.history.is_empty() {
+                    return Err(bad("dpcm-6bit has no history input"));
+                }
+                compress::dpcm_6bit::decode(source, self.max_output)
+            }
+            Codec::Lzss11_5 => {
+                if !self.history.is_empty() {
+                    return Err(bad("lzss-11-5 has no history input"));
+                }
+                compress::lzss_11_5::decode(source, self.max_output)
+            }
+            Codec::PlanarRle => {
+                if !self.history.is_empty() {
+                    return Err(bad("planar-rle has no history input"));
+                }
+                compress::planar_rle::decode(source, self.max_output)
+            }
+            Codec::LzssTokenBe => {
+                if !self.history.is_empty() {
+                    return Err(bad("lzss-token-be has no history input"));
+                }
+                compress::lzss_token_be::decode(source, self.max_output)
             }
         }
     }

@@ -1,12 +1,12 @@
 //! Zero-escaped byte RLE stream for 8-bit PCM payloads.
 //! Non-zero bytes are emitted literally; `0x00 <val> <count>` repeats `val`
 //! `count` times (`count == 0` encodes 256). Extent is supplied by the carrier.
-use crate::{grow, input_size, DecodeOutcome, MAX_DECODED};
+use crate::{grow, DecodeOutcome, MAX_STREAM_DECODED};
 use formatkit_core::{Reader, Result, Writer};
 
 /// Decode a carrier-bounded zero-escaped RLE stream.
 pub fn decode(src: &[u8], max_output: usize) -> Result<DecodeOutcome> {
-    let limit = max_output.min(MAX_DECODED);
+    let limit = max_output.min(MAX_STREAM_DECODED);
     let mut r = Reader::new(src);
     let mut out = Vec::new();
     while r.remaining() > 0 {
@@ -30,7 +30,7 @@ pub fn decode(src: &[u8], max_output: usize) -> Result<DecodeOutcome> {
 
 /// Deterministic encoder for zero-escaped byte RLE streams.
 pub fn encode(src: &[u8]) -> Result<Vec<u8>> {
-    input_size(src)?;
+    grow(&[], src.len(), MAX_STREAM_DECODED)?;
     let mut w = Writer::new();
     let n = src.len();
     let mut i = 0;
@@ -76,7 +76,7 @@ mod tests {
         assert!(decode(&[0x80, 0x00], 16).is_err());
         assert!(decode(&[0x00, 0x80, 5], 4).is_err());
         assert!(decode(&[0x00, 0x80, 0], 255).is_err());
-        assert!(encode(&vec![0x80; MAX_DECODED + 1]).is_err());
+        assert!(encode(&vec![0x80; MAX_STREAM_DECODED + 1]).is_err());
     }
 
     #[test]
@@ -98,11 +98,11 @@ mod tests {
             assert_eq!(got.consumed, encoded.len());
             assert_eq!(encode(&raw).unwrap(), encoded);
         }
-        let wave: Vec<u8> = (0..MAX_DECODED)
+        let wave: Vec<u8> = (0..0x18000)
             .map(|i| if i % 17 == 0 { 0 } else { (128 + (i % 9)) as u8 })
             .collect();
         let encoded = encode(&wave).unwrap();
-        let got = decode(&encoded, MAX_DECODED).unwrap();
+        let got = decode(&encoded, wave.len()).unwrap();
         assert_eq!(got.bytes, wave);
         assert_eq!(got.consumed, encoded.len());
     }

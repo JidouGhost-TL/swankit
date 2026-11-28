@@ -17,6 +17,11 @@ pub const LZSS_BE_UNITS_ID: FormatId = FormatId::new("ws-lzss-be-units");
 pub const LZSS_MSB_DISTANCE12_ID: FormatId = FormatId::new("ws-lzss-msb-distance12");
 pub const RLE_77EE_ID: FormatId = FormatId::new("ws-rle-77ee");
 pub const RLE_PCM_00_ID: FormatId = FormatId::new("ws-rle-pcm-00");
+pub const COUNTED_WORD_LZ_ID: FormatId = FormatId::new("ws-counted-word-lz");
+pub const DPCM_6BIT_ID: FormatId = FormatId::new("ws-dpcm-6bit");
+pub const LZSS_11_5_ID: FormatId = FormatId::new("ws-lzss-11-5");
+pub const PLANAR_RLE_ID: FormatId = FormatId::new("ws-planar-rle");
+pub const LZSS_TOKEN_BE_ID: FormatId = FormatId::new("ws-lzss-token-be");
 
 /// Explicit decode-only grammar; no recognition probe or encoder.
 pub const LZSS_12_EXT_FORMAT: FormatDescriptor = {
@@ -136,6 +141,19 @@ pub const FORMATS: &[FormatDescriptor] = &[
     LZSS_BE_UNITS_FORMAT,
     descriptor(RLE_77EE_ID, "ws-rle-77ee", Confidence::CorpusBacked),
     descriptor(RLE_PCM_00_ID, "ws-rle-pcm-00", Confidence::CorpusBacked),
+    descriptor(
+        COUNTED_WORD_LZ_ID,
+        "ws-counted-word-lz",
+        Confidence::CorpusBacked,
+    ),
+    descriptor(DPCM_6BIT_ID, "ws-dpcm-6bit", Confidence::CorpusBacked),
+    descriptor(LZSS_11_5_ID, "ws-lzss-11-5", Confidence::CorpusBacked),
+    descriptor(PLANAR_RLE_ID, "ws-planar-rle", Confidence::CorpusBacked),
+    descriptor(
+        LZSS_TOKEN_BE_ID,
+        "ws-lzss-token-be",
+        Confidence::CorpusBacked,
+    ),
 ];
 
 /// Decode-only external-length support, with separately scoped corpus evidence.
@@ -470,6 +488,126 @@ pub const EMBEDDED: &[EmbeddedFormatSupport] = &[
         },
         corpus_evidence: Some(CorpusEvidence {
             handler: "ws-compress-rle-pcm-00",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: COUNTED_WORD_LZ_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "counted-word-lz",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-counted-word-lz",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: DPCM_6BIT_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "dpcm-6bit",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-dpcm-6bit",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: LZSS_11_5_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "lzss-11-5",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-lzss-11-5",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: PLANAR_RLE_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "planar-rle",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-planar-rle",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: LZSS_TOKEN_BE_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "lzss-token-be",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-lzss-token-be",
             sample_floor: 1,
         }),
     },
