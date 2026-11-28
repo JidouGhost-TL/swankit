@@ -276,6 +276,34 @@ static FORMATS: &[FormatCapability] = &[
         tier: 2,
         notes: "Tile-level bitmask and XOR-delta stream decoder and deterministic encoder",
     },
+    FormatCapability {
+        id: "ws-lzss-11-5-direct",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "Direct-distance 11-bit offset and 5-bit length LZSS stream decoder and deterministic encoder",
+    },
+    FormatCapability {
+        id: "ws-huffman-static",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "Static binary Huffman stream decoder and deterministic encoder with external tree table",
+    },
+    FormatCapability {
+        id: "ws-rle-lz4-cmd",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "4-mode byte-command literal, RLE, and 8/16-bit LZ stream decoder and deterministic encoder",
+    },
+    FormatCapability {
+        id: "ws-word-rle-00",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "16-bit little-endian word RLE (bit 15 literal) stream decoder and deterministic encoder",
+    },
     // Graphics (ws-gfx)
     FormatCapability {
         id: "ws-tile-2bpp",

@@ -42,6 +42,10 @@ Generated from `swankit capabilities --json` (`formatkit.capabilities.v1`).
 | `ws-lzss-bandai-g` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | Length-prefixed LSB-flag 11-bit distance single-plane and 2-plane LZSS stream decoder and encoder |
 | `ws-rle16-bit15` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | 16-bit little-endian word RLE (bit 15 repeat) stream decoder and deterministic encoder |
 | `ws-tile-xor-pack` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | Tile-level bitmask and XOR-delta stream decoder and deterministic encoder |
+| `ws-lzss-11-5-direct` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | Direct-distance 11-bit offset and 5-bit length LZSS stream decoder and deterministic encoder |
+| `ws-huffman-static` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | Static binary Huffman stream decoder and deterministic encoder with external tree table |
+| `ws-rle-lz4-cmd` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | 4-mode byte-command literal, RLE, and 8/16-bit LZ stream decoder and deterministic encoder |
+| `ws-word-rle-00` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | 16-bit little-endian word RLE (bit 15 literal) stream decoder and deterministic encoder |
 | `ws-tile-2bpp` | `gfx` | 2 | `parse`, `decode`, `reproduce`, `edit` | 2bpp planar 8x8 tiles (monochrome and 4-color palettes) |
 | `ws-tile-4bpp-planar` | `gfx` | 2 | `parse`, `decode`, `reproduce`, `edit` | 4bpp planar 8x8 WonderSwan Color tiles |
 | `ws-tile-4bpp-packed` | `gfx` | 2 | `parse`, `decode`, `reproduce`, `edit` | 4bpp packed 8x8 WonderSwan Color tiles |

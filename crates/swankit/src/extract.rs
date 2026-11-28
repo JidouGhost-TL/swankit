@@ -74,6 +74,14 @@ pub enum Codec {
     Rle16Bit15,
     #[serde(rename = "tile-xor-pack")]
     TileXorPack,
+    #[serde(rename = "lzss-11-5-direct")]
+    Lzss11_5Direct,
+    #[serde(rename = "huffman-static")]
+    HuffmanStatic,
+    #[serde(rename = "rle-lz4-cmd")]
+    RleLz4Cmd,
+    #[serde(rename = "word-rle-00")]
+    WordRle00,
     #[serde(skip_deserializing)]
     LzssBeUnits(TokenParameters),
 }
@@ -116,6 +124,9 @@ pub struct CodecDefinition {
     pub history: Vec<u8>,
     pub destination: u16,
     pub prehistory: Prehistory,
+    pub tree: Vec<u8>,
+    pub tree_offset: Option<usize>,
+    pub tree_length: Option<usize>,
 }
 
 /// Parameters are carried by the new codec variant to preserve legacy Rust literals.
@@ -159,6 +170,12 @@ struct CodecWire {
     destination: u16,
     #[serde(default)]
     prehistory: Prehistory,
+    #[serde(default)]
+    tree: Vec<u8>,
+    #[serde(default)]
+    tree_offset: Option<usize>,
+    #[serde(default)]
+    tree_length: Option<usize>,
     #[serde(default)]
     unit_size: Parameter<u8>,
     #[serde(default)]
@@ -224,6 +241,9 @@ impl<'de> Deserialize<'de> for CodecDefinition {
             history: w.history,
             destination: w.destination,
             prehistory: w.prehistory,
+            tree: w.tree,
+            tree_offset: w.tree_offset,
+            tree_length: w.tree_length,
         })
     }
 }
@@ -261,7 +281,9 @@ impl CodecDefinition {
             | Codec::Dpcm6bit
             | Codec::ZeroRle16
             | Codec::Dpcm4bitNibble
-            | Codec::Rle16Bit15 => compress::MAX_STREAM_DECODED,
+            | Codec::Rle16Bit15
+            | Codec::RleLz4Cmd
+            | Codec::WordRle00 => compress::MAX_STREAM_DECODED,
             _ => compress::MAX_DECODED,
         };
         if self.max_output > output_limit || self.history.len() > compress::MAX_DECODED {
@@ -513,6 +535,47 @@ impl CodecDefinition {
                     return Err(bad("tile-xor-pack has no history input"));
                 }
                 compress::tile_xor_pack::decode(source, self.max_output)
+            }
+            Codec::Lzss11_5Direct => {
+                if !self.history.is_empty() {
+                    return Err(bad("lzss-11-5-direct has no history input"));
+                }
+                compress::lzss_11_5_direct::decode(source, self.max_output)
+            }
+            Codec::HuffmanStatic => {
+                if !self.history.is_empty() {
+                    return Err(bad("huffman-static has no history input"));
+                }
+                let tree_slice: &[u8] = if !self.tree.is_empty() {
+                    &self.tree
+                } else if let Some(off) = self.tree_offset {
+                    let len = self.tree_length.unwrap_or(1024);
+                    if off + 2 > bytes.len() {
+                        return Err(bad("huffman-static tree_offset out of bounds"));
+                    }
+                    let end = off.saturating_add(len).min(bytes.len());
+                    &bytes[off..end]
+                } else {
+                    return Err(bad("huffman-static requires tree or tree_offset"));
+                };
+                compress::huffman_static::decode(
+                    source,
+                    tree_slice,
+                    self.decoded_size,
+                    self.max_output,
+                )
+            }
+            Codec::RleLz4Cmd => {
+                if !self.history.is_empty() {
+                    return Err(bad("rle-lz4-cmd has no history input"));
+                }
+                compress::rle_lz4_cmd::decode(source, self.max_output)
+            }
+            Codec::WordRle00 => {
+                if !self.history.is_empty() {
+                    return Err(bad("word-rle-00 has no history input"));
+                }
+                compress::word_rle_00::decode(source, self.decoded_size, self.max_output)
             }
         }
     }

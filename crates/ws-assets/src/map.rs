@@ -228,6 +228,14 @@ pub enum Codec {
     Rle16Bit15,
     #[serde(rename = "ws-tile-xor-pack")]
     TileXorPack,
+    #[serde(rename = "ws-lzss-11-5-direct")]
+    Lzss11_5Direct,
+    #[serde(rename = "ws-huffman-static")]
+    HuffmanStatic,
+    #[serde(rename = "ws-rle-lz4-cmd")]
+    RleLz4Cmd,
+    #[serde(rename = "ws-word-rle-00")]
+    WordRle00,
 }
 
 impl Codec {
@@ -256,6 +264,7 @@ impl Codec {
                 | Codec::Mask16Fill
                 | Codec::LzssBandaiG
                 | Codec::TileXorPack
+                | Codec::Lzss11_5Direct
         )
     }
 }
@@ -294,6 +303,15 @@ pub struct CodecParams {
     /// Optional prefix header bytes skipped before stream framing (e.g. `2` for 2-plane LZSS).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub header_bytes: Option<Num>,
+    /// Inline static Huffman decode tree table bytes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tree: Option<Vec<u8>>,
+    /// ROM byte offset of an external static Huffman decode tree table.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tree_offset: Option<Num>,
+    /// Optional byte length of the static Huffman tree at `tree_offset` (default `1024`, max `4096`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tree_length: Option<Num>,
 }
 
 /// CPU view of the asset when loaded: purely descriptive.

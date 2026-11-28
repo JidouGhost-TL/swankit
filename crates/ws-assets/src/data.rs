@@ -4,12 +4,12 @@ use crate::text::Charmaps;
 use crate::{malformed, AssetMap};
 use formatkit_core::{bytes_at, Result};
 use ws_compress::{
-    byte_lzss_ring8, counted_word_lz, dpcm_4bit_nibble, dpcm_6bit, flag16_distance11, lz_bits_16,
-    lz_command16_lsb, lz_rle_7f, lz_rle_pat, lz_tile_7b, lz_u8_zero, lz_word16_msb,
-    lz_word_counted, lzs2, lzss_11_5, lzss_12, lzss_12_ext, lzss_bandai_g, lzss_be_units,
-    lzss_msb_distance12, lzss_token_be, lzss_u16_zero, mask16_fill, nibble_lzss_ring8, okumura,
-    planar_rle, rle16_bit15, rle_77ee, rle_pcm_00, tile_xor_pack, zero_rle16, BitOrder,
-    MAX_DECODED,
+    byte_lzss_ring8, counted_word_lz, dpcm_4bit_nibble, dpcm_6bit, flag16_distance11,
+    huffman_static, lz_bits_16, lz_command16_lsb, lz_rle_7f, lz_rle_pat, lz_tile_7b, lz_u8_zero,
+    lz_word16_msb, lz_word_counted, lzs2, lzss_11_5, lzss_11_5_direct, lzss_12, lzss_12_ext,
+    lzss_bandai_g, lzss_be_units, lzss_msb_distance12, lzss_token_be, lzss_u16_zero, mask16_fill,
+    nibble_lzss_ring8, okumura, planar_rle, rle16_bit15, rle_77ee, rle_lz4_cmd, rle_pcm_00,
+    tile_xor_pack, word_rle_00, zero_rle16, BitOrder, MAX_DECODED,
 };
 
 /// Upper bound on the decoded bytes of one asset.
@@ -158,6 +158,71 @@ fn lzss_bandai_g_params(asset: &Asset) -> Result<(u8, usize)> {
     Ok((planes, header_bytes))
 }
 
+fn huffman_static_params(asset: &Asset) -> Result<(Option<usize>, Option<usize>, Option<usize>)> {
+    let p = &asset.codec_params;
+    if p.tree.is_none() && p.tree_offset.is_none() {
+        return Err(malformed(format!(
+            "{}: ws-huffman-static needs codec_params.tree or codec_params.tree_offset",
+            asset.id
+        )));
+    }
+    if let Some(ref tree) = p.tree {
+        if tree.len() < 2 || tree.len() > 4096 {
+            return Err(malformed(format!(
+                "{}: ws-huffman-static tree length must be 2..=4096",
+                asset.id
+            )));
+        }
+    }
+    let tree_offset = match p.tree_offset {
+        Some(n) => Some(n.usize()?),
+        None => None,
+    };
+    let tree_length = match p.tree_length {
+        Some(n) => {
+            let len = n.usize()?;
+            if !(2..=4096).contains(&len) {
+                return Err(malformed(format!(
+                    "{}: ws-huffman-static tree_length must be 2..=4096",
+                    asset.id
+                )));
+            }
+            Some(len)
+        }
+        None => None,
+    };
+    let decoded_length = match p.decoded_length {
+        Some(n) => {
+            let sz = n.usize()?;
+            if sz > MAX_DECODED {
+                return Err(malformed(format!("{}: decoded asset too large", asset.id)));
+            }
+            Some(sz)
+        }
+        None => None,
+    };
+    Ok((tree_offset, tree_length, decoded_length))
+}
+
+fn word_rle_00_params(asset: &Asset) -> Result<Option<usize>> {
+    match asset.codec_params.decoded_length {
+        Some(n) => {
+            let sz = n.usize()?;
+            if sz % 2 != 0 {
+                return Err(malformed(format!(
+                    "{}: ws-word-rle-00 decoded_length must be even",
+                    asset.id
+                )));
+            }
+            if sz > MAX_ASSET_BYTES {
+                return Err(malformed(format!("{}: decoded asset too large", asset.id)));
+            }
+            Ok(Some(sz))
+        }
+        None => Ok(None),
+    }
+}
+
 pub(crate) fn validate_codec_params(asset: &Asset) -> Result<()> {
     match asset.codec {
         Codec::LzssU16Zero => {
@@ -180,6 +245,12 @@ pub(crate) fn validate_codec_params(asset: &Asset) -> Result<()> {
         }
         Codec::LzssBandaiG => {
             lzss_bandai_g_params(asset)?;
+        }
+        Codec::HuffmanStatic => {
+            huffman_static_params(asset)?;
+        }
+        Codec::WordRle00 => {
+            word_rle_00_params(asset)?;
         }
         Codec::Lzs2 if asset.codec_params != Default::default() => {
             return Err(malformed(format!(
@@ -260,7 +331,11 @@ pub fn decode_asset(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -
         | Codec::LzRlePat
         | Codec::LzssBandaiG
         | Codec::Rle16Bit15
-        | Codec::TileXorPack => {
+        | Codec::TileXorPack
+        | Codec::Lzss11_5Direct
+        | Codec::HuffmanStatic
+        | Codec::RleLz4Cmd
+        | Codec::WordRle00 => {
             let outcome = match asset.codec {
                 Codec::Lzs2 => lzs2::decode(window, MAX_DECODED)?,
                 Codec::LzRle7f => lz_rle_7f::decode(window, MAX_DECODED)?,
@@ -355,6 +430,46 @@ pub fn decode_asset(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -
                     rle16_bit15::decode(window, MAX_ASSET_BYTES)?
                 }
                 Codec::TileXorPack => tile_xor_pack::decode(window, MAX_DECODED)?,
+                Codec::Lzss11_5Direct => lzss_11_5_direct::decode(window, MAX_DECODED)?,
+                Codec::HuffmanStatic => {
+                    let (tree_offset, tree_length, decoded_length) = huffman_static_params(asset)?;
+                    if decoded_length.is_none() && declared.is_none() {
+                        return Err(malformed(format!(
+                            "{id}: ws-huffman-static asset needs a length or decoded_length"
+                        )));
+                    }
+                    let tree_slice: &[u8] = if let Some(ref tree) = asset.codec_params.tree {
+                        tree.as_slice()
+                    } else {
+                        let off = tree_offset.unwrap();
+                        let len = tree_length.unwrap_or(1024);
+                        if off + 2 > rom.len() {
+                            return Err(malformed(format!(
+                                "{id}: ws-huffman-static tree_offset out of ROM bounds"
+                            )));
+                        }
+                        let end = off.saturating_add(len).min(rom.len());
+                        &rom[off..end]
+                    };
+                    huffman_static::decode(window, tree_slice, decoded_length, MAX_DECODED)?
+                }
+                Codec::RleLz4Cmd => {
+                    if declared.is_none() {
+                        return Err(malformed(format!(
+                            "{id}: ws-rle-lz4-cmd asset needs a length"
+                        )));
+                    }
+                    rle_lz4_cmd::decode(window, MAX_ASSET_BYTES)?
+                }
+                Codec::WordRle00 => {
+                    let decoded_length = word_rle_00_params(asset)?;
+                    if decoded_length.is_none() && declared.is_none() {
+                        return Err(malformed(format!(
+                            "{id}: ws-word-rle-00 asset needs a length or decoded_length"
+                        )));
+                    }
+                    word_rle_00::decode(window, decoded_length, MAX_ASSET_BYTES)?
+                }
                 _ => unreachable!(),
             };
             if let Some(n) = declared {
@@ -680,5 +795,17 @@ pub fn encode_payload(asset: &Asset, decoded: &[u8]) -> Result<Vec<u8>> {
         }
         Codec::Rle16Bit15 => rle16_bit15::encode(decoded),
         Codec::TileXorPack => tile_xor_pack::encode(decoded),
+        Codec::Lzss11_5Direct => lzss_11_5_direct::encode(decoded),
+        Codec::HuffmanStatic => {
+            let tree = asset.codec_params.tree.as_deref().ok_or_else(|| {
+                malformed(format!(
+                    "{}: ws-huffman-static encode requires inline codec_params.tree",
+                    asset.id
+                ))
+            })?;
+            huffman_static::encode(decoded, tree)
+        }
+        Codec::RleLz4Cmd => rle_lz4_cmd::encode(decoded),
+        Codec::WordRle00 => word_rle_00::encode(decoded),
     }
 }

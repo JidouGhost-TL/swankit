@@ -364,6 +364,54 @@
         "parse",
         "decode",
         "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-lzss-11-5-direct",
+      "notes": "Direct-distance 11-bit offset and 5-bit length LZSS stream decoder and deterministic encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-huffman-static",
+      "notes": "Static binary Huffman stream decoder and deterministic encoder with external tree table",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-rle-lz4-cmd",
+      "notes": "4-mode byte-command literal, RLE, and 8/16-bit LZ stream decoder and deterministic encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-word-rle-00",
+      "notes": "16-bit little-endian word RLE (bit 15 literal) stream decoder and deterministic encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
         "edit"
       ],
       "category": "gfx",

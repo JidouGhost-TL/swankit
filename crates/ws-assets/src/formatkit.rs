@@ -730,6 +730,10 @@ pub fn format_id_for(asset: &Asset) -> String {
         Codec::LzssBandaiG => "ws.codec.lzss-bandai-g".into(),
         Codec::Rle16Bit15 => "ws.codec.rle16-bit15".into(),
         Codec::TileXorPack => "ws.codec.tile-xor-pack".into(),
+        Codec::Lzss11_5Direct => "ws.codec.lzss-11-5-direct".into(),
+        Codec::HuffmanStatic => "ws.codec.huffman-static".into(),
+        Codec::RleLz4Cmd => "ws.codec.rle-lz4-cmd".into(),
+        Codec::WordRle00 => "ws.codec.word-rle-00".into(),
     }
 }
 
@@ -1209,6 +1213,10 @@ fn infer_codec(entry: &FormatkitEntry) -> Codec {
         "ws.codec.lzss-bandai-g" => Codec::LzssBandaiG,
         "ws.codec.rle16-bit15" => Codec::Rle16Bit15,
         "ws.codec.tile-xor-pack" => Codec::TileXorPack,
+        "ws.codec.lzss-11-5-direct" => Codec::Lzss11_5Direct,
+        "ws.codec.huffman-static" => Codec::HuffmanStatic,
+        "ws.codec.rle-lz4-cmd" => Codec::RleLz4Cmd,
+        "ws.codec.word-rle-00" => Codec::WordRle00,
         _ => Codec::Raw,
     }
 }

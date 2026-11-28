@@ -1398,3 +1398,175 @@ fn round4_and_remaining_wired_codecs_round_trip_through_formatkit_v1() {
     assert_eq!(file_bytes("rle16.bin"), rle16_raw.as_slice());
     assert_eq!(file_bytes("txp0.bin"), txp_raw.as_slice());
 }
+
+#[test]
+fn round5_to_7_codecs_round_trip() {
+    let mut rom = vec![0u8; 65_536];
+
+    // 1. ws.codec.lzss-11-5-direct (both zero tag and non-zero tag)
+    let lz11d_raw = b"ABCDABCDABCDABCD01234567890123456789tail".to_vec();
+    let lz11d_enc0 = ws_compress::lzss_11_5_direct::encode(&lz11d_raw).unwrap();
+    let lz11d_enc1 = ws_compress::lzss_11_5_direct::encode_with_tag(&lz11d_raw, 0x7361).unwrap();
+    rom[0x100..0x100 + lz11d_enc0.len()].copy_from_slice(&lz11d_enc0);
+    rom[0x200..0x200 + lz11d_enc1.len()].copy_from_slice(&lz11d_enc1);
+
+    // 2. ws.codec.huffman-static (both ROM tree_offset and inline tree)
+    let huff_tree = vec![0u8, b'A', 1, 0, b'B', 1, 0, b'C', 0, b'D'];
+    rom[0x1000..0x1000 + huff_tree.len()].copy_from_slice(&huff_tree);
+    let huff_raw = b"ABACADABBAABCDDCBA".to_vec();
+    let huff_enc = ws_compress::huffman_static::encode(&huff_raw, &huff_tree).unwrap();
+    rom[0x300..0x300 + huff_enc.len()].copy_from_slice(&huff_enc);
+    rom[0x400..0x400 + huff_enc.len()].copy_from_slice(&huff_enc);
+
+    // 3. ws.codec.rle-lz4-cmd
+    let mut rle_lz4_raw = b"PATTERN_01234567".to_vec();
+    rle_lz4_raw.extend_from_slice(&[0x55; 24]);
+    rle_lz4_raw.extend_from_slice(b"PATTERN_01234567");
+    let rle_lz4_enc = ws_compress::rle_lz4_cmd::encode(&rle_lz4_raw).unwrap();
+    rom[0x500..0x500 + rle_lz4_enc.len()].copy_from_slice(&rle_lz4_enc);
+
+    // 4. ws.codec.word-rle-00 (carrier-bounded and explicit decoded_length)
+    let wrle_words: [u16; 8] = [0x0123, 0x0000, 0x0000, 0x0000, 0x8042, 0x1234, 0x1234, 0x00ff];
+    let mut wrle_raw = Vec::new();
+    for w in wrle_words {
+        wrle_raw.extend_from_slice(&w.to_le_bytes());
+    }
+    let wrle_enc = ws_compress::word_rle_00::encode(&wrle_raw).unwrap();
+    rom[0x600..0x600 + wrle_enc.len()].copy_from_slice(&wrle_enc);
+    rom[0x700..0x700 + wrle_enc.len()].copy_from_slice(&wrle_enc);
+
+    let sha = sha256_hex(&rom);
+    let fk_doc = json!({
+        "schema": FORMATKIT_SCHEMA,
+        "schema_version": 1,
+        "kit": "swankit",
+        "media": {
+            "kind": "flat-rom",
+            "fingerprint": { "rom_sha256": sha },
+            "total_bytes": rom.len()
+        },
+        "entries": [
+            {
+                "id": "lz11d0",
+                "offset": 0x100,
+                "size": lz11d_enc0.len(),
+                "sha256": sha256_hex(&lz11d_enc0),
+                "status": "mapped",
+                "format_id": "ws.codec.lzss-11-5-direct",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            },
+            {
+                "id": "lz11d1",
+                "offset": 0x200,
+                "size": lz11d_enc1.len(),
+                "sha256": sha256_hex(&lz11d_enc1),
+                "status": "mapped",
+                "format_id": "ws.codec.lzss-11-5-direct",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            },
+            {
+                "id": "huff_rom",
+                "offset": 0x300,
+                "size": huff_enc.len(),
+                "sha256": sha256_hex(&huff_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.huffman-static",
+                "mapping": {
+                    "kind": "compressed",
+                    "params": {
+                        "codec_params": {
+                            "tree_offset": 0x1000,
+                            "tree_length": huff_tree.len(),
+                            "decoded_length": huff_raw.len()
+                        }
+                    },
+                    "inner_format": "other"
+                },
+                "verified": true
+            },
+            {
+                "id": "huff_inline",
+                "offset": 0x400,
+                "size": huff_enc.len(),
+                "sha256": sha256_hex(&huff_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.huffman-static",
+                "mapping": {
+                    "kind": "compressed",
+                    "params": {
+                        "codec_params": {
+                            "tree": huff_tree,
+                            "decoded_length": huff_raw.len()
+                        }
+                    },
+                    "inner_format": "other"
+                },
+                "verified": true
+            },
+            {
+                "id": "rle_lz4",
+                "offset": 0x500,
+                "size": rle_lz4_enc.len(),
+                "sha256": sha256_hex(&rle_lz4_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.rle-lz4-cmd",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            },
+            {
+                "id": "wrle_carrier",
+                "offset": 0x600,
+                "size": wrle_enc.len(),
+                "sha256": sha256_hex(&wrle_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.word-rle-00",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            },
+            {
+                "id": "wrle_sized",
+                "offset": 0x700,
+                "size": wrle_enc.len(),
+                "sha256": sha256_hex(&wrle_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.word-rle-00",
+                "mapping": {
+                    "kind": "compressed",
+                    "params": { "codec_params": { "decoded_length": wrle_raw.len() } },
+                    "inner_format": "other"
+                },
+                "verified": true
+            }
+        ]
+    });
+
+    let fk_bytes = serde_json::to_vec(&fk_doc).unwrap();
+    let loaded = LoadedAssetMap::from_json(&fk_bytes).unwrap();
+    let asset_map = loaded.to_asset_map().unwrap();
+    let charmaps = Charmaps::load(&asset_map, |_| unreachable!()).unwrap();
+
+    let report = loaded.verify(&charmaps, &rom).unwrap();
+    assert!(report.ok(), "{:?}", report.errors);
+
+    let extracted = extract(&asset_map, &charmaps, &rom).unwrap();
+    assert_eq!(extracted.failures, 0);
+    let file_bytes = |name: &str| -> &[u8] {
+        extracted
+            .files
+            .iter()
+            .find_map(|(n, f)| match (n == name, f) {
+                (true, ws_assets::ExtractedFile::Bytes(b)) => Some(b.as_slice()),
+                _ => None,
+            })
+            .unwrap()
+    };
+    assert_eq!(file_bytes("lz11d0.bin"), lz11d_raw.as_slice());
+    assert_eq!(file_bytes("lz11d1.bin"), lz11d_raw.as_slice());
+    assert_eq!(file_bytes("huff_rom.bin"), huff_raw.as_slice());
+    assert_eq!(file_bytes("huff_inline.bin"), huff_raw.as_slice());
+    assert_eq!(file_bytes("rle_lz4.bin"), rle_lz4_raw.as_slice());
+    assert_eq!(file_bytes("wrle_carrier.bin"), wrle_raw.as_slice());
+    assert_eq!(file_bytes("wrle_sized.bin"), wrle_raw.as_slice());
+}

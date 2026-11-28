@@ -96,6 +96,10 @@ impl Toolkit {
             extract::Codec::LzssBandaiG => compress::catalog::LZSS_BANDAI_G_ID,
             extract::Codec::Rle16Bit15 => compress::catalog::RLE16_BIT15_ID,
             extract::Codec::TileXorPack => compress::catalog::TILE_XOR_PACK_ID,
+            extract::Codec::Lzss11_5Direct => compress::catalog::LZSS_11_5_DIRECT_ID,
+            extract::Codec::HuffmanStatic => compress::catalog::HUFFMAN_STATIC_ID,
+            extract::Codec::RleLz4Cmd => compress::catalog::RLE_LZ4_CMD_ID,
+            extract::Codec::WordRle00 => compress::catalog::WORD_RLE_00_ID,
         })?;
         definition.decode(bytes)
     }
