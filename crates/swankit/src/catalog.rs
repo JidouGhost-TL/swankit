@@ -391,6 +391,24 @@ pub static MODULES: &[FormatModule] = &[
         None,
         Some(&ws_compress::catalog::EMBEDDED[40]),
     ),
+    row(
+        ws_compress::catalog::RLE2_DOUBLE_BYTE_ID,
+        "ws-compress",
+        None,
+        Some(&ws_compress::catalog::EMBEDDED[41]),
+    ),
+    row(
+        ws_compress::catalog::RLE_WORD_7B_ID,
+        "ws-compress",
+        None,
+        Some(&ws_compress::catalog::EMBEDDED[42]),
+    ),
+    row(
+        ws_compress::catalog::WORD_RLE_FLAG_ID,
+        "ws-compress",
+        None,
+        Some(&ws_compress::catalog::EMBEDDED[43]),
+    ),
 ];
 
 pub fn compose() -> std::result::Result<ModuleCatalog, ModuleCatalogError> {

@@ -353,6 +353,27 @@ static FORMATS: &[FormatCapability] = &[
         tier: 2,
         notes: "1-byte-token 4-bit distance and 4-bit length LSB-flag LZ77 decoder and deterministic encoder",
     },
+    FormatCapability {
+        id: "ws-rle2-double-byte",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "Double-byte trigger RLE (single-plane and 2-plane split-word) stream decoder and deterministic encoder",
+    },
+    FormatCapability {
+        id: "ws-rle-word-7b",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "Byte-tagged 16-bit little-endian word RLE stream decoder and deterministic encoder with zero terminator",
+    },
+    FormatCapability {
+        id: "ws-word-rle-flag",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "Flag-prefixed 16-bit word RLE (literal, repeat, increment, decrement) stream decoder and deterministic encoder",
+    },
     // Graphics (ws-gfx)
     FormatCapability {
         id: "ws-tile-2bpp",

@@ -96,6 +96,12 @@ pub enum Codec {
     Dict16Rle,
     #[serde(rename = "lz44")]
     Lz44,
+    #[serde(rename = "rle2-double-byte")]
+    Rle2DoubleByte,
+    #[serde(rename = "rle-word-7b")]
+    RleWord7b,
+    #[serde(rename = "word-rle-flag")]
+    WordRleFlag,
     #[serde(skip_deserializing)]
     LzssBeUnits(TokenParameters),
 }
@@ -309,7 +315,8 @@ impl CodecDefinition {
             | Codec::RleLz4Cmd
             | Codec::WordRle00
             | Codec::Dpcm4bitSm
-            | Codec::Wave4bitPacked => compress::MAX_STREAM_DECODED,
+            | Codec::Wave4bitPacked
+            | Codec::RleWord7b => compress::MAX_STREAM_DECODED,
             _ => compress::MAX_DECODED,
         };
         if self.max_output > output_limit || self.history.len() > compress::MAX_DECODED {
@@ -645,6 +652,28 @@ impl CodecDefinition {
                     return Err(bad("lz44 has no history input"));
                 }
                 compress::lz44::decode(source, self.decoded_size, self.max_output)
+            }
+            Codec::Rle2DoubleByte => {
+                if !self.history.is_empty() {
+                    return Err(bad("rle2-double-byte has no history input"));
+                }
+                compress::rle2_double_byte::decode(
+                    source,
+                    self.planes.unwrap_or(1),
+                    self.max_output,
+                )
+            }
+            Codec::RleWord7b => {
+                if !self.history.is_empty() {
+                    return Err(bad("rle-word-7b has no history input"));
+                }
+                compress::rle_word_7b::decode(source, self.max_output)
+            }
+            Codec::WordRleFlag => {
+                if !self.history.is_empty() {
+                    return Err(bad("word-rle-flag has no history input"));
+                }
+                compress::word_rle_flag::decode(source, self.max_output)
             }
         }
     }

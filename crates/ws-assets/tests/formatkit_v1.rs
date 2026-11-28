@@ -1795,3 +1795,127 @@ fn round10_codecs_and_clamped_lzss_round_trip_through_formatkit_v1() {
     assert_eq!(file_bytes("dict16.bin"), dict_raw.as_slice());
     assert_eq!(file_bytes("lz44_0.bin"), lz44_raw.as_slice());
 }
+
+#[test]
+fn round11_tail_codecs_round_trip_through_formatkit_v1() {
+    let mut rom = vec![0u8; 65536];
+
+    // 1. ws.codec.rle2-double-byte (single-plane, default planes=1)
+    let mut rle2_1_raw = vec![0x01, 0x02, 0x02, 0x02, 0x03];
+    rle2_1_raw.extend(std::iter::repeat_n(0xaa, 300));
+    rle2_1_raw.push(0x55);
+    let rle2_1_enc = ws_compress::rle2_double_byte::encode(&rle2_1_raw, 1).unwrap();
+    rom[0x100..0x100 + rle2_1_enc.len()].copy_from_slice(&rle2_1_enc);
+
+    // 2. ws.codec.rle2-double-byte (2-plane split-word, planes=2)
+    let mut rle2_2_raw = Vec::new();
+    for i in 0u16..128 {
+        let w = if i < 64 { 0x0200 | (i & 0x07) } else { 0x1400 };
+        rle2_2_raw.extend_from_slice(&w.to_le_bytes());
+    }
+    let rle2_2_enc = ws_compress::rle2_double_byte::encode(&rle2_2_raw, 2).unwrap();
+    rom[0x400..0x400 + rle2_2_enc.len()].copy_from_slice(&rle2_2_enc);
+
+    // 3. ws.codec.rle-word-7b
+    let mut rw7_raw = Vec::new();
+    for w in [0x0010u16, 0x0011, 0x0012, 0x0040, 0x0040, 0x0040, 0x0040, 0x8123] {
+        rw7_raw.extend_from_slice(&w.to_le_bytes());
+    }
+    let rw7_enc = ws_compress::rle_word_7b::encode(&rw7_raw).unwrap();
+    rom[0x700..0x700 + rw7_enc.len()].copy_from_slice(&rw7_enc);
+
+    // 4. ws.codec.word-rle-flag (with literals, repeat, inc, dec, and odd trailing byte)
+    let mut wrf_raw = Vec::new();
+    for w in [
+        0x0100u16, 0x0500, 0x0020, 0x0020, 0x0020, 0x0010, 0x0011, 0x0012, 0x0005, 0x0004, 0x0003,
+    ] {
+        wrf_raw.extend_from_slice(&w.to_le_bytes());
+    }
+    wrf_raw.push(0x99);
+    let wrf_enc = ws_compress::word_rle_flag::encode(&wrf_raw).unwrap();
+    rom[0x900..0x900 + wrf_enc.len()].copy_from_slice(&wrf_enc);
+
+    let sha = sha256_hex(&rom);
+    let fk_doc = json!({
+        "schema": FORMATKIT_SCHEMA,
+        "schema_version": 1,
+        "kit": "swankit",
+        "media": {
+            "kind": "flat-rom",
+            "fingerprint": { "rom_sha256": sha },
+            "total_bytes": rom.len()
+        },
+        "entries": [
+            {
+                "id": "rle2_1",
+                "offset": 0x100,
+                "size": rle2_1_enc.len(),
+                "sha256": sha256_hex(&rle2_1_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.rle2-double-byte",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            },
+            {
+                "id": "rle2_2",
+                "offset": 0x400,
+                "size": rle2_2_enc.len(),
+                "sha256": sha256_hex(&rle2_2_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.rle2-double-byte",
+                "mapping": {
+                    "kind": "compressed",
+                    "params": { "codec_params": { "planes": 2 } },
+                    "inner_format": "other"
+                },
+                "verified": true
+            },
+            {
+                "id": "rw7",
+                "offset": 0x700,
+                "size": rw7_enc.len(),
+                "sha256": sha256_hex(&rw7_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.rle-word-7b",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            },
+            {
+                "id": "wrf",
+                "offset": 0x900,
+                "size": wrf_enc.len(),
+                "sha256": sha256_hex(&wrf_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.word-rle-flag",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            }
+        ]
+    });
+
+    let fk_bytes = serde_json::to_vec(&fk_doc).unwrap();
+    let loaded = LoadedAssetMap::from_json(&fk_bytes).unwrap();
+    let asset_map = loaded.to_asset_map().unwrap();
+    let charmaps = Charmaps::load(&asset_map, |_| unreachable!()).unwrap();
+
+    let report = loaded.verify(&charmaps, &rom).unwrap();
+    assert!(report.ok(), "{:?}", report.errors);
+
+    let extracted = extract(&asset_map, &charmaps, &rom).unwrap();
+    assert_eq!(extracted.failures, 0);
+    let file_bytes = |name: &str| -> &[u8] {
+        extracted
+            .files
+            .iter()
+            .find_map(|(n, f)| match (n == name, f) {
+                (true, ws_assets::ExtractedFile::Bytes(b)) => Some(b.as_slice()),
+                _ => None,
+            })
+            .unwrap()
+    };
+
+    assert_eq!(file_bytes("rle2_1.bin"), rle2_1_raw.as_slice());
+    assert_eq!(file_bytes("rle2_2.bin"), rle2_2_raw.as_slice());
+    assert_eq!(file_bytes("rw7.bin"), rw7_raw.as_slice());
+    assert_eq!(file_bytes("wrf.bin"), wrf_raw.as_slice());
+}

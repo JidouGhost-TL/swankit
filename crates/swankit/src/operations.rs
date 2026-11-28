@@ -107,6 +107,9 @@ impl Toolkit {
             extract::Codec::StridedRle => compress::catalog::STRIDED_RLE_ID,
             extract::Codec::Dict16Rle => compress::catalog::DICT16_RLE_ID,
             extract::Codec::Lz44 => compress::catalog::LZ44_ID,
+            extract::Codec::Rle2DoubleByte => compress::catalog::RLE2_DOUBLE_BYTE_ID,
+            extract::Codec::RleWord7b => compress::catalog::RLE_WORD_7B_ID,
+            extract::Codec::WordRleFlag => compress::catalog::WORD_RLE_FLAG_ID,
         })?;
         definition.decode(bytes)
     }

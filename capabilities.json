@@ -496,6 +496,42 @@
         "parse",
         "decode",
         "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-rle2-double-byte",
+      "notes": "Double-byte trigger RLE (single-plane and 2-plane split-word) stream decoder and deterministic encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-rle-word-7b",
+      "notes": "Byte-tagged 16-bit little-endian word RLE stream decoder and deterministic encoder with zero terminator",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-word-rle-flag",
+      "notes": "Flag-prefixed 16-bit word RLE (literal, repeat, increment, decrement) stream decoder and deterministic encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
         "edit"
       ],
       "category": "gfx",

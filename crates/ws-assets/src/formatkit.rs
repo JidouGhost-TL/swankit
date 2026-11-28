@@ -741,6 +741,9 @@ pub fn format_id_for(asset: &Asset) -> String {
         Codec::StridedRle => "ws.codec.strided-rle".into(),
         Codec::Dict16Rle => "ws.codec.dict16-rle".into(),
         Codec::Lz44 => "ws.codec.lz44".into(),
+        Codec::Rle2DoubleByte => "ws.codec.rle2-double-byte".into(),
+        Codec::RleWord7b => "ws.codec.rle-word-7b".into(),
+        Codec::WordRleFlag => "ws.codec.word-rle-flag".into(),
     }
 }
 
@@ -1231,6 +1234,9 @@ fn infer_codec(entry: &FormatkitEntry) -> Codec {
         "ws.codec.strided-rle" => Codec::StridedRle,
         "ws.codec.dict16-rle" => Codec::Dict16Rle,
         "ws.codec.lz44" => Codec::Lz44,
+        "ws.codec.rle2-double-byte" => Codec::Rle2DoubleByte,
+        "ws.codec.rle-word-7b" => Codec::RleWord7b,
+        "ws.codec.word-rle-flag" => Codec::WordRleFlag,
         _ => Codec::Raw,
     }
 }

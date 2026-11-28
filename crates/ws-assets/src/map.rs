@@ -250,6 +250,12 @@ pub enum Codec {
     Dict16Rle,
     #[serde(rename = "ws-lz44")]
     Lz44,
+    #[serde(rename = "ws-rle2-double-byte")]
+    Rle2DoubleByte,
+    #[serde(rename = "ws-rle-word-7b")]
+    RleWord7b,
+    #[serde(rename = "ws-word-rle-flag")]
+    WordRleFlag,
 }
 
 impl Codec {
@@ -283,6 +289,8 @@ impl Codec {
                 | Codec::Lzss12_4Msb
                 | Codec::StridedRle
                 | Codec::Dict16Rle
+                | Codec::Rle2DoubleByte
+                | Codec::WordRleFlag
         )
     }
 }

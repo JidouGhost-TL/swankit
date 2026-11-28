@@ -53,6 +53,9 @@ Generated from `swankit capabilities --json` (`formatkit.capabilities.v1`).
 | `ws-strided-rle` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | Plane-strided RLE stream decoder and deterministic encoder with per-plane zero terminators |
 | `ws-dict16-rle` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | 16-byte FIFO dictionary and repeat-last-byte MSB-first bitstream decoder and deterministic encoder |
 | `ws-lz44` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | 1-byte-token 4-bit distance and 4-bit length LSB-flag LZ77 decoder and deterministic encoder |
+| `ws-rle2-double-byte` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | Double-byte trigger RLE (single-plane and 2-plane split-word) stream decoder and deterministic encoder |
+| `ws-rle-word-7b` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | Byte-tagged 16-bit little-endian word RLE stream decoder and deterministic encoder with zero terminator |
+| `ws-word-rle-flag` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | Flag-prefixed 16-bit word RLE (literal, repeat, increment, decrement) stream decoder and deterministic encoder |
 | `ws-tile-2bpp` | `gfx` | 2 | `parse`, `decode`, `reproduce`, `edit` | 2bpp planar 8x8 tiles (monochrome and 4-color palettes) |
 | `ws-tile-4bpp-planar` | `gfx` | 2 | `parse`, `decode`, `reproduce`, `edit` | 4bpp planar 8x8 WonderSwan Color tiles |
 | `ws-tile-4bpp-packed` | `gfx` | 2 | `parse`, `decode`, `reproduce`, `edit` | 4bpp packed 8x8 WonderSwan Color tiles |

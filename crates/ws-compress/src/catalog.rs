@@ -42,6 +42,9 @@ pub const LZSS_12_4_MSB_ID: FormatId = FormatId::new("ws-lzss-12-4-msb");
 pub const STRIDED_RLE_ID: FormatId = FormatId::new("ws-strided-rle");
 pub const DICT16_RLE_ID: FormatId = FormatId::new("ws-dict16-rle");
 pub const LZ44_ID: FormatId = FormatId::new("ws-lz44");
+pub const RLE2_DOUBLE_BYTE_ID: FormatId = FormatId::new("ws-rle2-double-byte");
+pub const RLE_WORD_7B_ID: FormatId = FormatId::new("ws-rle-word-7b");
+pub const WORD_RLE_FLAG_ID: FormatId = FormatId::new("ws-word-rle-flag");
 
 /// Explicit decode-only grammar; no recognition probe or encoder.
 pub const LZSS_12_EXT_FORMAT: FormatDescriptor = {
@@ -1149,6 +1152,78 @@ pub const EMBEDDED: &[EmbeddedFormatSupport] = &[
         },
         corpus_evidence: Some(CorpusEvidence {
             handler: "ws-compress-lz44",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: RLE2_DOUBLE_BYTE_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "rle2-double-byte",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-rle2-double-byte",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: RLE_WORD_7B_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "rle-word-7b",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-rle-word-7b",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: WORD_RLE_FLAG_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "word-rle-flag",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-word-rle-flag",
             sample_floor: 1,
         }),
     },

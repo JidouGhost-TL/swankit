@@ -36,14 +36,17 @@ pub mod nibble_lzss_ring8;
 pub mod okumura;
 pub mod planar_rle;
 pub mod rle16_bit15;
+pub mod rle2_double_byte;
 pub mod rle_77ee;
 pub mod rle_lz4_cmd;
 pub mod rle_pcm_00;
+pub mod rle_word_7b;
 pub mod strided_rle;
 pub mod tile_xor_pack;
 pub mod tilemap_2bit;
 pub mod wave_4bit_packed;
 pub mod word_rle_00;
+pub mod word_rle_flag;
 pub mod zero_rle16;
 
 use formatkit_codec::sliding_window::{append_match, MatchError};
