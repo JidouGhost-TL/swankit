@@ -26,6 +26,11 @@ pub const NIBBLE_LZSS_RING8_ID: FormatId = FormatId::new("ws-nibble-lzss-ring8")
 pub const BYTE_LZSS_RING8_ID: FormatId = FormatId::new("ws-byte-lzss-ring8");
 pub const ZERO_RLE16_ID: FormatId = FormatId::new("ws-zero-rle16");
 pub const LZ_TILE_7B_ID: FormatId = FormatId::new("ws-lz-tile-7b");
+pub const DPCM_4BIT_NIBBLE_ID: FormatId = FormatId::new("ws-dpcm-4bit-nibble");
+pub const LZ_RLE_PAT_ID: FormatId = FormatId::new("ws-lz-rle-pat");
+pub const LZSS_BANDAI_G_ID: FormatId = FormatId::new("ws-lzss-bandai-g");
+pub const RLE16_BIT15_ID: FormatId = FormatId::new("ws-rle16-bit15");
+pub const TILE_XOR_PACK_ID: FormatId = FormatId::new("ws-tile-xor-pack");
 
 /// Explicit decode-only grammar; no recognition probe or encoder.
 pub const LZSS_12_EXT_FORMAT: FormatDescriptor = {
@@ -170,6 +175,23 @@ pub const FORMATS: &[FormatDescriptor] = &[
     ),
     descriptor(ZERO_RLE16_ID, "ws-zero-rle16", Confidence::CorpusBacked),
     descriptor(LZ_TILE_7B_ID, "ws-lz-tile-7b", Confidence::CorpusBacked),
+    descriptor(
+        DPCM_4BIT_NIBBLE_ID,
+        "ws-dpcm-4bit-nibble",
+        Confidence::CorpusBacked,
+    ),
+    descriptor(LZ_RLE_PAT_ID, "ws-lz-rle-pat", Confidence::CorpusBacked),
+    descriptor(
+        LZSS_BANDAI_G_ID,
+        "ws-lzss-bandai-g",
+        Confidence::CorpusBacked,
+    ),
+    descriptor(RLE16_BIT15_ID, "ws-rle16-bit15", Confidence::CorpusBacked),
+    descriptor(
+        TILE_XOR_PACK_ID,
+        "ws-tile-xor-pack",
+        Confidence::CorpusBacked,
+    ),
 ];
 
 /// Decode-only external-length support, with separately scoped corpus evidence.
@@ -720,6 +742,126 @@ pub const EMBEDDED: &[EmbeddedFormatSupport] = &[
         },
         corpus_evidence: Some(CorpusEvidence {
             handler: "ws-compress-lz-tile-7b",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: DPCM_4BIT_NIBBLE_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "dpcm-4bit-nibble",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-dpcm-4bit-nibble",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: LZ_RLE_PAT_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "lz-rle-pat",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-lz-rle-pat",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: LZSS_BANDAI_G_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "lzss-bandai-g",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-lzss-bandai-g",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: RLE16_BIT15_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "rle16-bit15",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-rle16-bit15",
+            sample_floor: 1,
+        }),
+    },
+    EmbeddedFormatSupport {
+        id: TILE_XOR_PACK_ID,
+        detectable_carrier: None,
+        family: formatkit_catalog::FormatFamilyId::new("ws-compress"),
+        decoder: "ws-compress",
+        context: ContextRequirement::ExplicitSelection,
+        local_discriminator: "tile-xor-pack",
+        dialect_group: None,
+        typed_context: true,
+        capabilities: FormatCapabilities {
+            parse: true,
+            decode: true,
+            edit: false,
+            write: true,
+            round_trip: false,
+            corpus: true,
+            bindings: false,
+            confidence: Confidence::CorpusBacked,
+        },
+        corpus_evidence: Some(CorpusEvidence {
+            handler: "ws-compress-tile-xor-pack",
             sample_floor: 1,
         }),
     },

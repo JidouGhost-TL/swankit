@@ -722,6 +722,14 @@ pub fn format_id_for(asset: &Asset) -> String {
         Codec::ByteLzssRing8 => "ws.codec.byte-lzss-ring8".into(),
         Codec::ZeroRle16 => "ws.codec.zero-rle16".into(),
         Codec::LzTile7b => "ws.codec.lz-tile-7b".into(),
+        Codec::LzCommand16Lsb => "ws.codec.lz-command16-lsb".into(),
+        Codec::LzssMsbDistance12 => "ws.codec.lzss-msb-distance12".into(),
+        Codec::Mask16Fill => "ws.codec.mask16-fill".into(),
+        Codec::Dpcm4bitNibble => "ws.codec.dpcm-4bit-nibble".into(),
+        Codec::LzRlePat => "ws.codec.lz-rle-pat".into(),
+        Codec::LzssBandaiG => "ws.codec.lzss-bandai-g".into(),
+        Codec::Rle16Bit15 => "ws.codec.rle16-bit15".into(),
+        Codec::TileXorPack => "ws.codec.tile-xor-pack".into(),
     }
 }
 
@@ -1193,6 +1201,14 @@ fn infer_codec(entry: &FormatkitEntry) -> Codec {
         "ws.codec.byte-lzss-ring8" => Codec::ByteLzssRing8,
         "ws.codec.zero-rle16" => Codec::ZeroRle16,
         "ws.codec.lz-tile-7b" => Codec::LzTile7b,
+        "ws.codec.lz-command16-lsb" => Codec::LzCommand16Lsb,
+        "ws.codec.lzss-msb-distance12" => Codec::LzssMsbDistance12,
+        "ws.codec.mask16-fill" => Codec::Mask16Fill,
+        "ws.codec.dpcm-4bit-nibble" => Codec::Dpcm4bitNibble,
+        "ws.codec.lz-rle-pat" => Codec::LzRlePat,
+        "ws.codec.lzss-bandai-g" => Codec::LzssBandaiG,
+        "ws.codec.rle16-bit15" => Codec::Rle16Bit15,
+        "ws.codec.tile-xor-pack" => Codec::TileXorPack,
         _ => Codec::Raw,
     }
 }

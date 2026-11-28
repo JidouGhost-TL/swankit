@@ -241,6 +241,41 @@ static FORMATS: &[FormatCapability] = &[
         tier: 2,
         notes: "7-bit literal and back-reference 4bpp tile LZ stream decoder and deterministic encoder",
     },
+    FormatCapability {
+        id: "ws-dpcm-4bit-nibble",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "4-bit nibble-delta DPCM audio stream decoder with hold RLE and deterministic encoder",
+    },
+    FormatCapability {
+        id: "ws-lz-rle-pat",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "Byte-tagged literal, pattern-repeat, 10-bit LZ77, and RLE fill stream decoder and encoder",
+    },
+    FormatCapability {
+        id: "ws-lzss-bandai-g",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "Length-prefixed LSB-flag 11-bit distance single-plane and 2-plane LZSS stream decoder and encoder",
+    },
+    FormatCapability {
+        id: "ws-rle16-bit15",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "16-bit little-endian word RLE (bit 15 repeat) stream decoder and deterministic encoder",
+    },
+    FormatCapability {
+        id: "ws-tile-xor-pack",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "Tile-level bitmask and XOR-delta stream decoder and deterministic encoder",
+    },
     // Graphics (ws-gfx)
     FormatCapability {
         id: "ws-tile-2bpp",

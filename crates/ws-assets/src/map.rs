@@ -212,6 +212,22 @@ pub enum Codec {
     ZeroRle16,
     #[serde(rename = "ws-lz-tile-7b")]
     LzTile7b,
+    #[serde(rename = "ws-lz-command16-lsb")]
+    LzCommand16Lsb,
+    #[serde(rename = "ws-lzss-msb-distance12")]
+    LzssMsbDistance12,
+    #[serde(rename = "ws-mask16-fill")]
+    Mask16Fill,
+    #[serde(rename = "ws-dpcm-4bit-nibble")]
+    Dpcm4bitNibble,
+    #[serde(rename = "ws-lz-rle-pat")]
+    LzRlePat,
+    #[serde(rename = "ws-lzss-bandai-g")]
+    LzssBandaiG,
+    #[serde(rename = "ws-rle16-bit15")]
+    Rle16Bit15,
+    #[serde(rename = "ws-tile-xor-pack")]
+    TileXorPack,
 }
 
 impl Codec {
@@ -236,6 +252,10 @@ impl Codec {
                 | Codec::NibbleLzssRing8
                 | Codec::ByteLzssRing8
                 | Codec::LzTile7b
+                | Codec::LzCommand16Lsb
+                | Codec::Mask16Fill
+                | Codec::LzssBandaiG
+                | Codec::TileXorPack
         )
     }
 }
@@ -268,6 +288,12 @@ pub struct CodecParams {
     /// Source address width in bits for unit-framed codecs (`16` or `32`, default `16`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_width: Option<Num>,
+    /// Plane count for planar-interleaved LZSS codecs (`1` or `2`, default `1`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub planes: Option<Num>,
+    /// Optional prefix header bytes skipped before stream framing (e.g. `2` for 2-plane LZSS).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub header_bytes: Option<Num>,
 }
 
 /// CPU view of the asset when loaded: purely descriptive.

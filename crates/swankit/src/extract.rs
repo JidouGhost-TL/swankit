@@ -64,6 +64,16 @@ pub enum Codec {
     ZeroRle16,
     #[serde(rename = "lz-tile-7b")]
     LzTile7b,
+    #[serde(rename = "dpcm-4bit-nibble")]
+    Dpcm4bitNibble,
+    #[serde(rename = "lz-rle-pat")]
+    LzRlePat,
+    #[serde(rename = "lzss-bandai-g")]
+    LzssBandaiG,
+    #[serde(rename = "rle16-bit15")]
+    Rle16Bit15,
+    #[serde(rename = "tile-xor-pack")]
+    TileXorPack,
     #[serde(skip_deserializing)]
     LzssBeUnits(TokenParameters),
 }
@@ -246,9 +256,12 @@ impl CodecDefinition {
             return Err(bad("unknown codec definition schema"));
         }
         let output_limit = match self.codec {
-            Codec::Rle77ee | Codec::RlePcm00 | Codec::Dpcm6bit | Codec::ZeroRle16 => {
-                compress::MAX_STREAM_DECODED
-            }
+            Codec::Rle77ee
+            | Codec::RlePcm00
+            | Codec::Dpcm6bit
+            | Codec::ZeroRle16
+            | Codec::Dpcm4bitNibble
+            | Codec::Rle16Bit15 => compress::MAX_STREAM_DECODED,
             _ => compress::MAX_DECODED,
         };
         if self.max_output > output_limit || self.history.len() > compress::MAX_DECODED {
@@ -465,6 +478,41 @@ impl CodecDefinition {
                     return Err(bad("lz-tile-7b has no history input"));
                 }
                 compress::lz_tile_7b::decode(source, self.max_output)
+            }
+            Codec::Dpcm4bitNibble => {
+                if !self.history.is_empty() {
+                    return Err(bad("dpcm-4bit-nibble has no history input"));
+                }
+                compress::dpcm_4bit_nibble::decode(source, self.max_output)
+            }
+            Codec::LzRlePat => {
+                if !self.history.is_empty() {
+                    return Err(bad("lz-rle-pat has no history input"));
+                }
+                compress::lz_rle_pat::decode(
+                    source,
+                    self.decoded_size
+                        .ok_or_else(|| bad("lz-rle-pat requires decoded_size"))?,
+                    self.max_output,
+                )
+            }
+            Codec::LzssBandaiG => {
+                if !self.history.is_empty() {
+                    return Err(bad("lzss-bandai-g has no history input"));
+                }
+                compress::lzss_bandai_g::decode(source, self.max_output)
+            }
+            Codec::Rle16Bit15 => {
+                if !self.history.is_empty() {
+                    return Err(bad("rle16-bit15 has no history input"));
+                }
+                compress::rle16_bit15::decode(source, self.max_output)
+            }
+            Codec::TileXorPack => {
+                if !self.history.is_empty() {
+                    return Err(bad("tile-xor-pack has no history input"));
+                }
+                compress::tile_xor_pack::decode(source, self.max_output)
             }
         }
     }

@@ -529,7 +529,10 @@ pub fn preview_asset_impl(
     let format_id = format_id_for(asset);
 
     if asset.kind == Kind::Pcm
-        || matches!(asset.codec, Codec::RlePcm00 | Codec::Dpcm6bit)
+        || matches!(
+            asset.codec,
+            Codec::RlePcm00 | Codec::Dpcm6bit | Codec::Dpcm4bitNibble
+        )
     {
         let rate = sample_rate
             .filter(|&r| r > 0)
@@ -1370,6 +1373,41 @@ mod tests {
                 assert_eq!(&wav[0..4], b"RIFF");
             }
             other => panic!("expected wav for pcm.s8, got {other:?}"),
+        }
+
+        // Verify dpcm-4bit-nibble also previews as WAV in swankit-wasm
+        let mut rom2 = vec![0u8; 256];
+        let dpcm4_enc = ws_compress::dpcm_4bit_nibble::encode(&pcm_samples).expect("encode dpcm4");
+        rom2[0..dpcm4_enc.len()].copy_from_slice(&dpcm4_enc);
+        let fk_dpcm4 = json!({
+            "schema": "formatkit.asset-map.v1",
+            "schema_version": 1,
+            "kit": "swankit",
+            "media": {
+                "kind": "flat-rom",
+                "fingerprint": { "rom_sha256": sha256_hex(&rom2) },
+                "total_bytes": rom2.len()
+            },
+            "entries": [{
+                "id": "voice.dpcm4",
+                "offset": 0,
+                "size": dpcm4_enc.len(),
+                "status": "mapped",
+                "format_id": "ws.codec.dpcm-4bit-nibble",
+                "mapping": {
+                    "kind": "compressed",
+                    "params": { "format": { "sample_rate": 12000 } }
+                }
+            }]
+        })
+        .to_string();
+        match preview_asset_impl(&rom2, &fk_dpcm4, "voice.dpcm4", None, None, None).expect("dpcm4")
+        {
+            PreviewOutput::Wav { sample_rate, wav } => {
+                assert_eq!(sample_rate, 12_000);
+                assert_eq!(&wav[0..4], b"RIFF");
+            }
+            other => panic!("expected wav for dpcm-4bit-nibble, got {other:?}"),
         }
     }
 

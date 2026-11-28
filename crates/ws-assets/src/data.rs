@@ -4,10 +4,12 @@ use crate::text::Charmaps;
 use crate::{malformed, AssetMap};
 use formatkit_core::{bytes_at, Result};
 use ws_compress::{
-    byte_lzss_ring8, counted_word_lz, dpcm_6bit, flag16_distance11, lz_bits_16, lz_rle_7f,
-    lz_tile_7b, lz_u8_zero, lz_word16_msb, lz_word_counted, lzs2, lzss_11_5, lzss_12, lzss_12_ext,
-    lzss_be_units, lzss_token_be, lzss_u16_zero, nibble_lzss_ring8, okumura, planar_rle, rle_77ee,
-    rle_pcm_00, zero_rle16, BitOrder, MAX_DECODED,
+    byte_lzss_ring8, counted_word_lz, dpcm_4bit_nibble, dpcm_6bit, flag16_distance11, lz_bits_16,
+    lz_command16_lsb, lz_rle_7f, lz_rle_pat, lz_tile_7b, lz_u8_zero, lz_word16_msb,
+    lz_word_counted, lzs2, lzss_11_5, lzss_12, lzss_12_ext, lzss_bandai_g, lzss_be_units,
+    lzss_msb_distance12, lzss_token_be, lzss_u16_zero, mask16_fill, nibble_lzss_ring8, okumura,
+    planar_rle, rle16_bit15, rle_77ee, rle_pcm_00, tile_xor_pack, zero_rle16, BitOrder,
+    MAX_DECODED,
 };
 
 /// Upper bound on the decoded bytes of one asset.
@@ -105,6 +107,57 @@ fn lzss_be_units_params(asset: &Asset) -> Result<(u8, u8)> {
     Ok((unit_size, source_width))
 }
 
+fn lz_command16_lsb_params(asset: &Asset) -> Result<&[u8]> {
+    let history = asset.codec_params.history.as_deref().unwrap_or(&[]);
+    if history.len() > 4096 {
+        return Err(malformed(format!(
+            "{}: LZ history exceeds 4096 bytes",
+            asset.id
+        )));
+    }
+    Ok(history)
+}
+
+fn lz_rle_pat_params(asset: &Asset) -> Result<usize> {
+    let size = asset
+        .codec_params
+        .decoded_length
+        .ok_or_else(|| malformed(format!("{}: ws-lz-rle-pat needs decoded_length", asset.id)))?
+        .usize()?;
+    if size > MAX_DECODED {
+        return Err(malformed(format!("{}: decoded asset too large", asset.id)));
+    }
+    Ok(size)
+}
+
+fn lzss_bandai_g_params(asset: &Asset) -> Result<(u8, usize)> {
+    let p = &asset.codec_params;
+    let planes = match p.planes {
+        Some(n) => u8::try_from(n.0)
+            .ok()
+            .filter(|&v| matches!(v, 1 | 2))
+            .ok_or_else(|| malformed(format!("{}: planes must be 1 or 2", asset.id)))?,
+        None => 1,
+    };
+    let header_bytes = match p.header_bytes {
+        Some(n) => n.usize()?,
+        None => 0,
+    };
+    if planes == 1 && header_bytes != 0 {
+        return Err(malformed(format!(
+            "{}: header_bytes only applies to 2-plane ws-lzss-bandai-g",
+            asset.id
+        )));
+    }
+    if header_bytes > 16 {
+        return Err(malformed(format!(
+            "{}: header_bytes exceeds 16",
+            asset.id
+        )));
+    }
+    Ok((planes, header_bytes))
+}
+
 pub(crate) fn validate_codec_params(asset: &Asset) -> Result<()> {
     match asset.codec {
         Codec::LzssU16Zero => {
@@ -113,11 +166,20 @@ pub(crate) fn validate_codec_params(asset: &Asset) -> Result<()> {
         Codec::Lzss12 => {
             lzss12_params(asset)?;
         }
-        Codec::Lzss12Ext => {
+        Codec::Lzss12Ext | Codec::LzssMsbDistance12 => {
             lzss12_ext_params(asset)?;
+        }
+        Codec::LzCommand16Lsb => {
+            lz_command16_lsb_params(asset)?;
         }
         Codec::LzssBeUnits => {
             lzss_be_units_params(asset)?;
+        }
+        Codec::LzRlePat => {
+            lz_rle_pat_params(asset)?;
+        }
+        Codec::LzssBandaiG => {
+            lzss_bandai_g_params(asset)?;
         }
         Codec::Lzs2 if asset.codec_params != Default::default() => {
             return Err(malformed(format!(
@@ -190,7 +252,15 @@ pub fn decode_asset(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -
         | Codec::NibbleLzssRing8
         | Codec::ByteLzssRing8
         | Codec::ZeroRle16
-        | Codec::LzTile7b => {
+        | Codec::LzTile7b
+        | Codec::LzCommand16Lsb
+        | Codec::LzssMsbDistance12
+        | Codec::Mask16Fill
+        | Codec::Dpcm4bitNibble
+        | Codec::LzRlePat
+        | Codec::LzssBandaiG
+        | Codec::Rle16Bit15
+        | Codec::TileXorPack => {
             let outcome = match asset.codec {
                 Codec::Lzs2 => lzs2::decode(window, MAX_DECODED)?,
                 Codec::LzRle7f => lz_rle_7f::decode(window, MAX_DECODED)?,
@@ -247,6 +317,44 @@ pub fn decode_asset(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -
                     zero_rle16::decode(window, MAX_ASSET_BYTES)?
                 }
                 Codec::LzTile7b => lz_tile_7b::decode(window, MAX_DECODED)?,
+                Codec::LzCommand16Lsb => {
+                    let history = lz_command16_lsb_params(asset)?;
+                    lz_command16_lsb::decode_with_history(window, history, MAX_DECODED)?
+                }
+                Codec::LzssMsbDistance12 => {
+                    let (size, history) = lzss12_ext_params(asset)?;
+                    lzss_msb_distance12::decode_with_history(window, history, size, MAX_ASSET_BYTES)?
+                }
+                Codec::Mask16Fill => mask16_fill::decode(window, MAX_DECODED)?,
+                Codec::Dpcm4bitNibble => {
+                    if declared.is_none() {
+                        return Err(malformed(format!(
+                            "{id}: ws-dpcm-4bit-nibble asset needs a length"
+                        )));
+                    }
+                    dpcm_4bit_nibble::decode(window, MAX_ASSET_BYTES)?
+                }
+                Codec::LzRlePat => {
+                    let size = lz_rle_pat_params(asset)?;
+                    lz_rle_pat::decode(window, size, MAX_DECODED)?
+                }
+                Codec::LzssBandaiG => {
+                    let (planes, header_bytes) = lzss_bandai_g_params(asset)?;
+                    if planes == 2 {
+                        lzss_bandai_g::decode_2plane(window, header_bytes, MAX_DECODED)?
+                    } else {
+                        lzss_bandai_g::decode(window, MAX_DECODED)?
+                    }
+                }
+                Codec::Rle16Bit15 => {
+                    if declared.is_none() {
+                        return Err(malformed(format!(
+                            "{id}: ws-rle16-bit15 asset needs a length"
+                        )));
+                    }
+                    rle16_bit15::decode(window, MAX_ASSET_BYTES)?
+                }
+                Codec::TileXorPack => tile_xor_pack::decode(window, MAX_DECODED)?,
                 _ => unreachable!(),
             };
             if let Some(n) = declared {
@@ -533,5 +641,44 @@ pub fn encode_payload(asset: &Asset, decoded: &[u8]) -> Result<Vec<u8>> {
         Codec::ByteLzssRing8 => byte_lzss_ring8::encode(decoded),
         Codec::ZeroRle16 => zero_rle16::encode(decoded),
         Codec::LzTile7b => lz_tile_7b::encode(decoded),
+        Codec::LzCommand16Lsb => Err(malformed(format!(
+            "{}: ws-lz-command16-lsb assets are decode-only",
+            asset.id
+        ))),
+        Codec::LzssMsbDistance12 => Err(malformed(format!(
+            "{}: ws-lzss-msb-distance12 assets are decode-only",
+            asset.id
+        ))),
+        Codec::Mask16Fill => Err(malformed(format!(
+            "{}: ws-mask16-fill assets are decode-only",
+            asset.id
+        ))),
+        Codec::Dpcm4bitNibble => dpcm_4bit_nibble::encode(decoded),
+        Codec::LzRlePat => {
+            let size = lz_rle_pat_params(asset)?;
+            if decoded.len() != size {
+                return Err(malformed(format!(
+                    "{}: ws-lz-rle-pat payload must stay {size} bytes",
+                    asset.id
+                )));
+            }
+            lz_rle_pat::encode(decoded)
+        }
+        Codec::LzssBandaiG => {
+            let (planes, header_bytes) = lzss_bandai_g_params(asset)?;
+            if planes == 2 {
+                if header_bytes != 0 {
+                    return Err(malformed(format!(
+                        "{}: 2-plane ws-lzss-bandai-g with prefix header_bytes is decode-only",
+                        asset.id
+                    )));
+                }
+                lzss_bandai_g::encode_2plane(decoded)
+            } else {
+                lzss_bandai_g::encode(decoded)
+            }
+        }
+        Codec::Rle16Bit15 => rle16_bit15::encode(decoded),
+        Codec::TileXorPack => tile_xor_pack::encode(decoded),
     }
 }

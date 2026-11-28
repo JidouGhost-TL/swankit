@@ -304,6 +304,66 @@
         "parse",
         "decode",
         "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-dpcm-4bit-nibble",
+      "notes": "4-bit nibble-delta DPCM audio stream decoder with hold RLE and deterministic encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-lz-rle-pat",
+      "notes": "Byte-tagged literal, pattern-repeat, 10-bit LZ77, and RLE fill stream decoder and encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-lzss-bandai-g",
+      "notes": "Length-prefixed LSB-flag 11-bit distance single-plane and 2-plane LZSS stream decoder and encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-rle16-bit15",
+      "notes": "16-bit little-endian word RLE (bit 15 repeat) stream decoder and deterministic encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-tile-xor-pack",
+      "notes": "Tile-level bitmask and XOR-delta stream decoder and deterministic encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
         "edit"
       ],
       "category": "gfx",

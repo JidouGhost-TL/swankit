@@ -1189,3 +1189,212 @@ fn round3_codecs_round_trip_through_formatkit_v1() {
     assert_eq!(file_bytes("zrle0.bin"), zrle_raw.as_slice());
     assert_eq!(file_bytes("tile7.bin"), tile7_raw.as_slice());
 }
+
+#[test]
+fn round4_and_remaining_wired_codecs_round_trip_through_formatkit_v1() {
+    let mut rom = vec![0u8; 65536];
+
+    // 1. ws-lz-command16-lsb: 2 commands, literal 'A', then distance 1 length 3 => "AAAA"
+    let cmd16_enc = [0x00u8, 0x02, 0x06, b'A', 0x00, 0x10];
+    rom[0x100..0x100 + cmd16_enc.len()].copy_from_slice(&cmd16_enc);
+
+    // 2. ws-lzss-msb-distance12: "ABABA" (decoded_length=5)
+    let msb12_enc = [0x20u8, b'A', b'B', 0x10, 0x00];
+    rom[0x200..0x200 + msb12_enc.len()].copy_from_slice(&msb12_enc);
+
+    // 3. ws-mask16-fill: 1 group, fill 0xee, mask 0x8001 (all fill except 14 literals)
+    let mut mask16_enc = vec![1u8, 0xee, 0x01, 0x80];
+    mask16_enc.extend(0u8..14);
+    rom[0x300..0x300 + mask16_enc.len()].copy_from_slice(&mask16_enc);
+    let mut mask16_expected: Vec<u8> = (0..7).collect();
+    mask16_expected.extend_from_slice(&[0xee, 0xee]);
+    mask16_expected.extend(7..14);
+
+    // 4. ws-dpcm-4bit-nibble -> WAV export
+    let dpcm4_raw: Vec<u8> = vec![
+        0x20, 0x20, 0x20, 0x21, 0x23, 0x20, 0x1e, 0x60, 0x60, 0x60, 0x5f, 0x80,
+    ];
+    let dpcm4_enc = ws_compress::dpcm_4bit_nibble::encode(&dpcm4_raw).unwrap();
+    rom[0x400..0x400 + dpcm4_enc.len()].copy_from_slice(&dpcm4_enc);
+
+    // 5. ws-lz-rle-pat
+    let lrp_raw = b"AAAABBBBCCCC_pattern_pattern_01234567".to_vec();
+    let lrp_enc = ws_compress::lz_rle_pat::encode(&lrp_raw).unwrap();
+    rom[0x500..0x500 + lrp_enc.len()].copy_from_slice(&lrp_enc);
+
+    // 6a. ws-lzss-bandai-g (1-plane)
+    let bg1_raw = b"BandaiG_1plane_BandaiG_1plane_01234567".to_vec();
+    let bg1_enc = ws_compress::lzss_bandai_g::encode(&bg1_raw).unwrap();
+    rom[0x600..0x600 + bg1_enc.len()].copy_from_slice(&bg1_enc);
+
+    // 6b. ws-lzss-bandai-g (2-plane with 2-byte prefix header)
+    let bg2_raw: Vec<u8> = (0..64u8).map(|i| if i % 2 == 0 { i & 7 } else { 0xc0 | (i & 3) }).collect();
+    let mut bg2_enc = vec![0xaa, 0x55];
+    bg2_enc.extend_from_slice(&ws_compress::lzss_bandai_g::encode_2plane(&bg2_raw).unwrap());
+    rom[0x700..0x700 + bg2_enc.len()].copy_from_slice(&bg2_enc);
+
+    // 7. ws-rle16-bit15
+    let rle16_raw = vec![0x34, 0x12, 0x34, 0x12, 0x34, 0x12, 0x78, 0x56, 0xbc, 0x9a];
+    let rle16_enc = ws_compress::rle16_bit15::encode(&rle16_raw).unwrap();
+    rom[0x800..0x800 + rle16_enc.len()].copy_from_slice(&rle16_enc);
+
+    // 8. ws-tile-xor-pack
+    let mut txp_raw = vec![0u8; 32];
+    txp_raw.extend((0..32u8).map(|i| if i % 4 == 0 { i + 1 } else { 0 }));
+    let txp_enc = ws_compress::tile_xor_pack::encode(&txp_raw).unwrap();
+    rom[0x900..0x900 + txp_enc.len()].copy_from_slice(&txp_enc);
+
+    let sha = sha256_hex(&rom);
+    let fk_doc = json!({
+        "schema": FORMATKIT_SCHEMA,
+        "schema_version": 1,
+        "kit": "swankit",
+        "media": {
+            "kind": "flat-rom",
+            "fingerprint": { "rom_sha256": sha },
+            "total_bytes": rom.len()
+        },
+        "entries": [
+            {
+                "id": "cmd16",
+                "offset": 0x100,
+                "size": cmd16_enc.len(),
+                "sha256": sha256_hex(&cmd16_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.lz-command16-lsb",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            },
+            {
+                "id": "msb12",
+                "offset": 0x200,
+                "size": msb12_enc.len(),
+                "sha256": sha256_hex(&msb12_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.lzss-msb-distance12",
+                "mapping": {
+                    "kind": "compressed",
+                    "params": { "codec_params": { "decoded_length": 5 } },
+                    "inner_format": "other"
+                },
+                "verified": true
+            },
+            {
+                "id": "mask16",
+                "offset": 0x300,
+                "size": mask16_enc.len(),
+                "sha256": sha256_hex(&mask16_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.mask16-fill",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            },
+            {
+                "id": "dpcm4",
+                "offset": 0x400,
+                "size": dpcm4_enc.len(),
+                "sha256": sha256_hex(&dpcm4_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.dpcm-4bit-nibble",
+                "mapping": {
+                    "kind": "compressed",
+                    "params": { "format": { "sample_rate": 12000 } },
+                    "inner_format": "pcm"
+                },
+                "verified": true
+            },
+            {
+                "id": "lrp0",
+                "offset": 0x500,
+                "size": lrp_enc.len(),
+                "sha256": sha256_hex(&lrp_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.lz-rle-pat",
+                "mapping": {
+                    "kind": "compressed",
+                    "params": { "codec_params": { "decoded_length": lrp_raw.len() } },
+                    "inner_format": "other"
+                },
+                "verified": true
+            },
+            {
+                "id": "bg1",
+                "offset": 0x600,
+                "size": bg1_enc.len(),
+                "sha256": sha256_hex(&bg1_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.lzss-bandai-g",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            },
+            {
+                "id": "bg2",
+                "offset": 0x700,
+                "size": bg2_enc.len(),
+                "sha256": sha256_hex(&bg2_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.lzss-bandai-g",
+                "mapping": {
+                    "kind": "compressed",
+                    "params": { "codec_params": { "planes": 2, "header_bytes": 2 } },
+                    "inner_format": "other"
+                },
+                "verified": true
+            },
+            {
+                "id": "rle16",
+                "offset": 0x800,
+                "size": rle16_enc.len(),
+                "sha256": sha256_hex(&rle16_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.rle16-bit15",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            },
+            {
+                "id": "txp0",
+                "offset": 0x900,
+                "size": txp_enc.len(),
+                "sha256": sha256_hex(&txp_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.tile-xor-pack",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            }
+        ]
+    });
+
+    let fk_bytes = serde_json::to_vec(&fk_doc).unwrap();
+    let loaded = LoadedAssetMap::from_json(&fk_bytes).unwrap();
+    let asset_map = loaded.to_asset_map().unwrap();
+    let charmaps = Charmaps::load(&asset_map, |_| unreachable!()).unwrap();
+
+    let report = loaded.verify(&charmaps, &rom).unwrap();
+    assert!(report.ok(), "{:?}", report.errors);
+
+    let extracted = extract(&asset_map, &charmaps, &rom).unwrap();
+    assert_eq!(extracted.failures, 0);
+    let file_bytes = |name: &str| -> &[u8] {
+        extracted
+            .files
+            .iter()
+            .find_map(|(n, f)| match (n == name, f) {
+                (true, ws_assets::ExtractedFile::Bytes(b)) => Some(b.as_slice()),
+                _ => None,
+            })
+            .unwrap()
+    };
+    assert_eq!(file_bytes("cmd16.bin"), b"AAAA");
+    assert_eq!(file_bytes("msb12.bin"), b"ABABA");
+    assert_eq!(file_bytes("mask16.bin"), mask16_expected.as_slice());
+    let expected_wav = ws_sound::render::unsigned_pcm(&dpcm4_raw, 12_000, dpcm4_raw.len())
+        .unwrap()
+        .to_wav_bytes()
+        .unwrap();
+    assert_eq!(file_bytes("dpcm4.wav"), expected_wav.as_slice());
+    assert_eq!(file_bytes("lrp0.bin"), lrp_raw.as_slice());
+    assert_eq!(file_bytes("bg1.bin"), bg1_raw.as_slice());
+    assert_eq!(file_bytes("bg2.bin"), bg2_raw.as_slice());
+    assert_eq!(file_bytes("rle16.bin"), rle16_raw.as_slice());
+    assert_eq!(file_bytes("txp0.bin"), txp_raw.as_slice());
+}
