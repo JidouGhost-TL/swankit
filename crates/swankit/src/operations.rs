@@ -87,6 +87,10 @@ impl Toolkit {
             extract::Codec::Lzss11_5 => compress::catalog::LZSS_11_5_ID,
             extract::Codec::PlanarRle => compress::catalog::PLANAR_RLE_ID,
             extract::Codec::LzssTokenBe => compress::catalog::LZSS_TOKEN_BE_ID,
+            extract::Codec::NibbleLzssRing8 => compress::catalog::NIBBLE_LZSS_RING8_ID,
+            extract::Codec::ByteLzssRing8 => compress::catalog::BYTE_LZSS_RING8_ID,
+            extract::Codec::ZeroRle16 => compress::catalog::ZERO_RLE16_ID,
+            extract::Codec::LzTile7b => compress::catalog::LZ_TILE_7B_ID,
         })?;
         definition.decode(bytes)
     }

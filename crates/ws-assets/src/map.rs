@@ -200,6 +200,18 @@ pub enum Codec {
     PlanarRle,
     #[serde(rename = "ws-lzss-token-be")]
     LzssTokenBe,
+    #[serde(rename = "ws-lzss-be-units")]
+    LzssBeUnits,
+    #[serde(rename = "ws-lzss-12-ext")]
+    Lzss12Ext,
+    #[serde(rename = "ws-nibble-lzss-ring8")]
+    NibbleLzssRing8,
+    #[serde(rename = "ws-byte-lzss-ring8")]
+    ByteLzssRing8,
+    #[serde(rename = "ws-zero-rle16")]
+    ZeroRle16,
+    #[serde(rename = "ws-lz-tile-7b")]
+    LzTile7b,
 }
 
 impl Codec {
@@ -220,6 +232,10 @@ impl Codec {
                 | Codec::Flag16Distance11
                 | Codec::PlanarRle
                 | Codec::LzssTokenBe
+                | Codec::LzssBeUnits
+                | Codec::NibbleLzssRing8
+                | Codec::ByteLzssRing8
+                | Codec::LzTile7b
         )
     }
 }
@@ -246,6 +262,12 @@ pub struct CodecParams {
     /// An empty array declares that no prior bytes are available.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub history: Option<Vec<u8>>,
+    /// Unit size in bytes for unit-framed codecs (`16` or `32`, default `16`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unit_size: Option<Num>,
+    /// Source address width in bits for unit-framed codecs (`16` or `32`, default `16`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_width: Option<Num>,
 }
 
 /// CPU view of the asset when loaded: purely descriptive.

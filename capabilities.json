@@ -256,6 +256,54 @@
         "parse",
         "decode",
         "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-nibble-lzss-ring8",
+      "notes": "4-bit nibble MSB-bitstream 256-entry ring-buffer LZSS stream decoder and deterministic encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-byte-lzss-ring8",
+      "notes": "8-bit byte MSB-bitstream 256-entry ring-buffer LZSS stream decoder and deterministic encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-zero-rle16",
+      "notes": "16-bit little-endian zero-run RLE stream decoder and deterministic encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
+        "author"
+      ],
+      "category": "compression",
+      "id": "ws-lz-tile-7b",
+      "notes": "7-bit literal and back-reference 4bpp tile LZ stream decoder and deterministic encoder",
+      "tier": 2
+    },
+    {
+      "capabilities": [
+        "parse",
+        "decode",
+        "reproduce",
         "edit"
       ],
       "category": "gfx",

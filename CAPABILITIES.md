@@ -33,6 +33,10 @@ Generated from `swankit capabilities --json` (`formatkit.capabilities.v1`).
 | `ws-lzss-11-5` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | 2 KiB ring-buffer 11-bit position and 5-bit length LZSS stream decoder and encoder |
 | `ws-planar-rle` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | Bitplane-split 0xFFFF-terminated tile RLE stream decoder and deterministic encoder |
 | `ws-lzss-token-be` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | Big-endian token-counted bit-flag LZSS stream decoder and deterministic encoder |
+| `ws-nibble-lzss-ring8` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | 4-bit nibble MSB-bitstream 256-entry ring-buffer LZSS stream decoder and deterministic encoder |
+| `ws-byte-lzss-ring8` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | 8-bit byte MSB-bitstream 256-entry ring-buffer LZSS stream decoder and deterministic encoder |
+| `ws-zero-rle16` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | 16-bit little-endian zero-run RLE stream decoder and deterministic encoder |
+| `ws-lz-tile-7b` | `compression` | 2 | `parse`, `decode`, `reproduce`, `author` | 7-bit literal and back-reference 4bpp tile LZ stream decoder and deterministic encoder |
 | `ws-tile-2bpp` | `gfx` | 2 | `parse`, `decode`, `reproduce`, `edit` | 2bpp planar 8x8 tiles (monochrome and 4-color palettes) |
 | `ws-tile-4bpp-planar` | `gfx` | 2 | `parse`, `decode`, `reproduce`, `edit` | 4bpp planar 8x8 WonderSwan Color tiles |
 | `ws-tile-4bpp-packed` | `gfx` | 2 | `parse`, `decode`, `reproduce`, `edit` | 4bpp packed 8x8 WonderSwan Color tiles |

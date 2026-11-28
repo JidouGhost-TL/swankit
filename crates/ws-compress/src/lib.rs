@@ -2,6 +2,7 @@
 //! Select the grammar explicitly: streams have no reliable global magic.
 #![forbid(unsafe_code)]
 
+pub mod byte_lzss_ring8;
 pub mod catalog;
 pub mod counted_word_lz;
 pub mod dpcm_6bit;
@@ -9,6 +10,7 @@ pub mod flag16_distance11;
 pub mod lz_bits_16;
 pub mod lz_command16_lsb;
 pub mod lz_rle_7f;
+pub mod lz_tile_7b;
 pub mod lz_u8_zero;
 pub mod lz_word16_msb;
 pub mod lz_word_counted;
@@ -21,10 +23,12 @@ pub mod lzss_msb_distance12;
 pub mod lzss_token_be;
 pub mod lzss_u16_zero;
 pub mod mask16_fill;
+pub mod nibble_lzss_ring8;
 pub mod okumura;
 pub mod planar_rle;
 pub mod rle_77ee;
 pub mod rle_pcm_00;
+pub mod zero_rle16;
 
 use formatkit_codec::sliding_window::{append_match, MatchError};
 pub use formatkit_codec::{BitOrder, DecodeOutcome};

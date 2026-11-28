@@ -4,9 +4,10 @@ use crate::text::Charmaps;
 use crate::{malformed, AssetMap};
 use formatkit_core::{bytes_at, Result};
 use ws_compress::{
-    counted_word_lz, dpcm_6bit, flag16_distance11, lz_bits_16, lz_rle_7f, lz_u8_zero,
-    lz_word16_msb, lz_word_counted, lzs2, lzss_11_5, lzss_12, lzss_token_be, lzss_u16_zero,
-    okumura, planar_rle, rle_77ee, rle_pcm_00, BitOrder, MAX_DECODED,
+    byte_lzss_ring8, counted_word_lz, dpcm_6bit, flag16_distance11, lz_bits_16, lz_rle_7f,
+    lz_tile_7b, lz_u8_zero, lz_word16_msb, lz_word_counted, lzs2, lzss_11_5, lzss_12, lzss_12_ext,
+    lzss_be_units, lzss_token_be, lzss_u16_zero, nibble_lzss_ring8, okumura, planar_rle, rle_77ee,
+    rle_pcm_00, zero_rle16, BitOrder, MAX_DECODED,
 };
 
 /// Upper bound on the decoded bytes of one asset.
@@ -66,6 +67,44 @@ fn lzss12_params(asset: &Asset) -> Result<(usize, &[u8])> {
     Ok((size, history))
 }
 
+fn lzss12_ext_params(asset: &Asset) -> Result<(usize, &[u8])> {
+    let p = &asset.codec_params;
+    let size = p
+        .decoded_length
+        .ok_or_else(|| malformed(format!("{}: ws-lzss-12-ext needs decoded_length", asset.id)))?
+        .usize()?;
+    if size > MAX_ASSET_BYTES {
+        return Err(malformed(format!("{}: decoded asset too large", asset.id)));
+    }
+    let history = p.history.as_deref().unwrap_or(&[]);
+    if history.len() > 4096 {
+        return Err(malformed(format!(
+            "{}: LZSS history exceeds 4096 bytes",
+            asset.id
+        )));
+    }
+    Ok((size, history))
+}
+
+fn lzss_be_units_params(asset: &Asset) -> Result<(u8, u8)> {
+    let p = &asset.codec_params;
+    let unit_size = match p.unit_size {
+        Some(n) => u8::try_from(n.0)
+            .ok()
+            .filter(|&v| matches!(v, 16 | 32))
+            .ok_or_else(|| malformed(format!("{}: unit_size must be 16 or 32", asset.id)))?,
+        None => 16,
+    };
+    let source_width = match p.source_width {
+        Some(n) => u8::try_from(n.0)
+            .ok()
+            .filter(|&v| matches!(v, 16 | 32))
+            .ok_or_else(|| malformed(format!("{}: source_width must be 16 or 32", asset.id)))?,
+        None => 16,
+    };
+    Ok((unit_size, source_width))
+}
+
 pub(crate) fn validate_codec_params(asset: &Asset) -> Result<()> {
     match asset.codec {
         Codec::LzssU16Zero => {
@@ -73,6 +112,12 @@ pub(crate) fn validate_codec_params(asset: &Asset) -> Result<()> {
         }
         Codec::Lzss12 => {
             lzss12_params(asset)?;
+        }
+        Codec::Lzss12Ext => {
+            lzss12_ext_params(asset)?;
+        }
+        Codec::LzssBeUnits => {
+            lzss_be_units_params(asset)?;
         }
         Codec::Lzs2 if asset.codec_params != Default::default() => {
             return Err(malformed(format!(
@@ -139,7 +184,13 @@ pub fn decode_asset(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -
         | Codec::Lzss11_5
         | Codec::Flag16Distance11
         | Codec::PlanarRle
-        | Codec::LzssTokenBe => {
+        | Codec::LzssTokenBe
+        | Codec::LzssBeUnits
+        | Codec::Lzss12Ext
+        | Codec::NibbleLzssRing8
+        | Codec::ByteLzssRing8
+        | Codec::ZeroRle16
+        | Codec::LzTile7b => {
             let outcome = match asset.codec {
                 Codec::Lzs2 => lzs2::decode(window, MAX_DECODED)?,
                 Codec::LzRle7f => lz_rle_7f::decode(window, MAX_DECODED)?,
@@ -154,6 +205,14 @@ pub fn decode_asset(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -
                 Codec::Lzss12 => {
                     let (size, history) = lzss12_params(asset)?;
                     lzss_12::decode_with_history(window, history, size, MAX_ASSET_BYTES)?
+                }
+                Codec::Lzss12Ext => {
+                    let (size, history) = lzss12_ext_params(asset)?;
+                    lzss_12_ext::decode_with_history(window, history, size, MAX_ASSET_BYTES)?
+                }
+                Codec::LzssBeUnits => {
+                    let (unit_size, source_width) = lzss_be_units_params(asset)?;
+                    lzss_be_units::decode(window, unit_size, source_width, MAX_DECODED)?
                 }
                 Codec::Rle77ee => rle_77ee::decode(window, MAX_ASSET_BYTES)?,
                 Codec::RlePcm00 => {
@@ -177,6 +236,17 @@ pub fn decode_asset(map: &AssetMap, charmaps: &Charmaps, rom: &[u8], id: &str) -
                 Codec::Flag16Distance11 => flag16_distance11::decode(window, MAX_DECODED)?,
                 Codec::PlanarRle => planar_rle::decode(window, MAX_DECODED)?,
                 Codec::LzssTokenBe => lzss_token_be::decode(window, MAX_DECODED)?,
+                Codec::NibbleLzssRing8 => nibble_lzss_ring8::decode(window, MAX_DECODED)?,
+                Codec::ByteLzssRing8 => byte_lzss_ring8::decode(window, MAX_DECODED)?,
+                Codec::ZeroRle16 => {
+                    if declared.is_none() {
+                        return Err(malformed(format!(
+                            "{id}: ws-zero-rle16 asset needs a length"
+                        )));
+                    }
+                    zero_rle16::decode(window, MAX_ASSET_BYTES)?
+                }
+                Codec::LzTile7b => lz_tile_7b::decode(window, MAX_DECODED)?,
                 _ => unreachable!(),
             };
             if let Some(n) = declared {
@@ -451,5 +521,17 @@ pub fn encode_payload(asset: &Asset, decoded: &[u8]) -> Result<Vec<u8>> {
             asset.id
         ))),
         Codec::LzssTokenBe => lzss_token_be::encode(decoded),
+        Codec::LzssBeUnits => Err(malformed(format!(
+            "{}: ws-lzss-be-units assets are decode-only",
+            asset.id
+        ))),
+        Codec::Lzss12Ext => Err(malformed(format!(
+            "{}: ws-lzss-12-ext assets are decode-only",
+            asset.id
+        ))),
+        Codec::NibbleLzssRing8 => nibble_lzss_ring8::encode(decoded),
+        Codec::ByteLzssRing8 => byte_lzss_ring8::encode(decoded),
+        Codec::ZeroRle16 => zero_rle16::encode(decoded),
+        Codec::LzTile7b => lz_tile_7b::encode(decoded),
     }
 }

@@ -56,6 +56,14 @@ pub enum Codec {
     PlanarRle,
     #[serde(rename = "lzss-token-be")]
     LzssTokenBe,
+    #[serde(rename = "nibble-lzss-ring8")]
+    NibbleLzssRing8,
+    #[serde(rename = "byte-lzss-ring8")]
+    ByteLzssRing8,
+    #[serde(rename = "zero-rle16")]
+    ZeroRle16,
+    #[serde(rename = "lz-tile-7b")]
+    LzTile7b,
     #[serde(skip_deserializing)]
     LzssBeUnits(TokenParameters),
 }
@@ -238,7 +246,9 @@ impl CodecDefinition {
             return Err(bad("unknown codec definition schema"));
         }
         let output_limit = match self.codec {
-            Codec::Rle77ee | Codec::RlePcm00 | Codec::Dpcm6bit => compress::MAX_STREAM_DECODED,
+            Codec::Rle77ee | Codec::RlePcm00 | Codec::Dpcm6bit | Codec::ZeroRle16 => {
+                compress::MAX_STREAM_DECODED
+            }
             _ => compress::MAX_DECODED,
         };
         if self.max_output > output_limit || self.history.len() > compress::MAX_DECODED {
@@ -431,6 +441,30 @@ impl CodecDefinition {
                     return Err(bad("lzss-token-be has no history input"));
                 }
                 compress::lzss_token_be::decode(source, self.max_output)
+            }
+            Codec::NibbleLzssRing8 => {
+                if !self.history.is_empty() {
+                    return Err(bad("nibble-lzss-ring8 has no history input"));
+                }
+                compress::nibble_lzss_ring8::decode(source, self.max_output)
+            }
+            Codec::ByteLzssRing8 => {
+                if !self.history.is_empty() {
+                    return Err(bad("byte-lzss-ring8 has no history input"));
+                }
+                compress::byte_lzss_ring8::decode(source, self.max_output)
+            }
+            Codec::ZeroRle16 => {
+                if !self.history.is_empty() {
+                    return Err(bad("zero-rle16 has no history input"));
+                }
+                compress::zero_rle16::decode(source, self.max_output)
+            }
+            Codec::LzTile7b => {
+                if !self.history.is_empty() {
+                    return Err(bad("lz-tile-7b has no history input"));
+                }
+                compress::lz_tile_7b::decode(source, self.max_output)
             }
         }
     }

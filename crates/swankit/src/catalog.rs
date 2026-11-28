@@ -271,6 +271,30 @@ pub static MODULES: &[FormatModule] = &[
         None,
         Some(&ws_compress::catalog::EMBEDDED[20]),
     ),
+    row(
+        ws_compress::catalog::NIBBLE_LZSS_RING8_ID,
+        "ws-compress",
+        None,
+        Some(&ws_compress::catalog::EMBEDDED[21]),
+    ),
+    row(
+        ws_compress::catalog::BYTE_LZSS_RING8_ID,
+        "ws-compress",
+        None,
+        Some(&ws_compress::catalog::EMBEDDED[22]),
+    ),
+    row(
+        ws_compress::catalog::ZERO_RLE16_ID,
+        "ws-compress",
+        None,
+        Some(&ws_compress::catalog::EMBEDDED[23]),
+    ),
+    row(
+        ws_compress::catalog::LZ_TILE_7B_ID,
+        "ws-compress",
+        None,
+        Some(&ws_compress::catalog::EMBEDDED[24]),
+    ),
 ];
 
 pub fn compose() -> std::result::Result<ModuleCatalog, ModuleCatalogError> {

@@ -1045,3 +1045,147 @@ fn round2_codecs_and_oversize_rle_round_trip_through_formatkit_v1() {
     let big_dec = ws_compress::dpcm_6bit::decode(&dpcm_enc, dpcm_raw.len()).unwrap();
     assert_eq!(big_dec.bytes, dpcm_raw);
 }
+
+#[test]
+fn round3_codecs_round_trip_through_formatkit_v1() {
+    let mut rom = vec![0u8; 65536];
+
+    // 1. ws.codec.lzss-be-units (unit_size=16, source_width=16): 1 unit = 16x 'A'
+    let beu_enc = [0u8, 1, 1, b'A', 0, 28];
+    rom[0x100..0x100 + beu_enc.len()].copy_from_slice(&beu_enc);
+
+    // 2. ws.codec.lzss-12-ext (decoded_length=5): "ABABA"
+    let l12e_enc = [4u8, b'A', b'B', 1, 0x10];
+    rom[0x200..0x200 + l12e_enc.len()].copy_from_slice(&l12e_enc);
+
+    // 3. ws.codec.nibble-lzss-ring8
+    let nib_raw: Vec<u8> = (0..128).map(|i| ((i / 3 + i % 13) & 0xff) as u8).collect();
+    let nib_enc = ws_compress::nibble_lzss_ring8::encode(&nib_raw).unwrap();
+    rom[0x300..0x300 + nib_enc.len()].copy_from_slice(&nib_enc);
+
+    // 4. ws.codec.byte-lzss-ring8
+    let byt_raw: Vec<u8> = (0..160).map(|i| ((i / 5 + i % 17) & 0xff) as u8).collect();
+    let byt_enc = ws_compress::byte_lzss_ring8::encode(&byt_raw).unwrap();
+    rom[0x500..0x500 + byt_enc.len()].copy_from_slice(&byt_enc);
+
+    // 5. ws.codec.zero-rle16 (672 bytes = 42 2bpp tiles)
+    let mut zrle_raw = vec![0u8; 672];
+    zrle_raw[0..4].copy_from_slice(&[0x12, 0x34, 0x56, 0x78]);
+    zrle_raw[320..324].copy_from_slice(&[0xaa, 0xbb, 0xcc, 0xdd]);
+    let zrle_enc = ws_compress::zero_rle16::encode(&zrle_raw).unwrap();
+    rom[0x700..0x700 + zrle_enc.len()].copy_from_slice(&zrle_enc);
+
+    // 6. ws.codec.lz-tile-7b (4 tiles = 128 bytes)
+    let tile7_raw: Vec<u8> = (0..128).map(|i| ((i / 4) & 0xff) as u8).collect();
+    let tile7_enc = ws_compress::lz_tile_7b::encode(&tile7_raw).unwrap();
+    rom[0x900..0x900 + tile7_enc.len()].copy_from_slice(&tile7_enc);
+
+    let sha = sha256_hex(&rom);
+    let fk_doc = json!({
+        "schema": FORMATKIT_SCHEMA,
+        "schema_version": 1,
+        "kit": "swankit",
+        "media": {
+            "kind": "flat-rom",
+            "fingerprint": { "rom_sha256": sha },
+            "total_bytes": rom.len()
+        },
+        "entries": [
+            {
+                "id": "beu0",
+                "offset": 0x100,
+                "size": beu_enc.len(),
+                "sha256": sha256_hex(&beu_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.lzss-be-units",
+                "mapping": {
+                    "kind": "compressed",
+                    "params": { "codec_params": { "unit_size": 16, "source_width": 16 } },
+                    "inner_format": "other"
+                },
+                "verified": true
+            },
+            {
+                "id": "l12e0",
+                "offset": 0x200,
+                "size": l12e_enc.len(),
+                "sha256": sha256_hex(&l12e_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.lzss-12-ext",
+                "mapping": {
+                    "kind": "compressed",
+                    "params": { "codec_params": { "decoded_length": 5 } },
+                    "inner_format": "other"
+                },
+                "verified": true
+            },
+            {
+                "id": "nib0",
+                "offset": 0x300,
+                "size": nib_enc.len(),
+                "sha256": sha256_hex(&nib_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.nibble-lzss-ring8",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            },
+            {
+                "id": "byt0",
+                "offset": 0x500,
+                "size": byt_enc.len(),
+                "sha256": sha256_hex(&byt_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.byte-lzss-ring8",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            },
+            {
+                "id": "zrle0",
+                "offset": 0x700,
+                "size": zrle_enc.len(),
+                "sha256": sha256_hex(&zrle_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.zero-rle16",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            },
+            {
+                "id": "tile7",
+                "offset": 0x900,
+                "size": tile7_enc.len(),
+                "sha256": sha256_hex(&tile7_enc),
+                "status": "mapped",
+                "format_id": "ws.codec.lz-tile-7b",
+                "mapping": { "kind": "compressed", "inner_format": "other" },
+                "verified": true
+            }
+        ]
+    });
+
+    let fk_bytes = serde_json::to_vec(&fk_doc).unwrap();
+    let loaded = LoadedAssetMap::from_json(&fk_bytes).unwrap();
+    let asset_map = loaded.to_asset_map().unwrap();
+    let charmaps = Charmaps::load(&asset_map, |_| unreachable!()).unwrap();
+
+    let report = loaded.verify(&charmaps, &rom).unwrap();
+    assert!(report.ok(), "{:?}", report.errors);
+
+    let extracted = extract(&asset_map, &charmaps, &rom).unwrap();
+    assert_eq!(extracted.failures, 0);
+    let file_bytes = |name: &str| -> &[u8] {
+        extracted
+            .files
+            .iter()
+            .find_map(|(n, f)| match (n == name, f) {
+                (true, ws_assets::ExtractedFile::Bytes(b)) => Some(b.as_slice()),
+                _ => None,
+            })
+            .unwrap()
+    };
+    assert_eq!(file_bytes("beu0.bin"), vec![b'A'; 16].as_slice());
+    assert_eq!(file_bytes("l12e0.bin"), b"ABABA");
+    assert_eq!(file_bytes("nib0.bin"), nib_raw.as_slice());
+    assert_eq!(file_bytes("byt0.bin"), byt_raw.as_slice());
+    assert_eq!(file_bytes("zrle0.bin"), zrle_raw.as_slice());
+    assert_eq!(file_bytes("tile7.bin"), tile7_raw.as_slice());
+}

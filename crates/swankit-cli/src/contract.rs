@@ -213,6 +213,34 @@ static FORMATS: &[FormatCapability] = &[
         tier: 2,
         notes: "Big-endian token-counted bit-flag LZSS stream decoder and deterministic encoder",
     },
+    FormatCapability {
+        id: "ws-nibble-lzss-ring8",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "4-bit nibble MSB-bitstream 256-entry ring-buffer LZSS stream decoder and deterministic encoder",
+    },
+    FormatCapability {
+        id: "ws-byte-lzss-ring8",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "8-bit byte MSB-bitstream 256-entry ring-buffer LZSS stream decoder and deterministic encoder",
+    },
+    FormatCapability {
+        id: "ws-zero-rle16",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "16-bit little-endian zero-run RLE stream decoder and deterministic encoder",
+    },
+    FormatCapability {
+        id: "ws-lz-tile-7b",
+        category: "compression",
+        capabilities: &["parse", "decode", "reproduce", "author"],
+        tier: 2,
+        notes: "7-bit literal and back-reference 4bpp tile LZ stream decoder and deterministic encoder",
+    },
     // Graphics (ws-gfx)
     FormatCapability {
         id: "ws-tile-2bpp",

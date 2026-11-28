@@ -716,6 +716,12 @@ pub fn format_id_for(asset: &Asset) -> String {
         Codec::Flag16Distance11 => "ws.codec.flag16-distance11".into(),
         Codec::PlanarRle => "ws.codec.planar-rle".into(),
         Codec::LzssTokenBe => "ws.codec.lzss-token-be".into(),
+        Codec::LzssBeUnits => "ws.codec.lzss-be-units".into(),
+        Codec::Lzss12Ext => "ws.codec.lzss-12-ext".into(),
+        Codec::NibbleLzssRing8 => "ws.codec.nibble-lzss-ring8".into(),
+        Codec::ByteLzssRing8 => "ws.codec.byte-lzss-ring8".into(),
+        Codec::ZeroRle16 => "ws.codec.zero-rle16".into(),
+        Codec::LzTile7b => "ws.codec.lz-tile-7b".into(),
     }
 }
 
@@ -1181,6 +1187,12 @@ fn infer_codec(entry: &FormatkitEntry) -> Codec {
         "ws.codec.flag16-distance11" => Codec::Flag16Distance11,
         "ws.codec.planar-rle" => Codec::PlanarRle,
         "ws.codec.lzss-token-be" => Codec::LzssTokenBe,
+        "ws.codec.lzss-be-units" => Codec::LzssBeUnits,
+        "ws.codec.lzss-12-ext" => Codec::Lzss12Ext,
+        "ws.codec.nibble-lzss-ring8" => Codec::NibbleLzssRing8,
+        "ws.codec.byte-lzss-ring8" => Codec::ByteLzssRing8,
+        "ws.codec.zero-rle16" => Codec::ZeroRle16,
+        "ws.codec.lz-tile-7b" => Codec::LzTile7b,
         _ => Codec::Raw,
     }
 }
